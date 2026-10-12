@@ -1060,22 +1060,28 @@ class PulseTheme {
         waitDuration: const Duration(milliseconds: 360),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       ),
+      // Midnight inputs: flat panel fill, hairline border, accent on focus.
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: tokens.surface,
+        isDense: true,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         hintStyle: textTheme.bodyMedium?.copyWith(color: tokens.textTertiary),
         labelStyle: textTheme.labelMedium?.copyWith(color: tokens.textSecondary),
+        floatingLabelStyle:
+            textTheme.labelMedium?.copyWith(color: tokens.textSecondary),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(tokens.radiusMd),
+          borderRadius: BorderRadius.circular(tokens.radiusLg),
           borderSide: BorderSide(color: tokens.stroke),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(tokens.radiusMd),
-          borderSide: BorderSide(color: tokens.stroke.withValues(alpha: 0.85)),
+          borderRadius: BorderRadius.circular(tokens.radiusLg),
+          borderSide: BorderSide(color: tokens.stroke),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(tokens.radiusMd),
-          borderSide: BorderSide(color: tokens.accent.withValues(alpha: 0.7)),
+          borderRadius: BorderRadius.circular(tokens.radiusLg),
+          borderSide: BorderSide(color: tokens.accent.withValues(alpha: 0.6)),
         ),
       ),
       scrollbarTheme: ScrollbarThemeData(

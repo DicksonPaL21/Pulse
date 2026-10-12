@@ -3,10 +3,11 @@ import 'package:flutter/material.dart';
 import '../../app/theme/pulse_theme.dart';
 import 'safe_hover.dart';
 
-/// Windows 11–style segmented control using Pulse accent tokens.
+/// Midnight pill segmented control (ADR-012).
 ///
-/// Selected: accentSoft fill, accent border/label (matches Timeline chips /
-/// Connected badge language). Unselected: transparent fill, stroke border.
+/// The track is a canvas-colored pill; the selected segment is an inverted
+/// pill (primary text color fill, canvas label) so it reads without relying
+/// on the accent. The control hugs its content instead of stretching.
 class PulseSegmentedControl<T> extends StatelessWidget {
   const PulseSegmentedControl({
     super.key,
@@ -19,8 +20,8 @@ class PulseSegmentedControl<T> extends StatelessWidget {
   final T selected;
   final ValueChanged<T> onChanged;
 
-  static const double _height = 36;
-  static const double _radius = 12;
+  static const double _height = 40;
+  static const double _trackPadding = 4;
 
   @override
   Widget build(BuildContext context) {
@@ -29,22 +30,18 @@ class PulseSegmentedControl<T> extends StatelessWidget {
       builder: (context, constraints) {
         final control = DecoratedBox(
           decoration: BoxDecoration(
-            color: PulseTokens.surface.withValues(alpha: 0.55),
-            borderRadius: BorderRadius.circular(_radius),
-            border: Border.all(color: PulseTokens.stroke.withValues(alpha: 0.75)),
+            color: PulseTokens.canvas,
+            borderRadius: BorderRadius.circular(PulseTokens.radiusPill),
+            border: Border.all(color: PulseTokens.stroke),
           ),
-          child: SizedBox(
+          child: Container(
             height: _height,
+            padding: const EdgeInsets.all(_trackPadding),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 for (var i = 0; i < segments.length; i++) ...[
-                  if (i > 0)
-                    Container(
-                      width: 1,
-                      height: 18,
-                      color: PulseTokens.strokeSubtle,
-                    ),
+                  if (i > 0) const SizedBox(width: 2),
                   _SegmentButton<T>(
                     segment: segments[i],
                     selected: segments[i].value == selected,
@@ -66,7 +63,7 @@ class PulseSegmentedControl<T> extends StatelessWidget {
             child: control,
           );
         }
-        return control;
+        return Align(alignment: Alignment.centerLeft, child: control);
       },
     );
   }
@@ -117,17 +114,15 @@ class _SegmentButtonState<T> extends State<_SegmentButton<T>>
       fg = PulseTokens.textDisabled;
       border = Colors.transparent;
     } else if (selected) {
-      bg = _pressed
-          ? Color.lerp(PulseTokens.accentSoft, PulseTokens.accent, 0.18)!
-          : PulseTokens.accentSoft;
-      fg = PulseTokens.accent;
-      border = PulseTokens.accent.withValues(alpha: 0.45);
+      bg = PulseTokens.textPrimary;
+      fg = PulseTokens.canvas;
+      border = Colors.transparent;
     } else if (_pressed) {
-      bg = PulseTokens.accent.withValues(alpha: 0.12);
+      bg = PulseTokens.surfacePressed;
       fg = PulseTokens.textPrimary;
       border = Colors.transparent;
     } else if (hover) {
-      bg = PulseTokens.accent.withValues(alpha: 0.08);
+      bg = PulseTokens.surfaceHover;
       fg = PulseTokens.textPrimary;
       border = Colors.transparent;
     } else {
@@ -146,7 +141,7 @@ class _SegmentButtonState<T> extends State<_SegmentButton<T>>
             : null,
         mouseCursor:
             enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(PulseTokens.radiusPill),
         child: AnimatedContainer(
           duration: MediaQuery.disableAnimationsOf(context)
               ? Duration.zero
@@ -156,7 +151,7 @@ class _SegmentButtonState<T> extends State<_SegmentButton<T>>
           padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
             color: bg,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(PulseTokens.radiusPill),
             border: Border.all(color: border),
           ),
           child: Text(
