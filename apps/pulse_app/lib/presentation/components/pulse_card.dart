@@ -32,16 +32,18 @@ class _PulseCardState extends State<PulseCard> with SafeHoverState {
   Widget build(BuildContext context) {
     final interactive = widget.onTap != null;
     final highlighted = interactive && (hover || widget.selected);
+    // Midnight (ADR-012): every card is a flat panel; [elevated] no longer
+    // changes the fill. Hover lifts one surface step instead of a shadow.
     final bg = widget.selected
         ? PulseTokens.accentSoft
         : highlighted
-            ? PulseTokens.surfaceHover
-            : widget.elevated
-                ? PulseTokens.surfaceElevated
-                : PulseTokens.surface;
+            ? PulseTokens.surfaceElevated
+            : PulseTokens.surface;
     final border = widget.selected
-        ? PulseTokens.accent.withValues(alpha: 0.4)
-        : PulseTokens.stroke.withValues(alpha: highlighted ? 0.8 : 0.5);
+        ? PulseTokens.accent.withValues(alpha: 0.45)
+        : highlighted
+            ? PulseTokens.strokeStrong
+            : PulseTokens.stroke;
 
     final content = Padding(
       padding: widget.padding ?? const EdgeInsets.all(PulseTokens.spaceMd),
@@ -60,11 +62,7 @@ class _PulseCardState extends State<PulseCard> with SafeHoverState {
         color: bg,
         borderRadius: BorderRadius.circular(PulseTokens.radiusCard),
         border: Border.all(color: border),
-        boxShadow: highlighted
-            ? PulseTokens.elevationLift
-            : widget.elevated
-                ? PulseTokens.elevation1
-                : PulseTokens.elevationSoft,
+        boxShadow: PulseTokens.elevationSoft,
       ),
       child: interactive
           ? Material(
