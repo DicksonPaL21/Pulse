@@ -3,6 +3,7 @@ import 'package:pulse_protocol/pulse_wire.dart';
 
 import '../../app/theme/pulse_theme.dart';
 import '../../presentation/components/pulse_badge.dart';
+import '../../presentation/utils/pulse_formatters.dart';
 
 /// Display helpers for IPC [TimelineEvent] — no duplicated event model.
 extension TimelineEventDisplay on TimelineEvent {
@@ -31,6 +32,15 @@ extension TimelineEventDisplay on TimelineEvent {
     }
     if (timestampIso.isNotEmpty) return timestampIso;
     return 'Unknown';
+  }
+
+  /// Local wall-clock time for the story feed's time column (`19:32`).
+  String get clockLabel {
+    if (timestampUnixMs <= 0) return '—';
+    final local =
+        DateTime.fromMillisecondsSinceEpoch(timestampUnixMs, isUtc: true)
+            .toLocal();
+    return PulseFormatters.clockTime(local);
   }
 
   TimelineSeverityVisual get severityVisual =>

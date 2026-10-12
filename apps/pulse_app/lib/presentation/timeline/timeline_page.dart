@@ -13,12 +13,14 @@ import '../../app/theme/pulse_theme.dart';
 import '../../application/connection_controller.dart';
 import '../../application/timeline_library_controller.dart';
 import '../../application/timeline_session_controller.dart';
+import '../../features/timeline/timeline_activity.dart';
 import '../../features/timeline/timeline_export.dart';
 import '../../features/timeline/timeline_incident_engine.dart';
 import '../../features/timeline/timeline_empty_copy.dart';
 import '../../features/timeline/timeline_query.dart';
 import '../../features/timeline/widgets/timeline_details_panel.dart';
 import '../../features/timeline/widgets/timeline_event_tile.dart';
+import '../../features/timeline/widgets/timeline_overview_header.dart';
 import '../../ipc/pulse_ipc_client.dart';
 import '../components/pulse_app_bar.dart';
 import '../components/pulse_badge.dart';
@@ -491,6 +493,7 @@ class _TimelinePageState extends State<TimelinePage> {
                           onAction: session.reloadSnapshot,
                         )
                       : _TimelineBody(
+                          sessionEvents: events,
                           selectedEventId: _selectedEventId,
                           selectedEvent: selectedEvent,
                           selectedRca: selectedRca,
@@ -584,6 +587,7 @@ class _TimelineSkeletonView extends StatelessWidget {
 
 class _TimelineBody extends StatelessWidget {
   const _TimelineBody({
+    required this.sessionEvents,
     required this.selectedEventId,
     required this.selectedEvent,
     required this.selectedRca,
@@ -623,6 +627,8 @@ class _TimelineBody extends StatelessWidget {
     required this.onExportCsv,
   });
 
+  /// Every event held by the session (unfiltered) — feeds the hero summary.
+  final List<TimelineEvent> sessionEvents;
   final String? selectedEventId;
   final TimelineEvent? selectedEvent;
   final TimelineRcaHint? selectedRca;
@@ -674,11 +680,28 @@ class _TimelineBody extends StatelessWidget {
                     selectedEvent!.timestampUnixMs <
                 120000;
 
+        final now = DateTime.now();
+        final activity = TimelineActivitySummary.fromEvents(
+          sessionEvents,
+          nowUnixMs: now.millisecondsSinceEpoch,
+        );
+
         final list = Scrollbar(
           controller: scrollController,
           child: CustomScrollView(
             controller: scrollController,
             slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(
+                  PulseTokens.pagePadX,
+                  4,
+                  PulseTokens.pagePadX,
+                  8,
+                ),
+                sliver: SliverToBoxAdapter(
+                  child: TimelineOverviewHeader(summary: activity, now: now),
+                ),
+              ),
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(
                   PulseTokens.pagePadX,
@@ -746,7 +769,16 @@ class _TimelineBody extends StatelessWidget {
                           ),
                         ),
                       )
-                    : SliverList(
+                    : DecoratedSliver(
+                        decoration: BoxDecoration(
+                          color: PulseTokens.surface,
+                          borderRadius:
+                              BorderRadius.circular(PulseTokens.radiusCard),
+                          border: Border.all(color: PulseTokens.stroke),
+                        ),
+                        sliver: SliverPadding(
+                          padding: const EdgeInsets.all(10),
+                          sliver: SliverList(
                         delegate: SliverChildBuilderDelegate(
                           (context, i) {
                             final item = listItems[i];
@@ -782,6 +814,8 @@ class _TimelineBody extends StatelessWidget {
                             );
                           },
                           childCount: listItems.length,
+                        ),
+                      ),
                         ),
                       ),
               ),
