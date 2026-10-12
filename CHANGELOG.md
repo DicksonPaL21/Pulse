@@ -5,6 +5,25 @@ All notable changes to Pulse are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **Midnight visual identity** ([ADR-012](docs/architecture/decisions/ADR-012-midnight-visual-identity.md)): near-black canvas, flat panels, lime signature accent, bundled Geist and Geist Mono fonts
+- Icon rail replaces the sidebar; command search moves into the title bar
+- Timeline: plain-language hero for the last hour, 24-hour activity strip, story-feed rows, and an Explained / Technical / Raw XML inspector
+- System Health: Overview bento with system pulse, memory ring, CPU, GPU and network tiles
+- Reports, Assistant, segmented controls and form fields restyled for Midnight
+
+### Fixed
+
+- System Health showed "Windows 10" on Windows 11 because the registry ProductName was never updated by Windows
+- Assistant send icon was white on the accent fill and hard to read
+
+### Upgrade notes
+
+- The accent preference is re-keyed: every install starts on the new lime accent once; pick another under Settings → Appearance
+
 ## [1.1.0] — 2026-08-13
 
 ### Added
