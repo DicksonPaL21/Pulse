@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -63,6 +62,9 @@ class _PulseTitleBarState extends State<PulseTitleBar> with WindowListener {
   @override
   void onWindowBlur() => _refresh();
 
+  static const double _height = 44;
+  static const double _searchMaxWidth = 460;
+
   @override
   Widget build(BuildContext context) {
     Theme.of(context);
@@ -70,39 +72,35 @@ class _PulseTitleBarState extends State<PulseTitleBar> with WindowListener {
 
     return DragToMoveArea(
       child: Container(
-        height: 40,
-        decoration: BoxDecoration(
-          color: PulseTokens.sidebarSolid,
-          border: Border(
-            bottom: BorderSide(color: PulseTokens.strokeSubtle),
-          ),
-        ),
-        padding: const EdgeInsets.only(left: 12),
+        height: _height,
+        color: PulseTokens.canvas,
+        padding: const EdgeInsets.only(left: PulseTokens.shellGutter + 8),
         child: Row(
           children: [
-            SvgPicture.asset(
-              'assets/branding/mark.svg',
-              width: 16,
-              height: 16,
-            ),
-            const SizedBox(width: 10),
             Text(
               'Pulse',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: fg,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: -0.1,
-                    fontSize: 13,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: _focused
+                        ? PulseTokens.textSecondary
+                        : PulseTokens.textTertiary,
+                    fontWeight: FontWeight.w500,
                   ),
             ),
-            const Spacer(),
-            if (widget.onOpenSearch != null) ...[
-              _TitleSearchButton(
-                color: fg,
-                onPressed: widget.onOpenSearch!,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Center(
+                child: widget.onOpenSearch == null
+                    ? const SizedBox.shrink()
+                    : ConstrainedBox(
+                        constraints:
+                            const BoxConstraints(maxWidth: _searchMaxWidth),
+                        child: _TitleSearchButton(
+                          onPressed: widget.onOpenSearch!,
+                        ),
+                      ),
               ),
-              const SizedBox(width: 4),
-            ],
+            ),
+            const SizedBox(width: 16),
             _CaptionButton(
               tooltip: 'Minimize',
               onPressed: windowManager.minimize,
@@ -137,13 +135,9 @@ class _PulseTitleBarState extends State<PulseTitleBar> with WindowListener {
 }
 
 class _TitleSearchButton extends StatefulWidget {
-  const _TitleSearchButton({
-    required this.onPressed,
-    required this.color,
-  });
+  const _TitleSearchButton({required this.onPressed});
 
   final VoidCallback onPressed;
-  final Color color;
 
   @override
   State<_TitleSearchButton> createState() => _TitleSearchButtonState();
@@ -164,42 +158,50 @@ class _TitleSearchButtonState extends State<_TitleSearchButton>
           onExit: (_) => setHovered(false),
           child: AnimatedContainer(
             duration: PulseTokens.motionFast,
-            height: 28,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
+            height: 32,
+            padding: const EdgeInsets.only(left: 14, right: 6),
             decoration: BoxDecoration(
-              color: hover
-                  ? PulseTokens.surfaceHover.withValues(alpha: 0.7)
-                  : PulseTokens.surface.withValues(alpha: 0.55),
-              borderRadius: BorderRadius.circular(PulseTokens.radiusSm),
-              border: Border.all(
-                color: PulseTokens.stroke.withValues(alpha: 0.55),
-              ),
+              color: hover ? PulseTokens.surfaceHover : PulseTokens.surface,
+              borderRadius: BorderRadius.circular(PulseTokens.radiusPill),
+              border: Border.all(color: PulseTokens.stroke),
             ),
             child: Row(
-              mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
                   LucideIcons.search,
-                  size: 13,
-                  color: widget.color.withValues(alpha: 0.85),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Search',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: widget.color.withValues(alpha: 0.85),
-                        fontWeight: FontWeight.w500,
-                        fontSize: 11.5,
-                      ),
+                  size: 14,
+                  color: PulseTokens.textSecondary,
                 ),
                 const SizedBox(width: 10),
-                Text(
-                  'Ctrl+K',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: PulseTokens.textDisabled,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 10.5,
-                      ),
+                Expanded(
+                  child: Text(
+                    'Search or jump to…',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                          color: PulseTokens.textTertiary,
+                          fontWeight: FontWeight.w400,
+                        ),
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(PulseTokens.radiusSm),
+                    border: Border.all(color: PulseTokens.strokeStrong),
+                  ),
+                  child: Text(
+                    'Ctrl K',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          fontFamily: PulseTheme.monoFont,
+                          fontFamilyFallback: PulseTheme.monoFallback,
+                          color: PulseTokens.textSecondary,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: 0,
+                          fontSize: 10.5,
+                        ),
+                  ),
                 ),
               ],
             ),
@@ -255,7 +257,7 @@ class _CaptionButtonState extends State<_CaptionButton> with SafeHoverState {
           child: AnimatedContainer(
             duration: PulseTokens.motionFast,
             width: 46,
-            height: 40,
+            height: 44,
             color: bg,
             alignment: Alignment.center,
             child: Icon(widget.icon, size: widget.iconSize, color: iconColor),

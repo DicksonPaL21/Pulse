@@ -16,10 +16,9 @@ import '../../ipc/pulse_ipc_client.dart';
 import '../assistant/assistant_host.dart';
 import '../assistant/assistant_page.dart';
 import '../components/pulse_content_frame.dart';
-import '../components/pulse_mica.dart';
-import '../components/pulse_sidebar.dart';
+import '../components/connection_indicator.dart';
+import '../components/pulse_nav_rail.dart';
 import '../components/pulse_title_bar.dart';
-import '../components/service_status_card.dart';
 import '../diagnostics/diagnostics_page.dart';
 import '../health/health_view_models.dart';
 import '../health/system_health_page.dart';
@@ -64,36 +63,51 @@ class _AppShellState extends State<AppShell> {
       ),
   ];
 
-  static const _nav = [
+  static const _primaryNav = [
     PulseNavItem(
       label: 'Timeline',
       icon: LucideIcons.listTree,
-      selectedIcon: LucideIcons.listTree,
+      pageIndex: PulseShellPages.timeline,
+      tooltip: 'Timeline (Ctrl+1)',
     ),
     PulseNavItem(
-      label: 'System Health',
+      label: 'Health',
       icon: LucideIcons.heartPulse,
-      selectedIcon: LucideIcons.heartPulse,
+      pageIndex: PulseShellPages.health,
+      tooltip: 'System Health (Ctrl+2)',
     ),
     PulseNavItem(
       label: 'Inventory',
       icon: LucideIcons.packageSearch,
-      selectedIcon: LucideIcons.packageSearch,
+      pageIndex: PulseShellPages.inventory,
+      tooltip: 'Inventory (Ctrl+3)',
     ),
     PulseNavItem(
       label: 'Reports',
       icon: LucideIcons.fileText,
-      selectedIcon: LucideIcons.fileText,
+      pageIndex: PulseShellPages.reports,
+      tooltip: 'Reports (Ctrl+4)',
     ),
     PulseNavItem(
-      label: 'Diagnostics',
-      icon: LucideIcons.activity,
-      selectedIcon: LucideIcons.activity,
+      label: 'Diagnose',
+      icon: LucideIcons.stethoscope,
+      pageIndex: PulseShellPages.diagnostics,
+      tooltip: 'Diagnostics (Ctrl+5)',
+    ),
+  ];
+
+  static const _secondaryNav = [
+    PulseNavItem(
+      label: 'Assistant',
+      icon: LucideIcons.sparkles,
+      pageIndex: PulseShellPages.assistant,
+      tooltip: 'Assistant — local AI',
     ),
     PulseNavItem(
       label: 'Settings',
       icon: LucideIcons.settings,
-      selectedIcon: LucideIcons.settings,
+      pageIndex: PulseShellPages.settings,
+      tooltip: 'Settings (Ctrl+6)',
     ),
   ];
 
@@ -390,7 +404,7 @@ class _AppShellState extends State<AppShell> {
       child: Focus(
         autofocus: true,
         child: Scaffold(
-          backgroundColor: Colors.transparent,
+          backgroundColor: PulseTokens.canvas,
           body: AssistantHost(
             child: Column(
               children: [
@@ -399,24 +413,29 @@ class _AppShellState extends State<AppShell> {
                 ),
                 Expanded(
                   child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      PulseSidebar(
-                        selectedIndex: _index,
-                        onSelected: _selectPage,
-                        items: _nav,
-                        pinnedItem: const PulseNavItem(
-                          label: 'Assistant',
-                          icon: LucideIcons.bot,
-                          selectedIcon: LucideIcons.bot,
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          PulseTokens.shellGutter,
+                          0,
+                          0,
+                          PulseTokens.shellGutter,
                         ),
-                        pinnedIndex: PulseShellPages.assistant,
-                        footer: const _SidebarConnectionFooter(),
+                        child: PulseNavRail(
+                          selectedIndex: _index,
+                          onSelected: _selectPage,
+                          primaryItems: _primaryNav,
+                          secondaryItems: _secondaryNav,
+                          footer: const _RailServiceStatus(),
+                        ),
                       ),
                       Expanded(
-                        child: PulseMicaBackground(
+                        child: ColoredBox(
+                          color: PulseTokens.canvas,
                           child: PulseContentFrame(
                             // Keep every page Element alive. AnimatedSwitcher was
-                            // fading through a transparent frame (mica/canvas flash)
+                            // fading through a transparent frame (canvas flash)
                             // and disposing Inventory on every leave.
                             child: IndexedStack(
                               index: _index,
@@ -459,9 +478,13 @@ class _AppShellState extends State<AppShell> {
   }
 }
 
-/// Rebuilds only the sidebar status card when connection state/version changes.
-class _SidebarConnectionFooter extends StatelessWidget {
-  const _SidebarConnectionFooter();
+/// Rail footer: a calm status dot for PulseService. Rebuilds only when the
+/// connection state or service version changes.
+class _RailServiceStatus extends StatelessWidget {
+  const _RailServiceStatus();
+
+  static const double _dotSize = 9;
+  static const double _hitSize = 44;
 
   @override
   Widget build(BuildContext context) {
@@ -471,6 +494,24 @@ class _SidebarConnectionFooter extends StatelessWidget {
     final version = context.select<PulseIpcClient, String>(
       (c) => c.status.serviceVersion,
     );
-    return ServiceStatusCard(state: state, serviceVersion: version);
+    final status = switch (state) {
+      IpcConnectionState.connected => 'PulseService connected',
+      IpcConnectionState.connecting => 'Connecting to PulseService',
+      IpcConnectionState.error => 'PulseService unavailable',
+      IpcConnectionState.disconnected => 'PulseService offline',
+    };
+    final message = version.isEmpty ? status : '$status · v$version';
+    return Tooltip(
+      message: message,
+      preferBelow: false,
+      child: Semantics(
+        label: message,
+        child: SizedBox(
+          width: _hitSize,
+          height: _hitSize,
+          child: Center(child: ConnectionDot(state: state, size: _dotSize)),
+        ),
+      ),
+    );
   }
 }
