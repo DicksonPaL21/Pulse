@@ -8,7 +8,7 @@ class DetailSection extends StatelessWidget {
     super.key,
     required this.title,
     required this.child,
-    this.padding = const EdgeInsets.fromLTRB(20, 16, 20, 16),
+    this.padding = const EdgeInsets.symmetric(vertical: 14),
     this.expandChild = false,
   });
 

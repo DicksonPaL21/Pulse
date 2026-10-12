@@ -667,6 +667,9 @@ class _TimelineBody extends StatelessWidget {
   final VoidCallback onExportJson;
   final VoidCallback onExportCsv;
 
+  /// Inspector width including its 32 px right gutter.
+  static const double _detailsPanelWidth = 452;
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -831,7 +834,7 @@ class _TimelineBody extends StatelessWidget {
                 Expanded(flex: 3, child: list),
                 if (showSideDetail)
                   SizedBox(
-                    width: 400,
+                    width: _detailsPanelWidth,
                     child: TimelineDetailsPanel(
                       event: selectedEvent!,
                       onClose: onClear,
@@ -847,7 +850,7 @@ class _TimelineBody extends StatelessWidget {
               Positioned(
                 top: 52,
                 left: 0,
-                right: showSideDetail ? 400 : 0,
+                right: showSideDetail ? _detailsPanelWidth : 0,
                 child: Center(
                   child: _NewEventsButton(
                     count: pendingNewCount,
@@ -910,9 +913,9 @@ class _IncidentGroupTile extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: PulseTokens.surface.withValues(alpha: 0.92),
-          borderRadius: BorderRadius.circular(PulseTokens.radiusMd),
-          border: Border.all(color: PulseTokens.strokeSubtle),
+          color: PulseTokens.surfaceElevated,
+          borderRadius: BorderRadius.circular(PulseTokens.radiusLg),
+          border: Border.all(color: PulseTokens.stroke),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
