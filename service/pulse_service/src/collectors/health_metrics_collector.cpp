@@ -6,6 +6,7 @@
 #include "collectors/process_metrics.hpp"
 #include "collectors/system_overview_info.hpp"
 #include "logging/logger.hpp"
+#include "util/windows_edition.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -2347,12 +2348,13 @@ ipc::HealthStaticInfo HealthMetricsCollector::CollectStatic() {
   std::lock_guard lock(mu_);
 
   ipc::HealthStaticInfo info;
-  info.windows_edition = ReadRegistryString(
+  const std::string product = ReadRegistryString(
       L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", L"ProductName");
   const std::string display = ReadRegistryString(
       L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", L"DisplayVersion");
   const std::string build = ReadRegistryString(
       L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", L"CurrentBuild");
+  info.windows_edition = util::NormalizeWindowsEdition(product, build);
   if (!display.empty() && !build.empty()) {
     info.windows_version = display + " (Build " + build + ")";
   } else if (!display.empty()) {

@@ -74,6 +74,7 @@ add_executable(PulseService WIN32
   src/windows/wevt_helpers.cpp
   src/logging/logger.cpp
   src/util/config.cpp
+  src/util/windows_edition.cpp
 )
 
 # Console subsystem so --console works with stdout; also fine for SCM.
@@ -314,6 +315,15 @@ target_include_directories(memory_modules_collector_tests PRIVATE
 )
 target_link_libraries(memory_modules_collector_tests PRIVATE pulse_wire)
 add_test(NAME memory_modules_collector_tests COMMAND memory_modules_collector_tests)
+
+add_executable(windows_edition_tests
+  test/windows_edition_test.cpp
+  src/util/windows_edition.cpp
+)
+target_include_directories(windows_edition_tests PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+add_test(NAME windows_edition_tests COMMAND windows_edition_tests)
 
 add_executable(cpu_collector_tests
   test/cpu_collector_test.cpp
