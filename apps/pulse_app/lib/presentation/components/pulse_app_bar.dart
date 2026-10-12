@@ -43,18 +43,14 @@ class PulseAppBar extends StatelessWidget {
   Widget build(BuildContext context) {
     // Rebuild with Material theme animation frames.
     Theme.of(context);
-    return Container(
+    // Midnight: the page header sits directly on the canvas; panels below
+    // carry the structure, so no bar fill or divider.
+    return Padding(
       padding: const EdgeInsets.fromLTRB(
         PulseTokens.pagePadX,
-        10,
+        6,
         PulseTokens.pagePadX,
-        10,
-      ),
-      decoration: BoxDecoration(
-        color: PulseTokens.header.withValues(alpha: 0.72),
-        border: Border(
-          bottom: BorderSide(color: PulseTokens.divider),
-        ),
+        12,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -69,7 +65,7 @@ class PulseAppBar extends StatelessWidget {
                 barWidth: constraints.maxWidth,
               );
               return SizedBox(
-                height: 36,
+                height: 40,
                 child: Row(
                   children: [
                     // Title + connection shrink first; actions keep intrinsic width.
@@ -85,8 +81,8 @@ class PulseAppBar extends StatelessWidget {
                                   .textTheme
                                   .titleLarge
                                   ?.copyWith(
-                                    fontSize: 20,
-                                    letterSpacing: -0.3,
+                                    fontSize: 24,
+                                    letterSpacing: -0.7,
                                     color: PulseTokens.primaryText,
                                   ),
                             ),
@@ -115,7 +111,7 @@ class PulseAppBar extends StatelessWidget {
             },
           ),
           if (searchHint != null || searchEnabled) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             _SearchField(
               hint: searchHint ?? 'Search events…',
               enabled: searchEnabled,
@@ -364,21 +360,21 @@ class _SearchFieldState extends State<_SearchField> with SafeHoverState {
       onExit: (_) => setHovered(false),
       child: AnimatedContainer(
         duration: PulseTokens.motionFast,
-        height: 36,
+        height: 44,
         decoration: BoxDecoration(
           color: !widget.enabled
               ? PulseTokens.surface.withValues(alpha: 0.55)
               : focused || hover
-                  ? PulseTokens.surfaceHover.withValues(alpha: 0.45)
+                  ? PulseTokens.surfaceElevated
                   : PulseTokens.surface,
-          borderRadius: BorderRadius.circular(PulseTokens.radiusMd),
+          borderRadius: BorderRadius.circular(PulseTokens.radiusPill),
           border: Border.all(
             color: focused && widget.enabled
-                ? PulseTokens.accent.withValues(alpha: 0.45)
-                : PulseTokens.stroke.withValues(alpha: 0.65),
+                ? PulseTokens.accent.withValues(alpha: 0.5)
+                : PulseTokens.stroke,
           ),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        padding: const EdgeInsets.only(left: 18, right: 10),
         child: Row(
           children: [
             Icon(
@@ -402,7 +398,11 @@ class _SearchFieldState extends State<_SearchField> with SafeHoverState {
                       cursorColor: PulseTokens.accent,
                       decoration: InputDecoration(
                         isDense: true,
+                        filled: false,
                         border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
                         hintText: widget.hint,
                         hintStyle:
                             Theme.of(context).textTheme.bodyMedium?.copyWith(

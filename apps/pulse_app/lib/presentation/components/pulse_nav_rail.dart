@@ -47,10 +47,10 @@ class PulseNavRail extends StatelessWidget {
   static const double _markSize = 26;
 
   Widget _tile(PulseNavItem item) => _RailTile(
-        item: item,
-        selected: item.pageIndex == selectedIndex,
-        onTap: () => onSelected(item.pageIndex),
-      );
+    item: item,
+    selected: item.pageIndex == selectedIndex,
+    onTap: () => onSelected(item.pageIndex),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -91,10 +91,7 @@ class PulseNavRail extends StatelessWidget {
           for (final item in primaryItems) _tile(item),
           const Spacer(),
           for (final item in secondaryItems) _tile(item),
-          if (footer != null) ...[
-            const SizedBox(height: 10),
-            footer!,
-          ],
+          if (footer != null) ...[const SizedBox(height: 10), footer!],
         ],
       ),
     );
@@ -126,10 +123,11 @@ class _RailTileState extends State<_RailTile> with SafeHoverState {
     final background = selected
         ? PulseTokens.surfaceHover
         : hover
-            ? PulseTokens.surfaceHover.withValues(alpha: 0.6)
-            : Colors.transparent;
-    final foreground =
-        selected ? PulseTokens.textPrimary : PulseTokens.textSecondary;
+        ? PulseTokens.surfaceHover.withValues(alpha: 0.6)
+        : Colors.transparent;
+    final foreground = selected
+        ? PulseTokens.textPrimary
+        : PulseTokens.textSecondary;
     final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations == true;
 
     return Padding(
@@ -174,11 +172,11 @@ class _RailTileState extends State<_RailTile> with SafeHoverState {
                       overflow: TextOverflow.fade,
                       softWrap: false,
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            fontSize: _labelSize,
-                            letterSpacing: 0,
-                            fontWeight: FontWeight.w500,
-                            color: foreground,
-                          ),
+                        fontSize: _labelSize,
+                        letterSpacing: 0,
+                        fontWeight: FontWeight.w500,
+                        color: foreground,
+                      ),
                     ),
                   ],
                 ),
