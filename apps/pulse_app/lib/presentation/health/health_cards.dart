@@ -478,11 +478,9 @@ class HealthSparklineTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final borderColor = selected
-        ? PulseTokens.accent.withValues(alpha: 0.7)
-        : PulseTokens.strokeSubtle;
-    final bg = selected
-        ? PulseTokens.accentSoft
-        : PulseTokens.surface.withValues(alpha: 0.55);
+        ? PulseTokens.accent.withValues(alpha: 0.45)
+        : PulseTokens.stroke;
+    final bg = selected ? PulseTokens.accentSoft : PulseTokens.surface;
 
     final content = Padding(
       padding: EdgeInsets.fromLTRB(12, fillHeight ? 10 : 12, 12, fillHeight ? 8 : 10),
@@ -557,8 +555,8 @@ class HealthSparklineTile extends StatelessWidget {
       curve: PulseTokens.motionCurve,
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(PulseTokens.radiusMd),
-        border: Border.all(color: borderColor, width: selected ? 1.5 : 1),
+        borderRadius: BorderRadius.circular(PulseTokens.radiusCard),
+        border: Border.all(color: borderColor),
       ),
       child: onTap == null
           ? content
@@ -566,7 +564,7 @@ class HealthSparklineTile extends StatelessWidget {
               color: Colors.transparent,
               child: InkWell(
                 onTap: onTap,
-                borderRadius: BorderRadius.circular(PulseTokens.radiusMd),
+                borderRadius: BorderRadius.circular(PulseTokens.radiusCard),
                 splashColor: PulseTokens.accent.withValues(alpha: 0.08),
                 highlightColor: PulseTokens.accent.withValues(alpha: 0.04),
                 mouseCursor: SystemMouseCursors.click,
@@ -619,7 +617,7 @@ class HealthGroupedCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(icon, size: compact ? 14 : 18, color: PulseTokens.accent),
+              Icon(icon, size: compact ? 14 : 18, color: PulseTokens.textTertiary),
               SizedBox(width: compact ? 8 : 10),
               Expanded(
                 child: Text(
@@ -740,23 +738,35 @@ class _DetailRow extends StatelessWidget {
 }
 
 class HealthSparklinePainter extends CustomPainter {
-  HealthSparklinePainter({required this.values, required this.color});
+  HealthSparklinePainter({
+    required this.values,
+    required this.color,
+    this.fixedMin,
+    this.fixedMax,
+    this.strokeWidth = 1.75,
+  });
 
   final List<double> values;
   final Color color;
+
+  /// When both are set, the chart uses this absolute range (e.g. 0–100 %)
+  /// instead of auto-scaling, so a 4 % CPU line stays near the floor.
+  final double? fixedMin;
+  final double? fixedMax;
+  final double strokeWidth;
 
   @override
   void paint(Canvas canvas, Size size) {
     if (values.length < 2) return;
 
-    final minV = values.reduce((a, b) => a < b ? a : b);
-    final maxV = values.reduce((a, b) => a > b ? a : b);
+    final minV = fixedMin ?? values.reduce((a, b) => a < b ? a : b);
+    final maxV = fixedMax ?? values.reduce((a, b) => a > b ? a : b);
     final range = (maxV - minV).abs() < 0.0001 ? 1.0 : (maxV - minV);
     const padY = 4.0;
 
     Offset pointAt(int i) {
       final x = size.width * (i / (values.length - 1));
-      final n = (values[i] - minV) / range;
+      final n = ((values[i] - minV) / range).clamp(0.0, 1.0);
       final y = size.height - padY - (n * (size.height - padY * 2));
       return Offset(x, y);
     }
@@ -789,7 +799,7 @@ class HealthSparklinePainter extends CustomPainter {
       Paint()
         ..color = color
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.75
+        ..strokeWidth = strokeWidth
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round,
     );
@@ -797,7 +807,11 @@ class HealthSparklinePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant HealthSparklinePainter oldDelegate) {
-    return oldDelegate.values != values || oldDelegate.color != color;
+    return oldDelegate.values != values ||
+        oldDelegate.color != color ||
+        oldDelegate.fixedMin != fixedMin ||
+        oldDelegate.fixedMax != fixedMax ||
+        oldDelegate.strokeWidth != strokeWidth;
   }
 }
 

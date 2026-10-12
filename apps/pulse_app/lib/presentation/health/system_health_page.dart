@@ -16,6 +16,7 @@ import '../components/pulse_loading.dart';
 import '../components/service_lifecycle_controls.dart';
 import '../utils/pulse_user_errors.dart';
 import 'health_cards.dart';
+import 'health_overview_bento.dart';
 import 'health_view_models.dart';
 import 'widgets/health_details_panel.dart';
 import 'widgets/process_inventory/process_inventory_store.dart';
@@ -361,6 +362,19 @@ class _SystemHealthBody extends StatelessWidget {
         final visibleIds = settings.dashboardWidgetOrder
             .where(settings.isDashboardWidgetVisible)
             .toList(growable: false);
+        // Status and hero metrics merge into the Midnight bento when both
+        // are shown; the bento takes the slot of whichever comes first.
+        final bento = visibleIds.contains('status') &&
+            visibleIds.contains('heroes');
+        final sectionIds = <String>[];
+        for (final id in visibleIds) {
+          final merged = bento && (id == 'status' || id == 'heroes');
+          if (!merged) {
+            sectionIds.add(id);
+          } else if (!sectionIds.contains(_bentoSectionId)) {
+            sectionIds.add(_bentoSectionId);
+          }
+        }
 
         final dashboard = customizeMode
             ? _DashboardCustomizePanel(settings: settings)
@@ -369,12 +383,13 @@ class _SystemHealthBody extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    for (var i = 0; i < visibleIds.length; i++) ...[
+                    for (var i = 0; i < sectionIds.length; i++) ...[
                       if (i > 0) SizedBox(height: gap),
                       _buildDashboardSection(
                         context,
-                        visibleIds[i],
+                        sectionIds[i],
                         compact: compact,
+                        gap: gap,
                       ),
                     ],
                   ],
@@ -427,12 +442,27 @@ class _SystemHealthBody extends StatelessWidget {
     );
   }
 
+  static const _bentoSectionId = 'bento';
+  static const double _bentoHeight = 340;
+  static const double _bentoHeightCompact = 300;
+
   Widget _buildDashboardSection(
     BuildContext context,
     String id, {
     required bool compact,
+    required double gap,
   }) {
     switch (id) {
+      case _bentoSectionId:
+        return SizedBox(
+          height: compact ? _bentoHeightCompact : _bentoHeight,
+          child: HealthOverviewBento(
+            view: view,
+            selectedPanel: selectedPanel,
+            onSelect: onSelect,
+            gap: gap,
+          ),
+        );
       case 'status':
         return HealthSystemStatusCard(
           summary: view.systemStatus,
@@ -726,9 +756,9 @@ class _SystemInfoStrip extends StatelessWidget {
       height: 34,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: PulseTokens.surface.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(PulseTokens.radiusMd),
-        border: Border.all(color: PulseTokens.stroke.withValues(alpha: 0.5)),
+        color: PulseTokens.surface,
+        borderRadius: BorderRadius.circular(PulseTokens.radiusCard),
+        border: Border.all(color: PulseTokens.stroke),
       ),
       child: Row(
         children: [
