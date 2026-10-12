@@ -314,9 +314,17 @@ class _ReportsPageState extends State<ReportsPage> {
                       ],
                     ),
                   ),
-                  SizedBox(
-                    width: 320,
-                    child: summary(fillHeight: true),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      12,
+                      16,
+                      PulseTokens.pagePadX,
+                      PulseTokens.pagePadBottom,
+                    ),
+                    child: SizedBox(
+                      width: 340,
+                      child: summary(fillHeight: true),
+                    ),
                   ),
                 ],
               );
@@ -469,9 +477,7 @@ class _ExportSummaryBar extends StatelessWidget {
     final body = <Widget>[
       Text(
         'Export summary',
-        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+        style: Theme.of(context).textTheme.titleLarge,
       ),
       const SizedBox(height: PulseTokens.spaceMd),
       _SummaryRow(label: 'Template', value: template.title),
@@ -515,18 +521,17 @@ class _ExportSummaryBar extends StatelessWidget {
       ],
     ];
 
+    // Wide: a floating Midnight panel. Narrow: a bottom bar with a top rule.
     return Material(
-      color: PulseTokens.surface.withValues(alpha: 0.96),
+      color: PulseTokens.surface,
+      shape: fillHeight
+          ? RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(PulseTokens.radiusCard),
+              side: BorderSide(color: PulseTokens.stroke),
+            )
+          : Border(top: BorderSide(color: PulseTokens.stroke)),
       child: Container(
-        decoration: BoxDecoration(
-          border: Border(
-            left: fillHeight
-                ? BorderSide(color: PulseTokens.strokeSubtle)
-                : BorderSide.none,
-            top: BorderSide(color: PulseTokens.strokeSubtle),
-          ),
-        ),
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+        padding: const EdgeInsets.fromLTRB(24, 22, 24, 22),
         child: Column(
           mainAxisSize: fillHeight ? MainAxisSize.max : MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
