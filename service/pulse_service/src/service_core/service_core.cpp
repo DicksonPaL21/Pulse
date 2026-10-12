@@ -170,6 +170,9 @@ int InstallService() {
 
   wchar_t path[MAX_PATH];
   if (!GetModuleFileNameW(nullptr, path, MAX_PATH)) return 1;
+  // Quote the image path: an unquoted path with spaces (C:\Program Files\...)
+  // makes the SCM probe C:\Program.exe first (unquoted service path).
+  const std::wstring binary_path = L"\"" + std::wstring(path) + L"\"";
 
   SC_HANDLE scm = OpenSCManagerW(nullptr, nullptr, SC_MANAGER_ALL_ACCESS);
   if (!scm) {
@@ -181,7 +184,8 @@ int InstallService() {
   if (svc) {
     // Already installed — refresh binary path + auto-start.
     if (!ChangeServiceConfigW(svc, SERVICE_WIN32_OWN_PROCESS, SERVICE_AUTO_START,
-                              SERVICE_ERROR_NORMAL, path, nullptr, nullptr, nullptr,
+                              SERVICE_ERROR_NORMAL, binary_path.c_str(), nullptr,
+                              nullptr, nullptr,
                               L"NT AUTHORITY\\LocalService", nullptr, L"Pulse")) {
       const DWORD err = GetLastError();
       CloseServiceHandle(svc);
@@ -192,8 +196,9 @@ int InstallService() {
   } else {
     svc = CreateServiceW(
         scm, L"PulseService", L"Pulse", SERVICE_ALL_ACCESS,
-        SERVICE_WIN32_OWN_PROCESS, SERVICE_AUTO_START, SERVICE_ERROR_NORMAL, path,
-        nullptr, nullptr, nullptr, L"NT AUTHORITY\\LocalService", nullptr);
+        SERVICE_WIN32_OWN_PROCESS, SERVICE_AUTO_START, SERVICE_ERROR_NORMAL,
+        binary_path.c_str(), nullptr, nullptr, nullptr, L"NT AUTHORITY\\LocalService",
+        nullptr);
     if (!svc) {
       const DWORD err = GetLastError();
       CloseServiceHandle(scm);
