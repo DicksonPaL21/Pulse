@@ -74,6 +74,19 @@ void main() {
     expect(b.resolvedAccent, PulseThemeData.accentPurple);
   });
 
+  test('Midnight starts on lime and ignores the pre-Midnight accent key',
+      () async {
+    SharedPreferences.setMockInitialValues({
+      'appearance.accent_preset': 'blue',
+    });
+    final settings = SettingsController(logger: AppLogger());
+    await settings.load();
+
+    expect(settings.accentPreset, 'lime');
+    expect(settings.accentPresetEnum, PulseAccentPreset.lime);
+    expect(settings.resolvedAccent, PulseThemeData.accentLime);
+  });
+
   test('battery performance mode forces animations off', () async {
     SharedPreferences.setMockInitialValues({});
     final a = SettingsController(logger: AppLogger());

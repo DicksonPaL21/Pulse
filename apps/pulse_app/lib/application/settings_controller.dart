@@ -23,7 +23,9 @@ class SettingsController extends ChangeNotifier {
   static const _kDebugLogging = 'diagnostics.debug_logging';
   static const _kWelcomeDone = 'onboarding.welcome_completed';
   static const _kThemeMode = 'appearance.theme_mode';
-  static const _kAccentPreset = 'appearance.accent_preset';
+  // Midnight (ADR-012) re-keys the accent so every install starts on the new
+  // lime signature; choices made against the old palette are not carried over.
+  static const _kAccentPreset = 'appearance.accent_preset.midnight';
   static const _kCustomAccent = 'appearance.custom_accent_argb';
   static const _kAnimationSpeed = 'appearance.animation_speed';
   static const _kTextScale = 'appearance.text_scale';
@@ -100,8 +102,10 @@ class SettingsController extends ChangeNotifier {
   /// `system` | `light` | `dark`
   String themeMode = 'dark';
 
-  /// `blue` | `green` | `purple` | `orange` | `custom`
-  String accentPreset = 'blue';
+  /// `lime` | `blue` | `green` | `purple` | `orange` | `custom`
+  ///
+  /// Lime is the Midnight default (ADR-012).
+  String accentPreset = 'lime';
 
   int customAccentArgb = defaultCustomAccentArgb;
 
@@ -164,6 +168,8 @@ class SettingsController extends ChangeNotifier {
 
   Color get resolvedAccent {
     switch (accentPreset) {
+      case 'blue':
+        return PulseThemeData.accentBlue;
       case 'green':
         return PulseThemeData.accentGreen;
       case 'purple':
@@ -172,14 +178,16 @@ class SettingsController extends ChangeNotifier {
         return PulseThemeData.accentOrange;
       case 'custom':
         return Color(customAccentArgb);
-      case 'blue':
+      case 'lime':
       default:
-        return PulseThemeData.accentBlue;
+        return PulseThemeData.accentLime;
     }
   }
 
   PulseAccentPreset get accentPresetEnum {
     switch (accentPreset) {
+      case 'blue':
+        return PulseAccentPreset.blue;
       case 'green':
         return PulseAccentPreset.green;
       case 'purple':
@@ -188,9 +196,9 @@ class SettingsController extends ChangeNotifier {
         return PulseAccentPreset.orange;
       case 'custom':
         return PulseAccentPreset.custom;
-      case 'blue':
+      case 'lime':
       default:
-        return PulseAccentPreset.blue;
+        return PulseAccentPreset.lime;
     }
   }
 
@@ -494,7 +502,7 @@ class SettingsController extends ChangeNotifier {
     debugLogging = false;
     welcomeCompleted = false;
     themeMode = 'dark';
-    accentPreset = 'blue';
+    accentPreset = 'lime';
     customAccentArgb = defaultCustomAccentArgb;
     animationSpeed = 1.0;
     textScale = 1.0;
@@ -823,6 +831,7 @@ class SettingsController extends ChangeNotifier {
 
   static String _normalizeAccentPreset(String? value) {
     switch (value) {
+      case 'lime':
       case 'blue':
       case 'green':
       case 'purple':
@@ -830,7 +839,7 @@ class SettingsController extends ChangeNotifier {
       case 'custom':
         return value!;
       default:
-        return 'blue';
+        return 'lime';
     }
   }
 

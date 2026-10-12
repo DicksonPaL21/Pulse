@@ -82,7 +82,8 @@ class _MetadataRow extends StatelessWidget {
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: PulseTokens.textPrimary,
                   height: 1.35,
-                  fontFamily: 'Consolas',
+                  fontFamily: PulseTheme.monoFont,
+                  fontFamilyFallback: PulseTheme.monoFallback,
                   fontSize: dense ? 12 : 12.5,
                 ),
           ),

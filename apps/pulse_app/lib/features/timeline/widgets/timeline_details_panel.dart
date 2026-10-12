@@ -772,7 +772,8 @@ class _OriginalMessageBox extends StatelessWidget {
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: PulseTokens.textSecondary,
               height: 1.45,
-              fontFamily: 'Consolas',
+              fontFamily: PulseTheme.monoFont,
+              fontFamilyFallback: PulseTheme.monoFallback,
             ),
       ),
     );

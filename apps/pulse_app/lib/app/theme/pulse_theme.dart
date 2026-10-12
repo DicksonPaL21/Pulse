@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 /// Named accent presets for appearance settings.
-enum PulseAccentPreset { blue, green, purple, orange, custom }
+enum PulseAccentPreset { lime, blue, green, purple, orange, custom }
 
 /// Ambient holder so legacy `PulseTokens.*` call sites track the active theme
 /// without requiring a [BuildContext]. Synced from [PulseApp]'s builder and
@@ -185,17 +185,21 @@ class PulseThemeData extends ThemeExtension<PulseThemeData> {
   final Curve motionCurve;
   final Curve motionEmphasized;
 
-  static const Color defaultAccent = Color(0xFF60CDFF);
+  /// Midnight signature lime (ADR-012).
+  static const Color accentLime = Color(0xFFC8F04A);
+  static const Color defaultAccent = accentLime;
 
   static const Color accentBlue = Color(0xFF60CDFF);
-  static const Color accentGreen = Color(0xFF6CCB5F);
-  static const Color accentPurple = Color(0xFFB48EFC);
-  static const Color accentOrange = Color(0xFFFFA657);
+  static const Color accentGreen = Color(0xFF34D399);
+  static const Color accentPurple = Color(0xFFA78BFA);
+  static const Color accentOrange = Color(0xFFFB923C);
 
   /// Accent swatch for Settings chips — deeper on light surfaces for contrast.
   static Color accentForPreset(String preset, Brightness brightness) {
     final Color base;
     switch (preset) {
+      case 'lime':
+        base = accentLime;
       case 'green':
         base = accentGreen;
       case 'purple':
@@ -213,9 +217,11 @@ class PulseThemeData extends ThemeExtension<PulseThemeData> {
   static const double iconSm = 14;
   static const double iconMd = 16;
   static const double iconLg = 18;
-  static const double iconNav = 17;
+  static const double iconNav = 20;
   static const double sidebarWidth = 256;
   static const double sidebarNarrow = 216;
+  static const double railWidth = 76;
+  static const double shellGutter = 12;
   static const double appBarHeight = 52;
   static const double contentMaxWidth = 1600;
   static const double windowMinWidth = 1200;
@@ -226,55 +232,57 @@ class PulseThemeData extends ThemeExtension<PulseThemeData> {
   static const double pagePadTop = 20;
   static const double pagePadBottom = 40;
 
-  /// Pulse Dark — deep charcoal surfaces (never pure black).
+  /// Pulse Midnight (ADR-012) — near-black canvas, flat panels, hairline
+  /// borders. Information severity is blue so the accent never reads as a
+  /// severity level.
   factory PulseThemeData.dark({Color accent = defaultAccent}) {
     final derived = _deriveAccent(accent, Brightness.dark);
     return PulseThemeData(
       brightness: Brightness.dark,
-      canvas: const Color(0xFF16171A),
-      canvasTint: const Color(0xFF1A2430),
-      sidebar: const Color(0xCC1A1B1F),
-      sidebarSolid: const Color(0xFF1A1B1F),
-      header: const Color(0xFF1E1F24),
-      micaOverlay: const Color(0x14F5F5F5),
-      surface: const Color(0xFF222329),
-      surfaceElevated: const Color(0xFF2A2B32),
-      surfaceHover: const Color(0xFF32333B),
-      surfacePressed: const Color(0xFF383942),
-      acrylicFill: const Color(0xE6222329),
-      stroke: const Color(0xFF3A3C44),
-      strokeSubtle: const Color(0xFF282A30),
-      strokeStrong: const Color(0xFF4A4C56),
+      canvas: const Color(0xFF08080A),
+      canvasTint: const Color(0xFF0D0D10),
+      sidebar: const Color(0xFF111114),
+      sidebarSolid: const Color(0xFF111114),
+      header: const Color(0xFF08080A),
+      micaOverlay: const Color(0x00000000),
+      surface: const Color(0xFF111114),
+      surfaceElevated: const Color(0xFF17171B),
+      surfaceHover: const Color(0xFF1E1E23),
+      surfacePressed: const Color(0xFF26262C),
+      acrylicFill: const Color(0xF2111114),
+      stroke: const Color(0x14FFFFFF),
+      strokeSubtle: const Color(0x0FFFFFFF),
+      strokeStrong: const Color(0x24FFFFFF),
       focusRing: derived.focusRing,
-      textPrimary: const Color(0xFFF2F3F5),
-      textSecondary: const Color(0xFFB0B3BB),
-      textTertiary: const Color(0xFF8B8F99),
-      textDisabled: const Color(0xFF5C606A),
+      textPrimary: const Color(0xFFF4F4F5),
+      textSecondary: const Color(0xFFA1A1AA),
+      textTertiary: const Color(0xFF8B8B94),
+      textDisabled: const Color(0xFF52525B),
       accent: accent,
       accentMuted: derived.muted,
       accentSoft: derived.soft,
       onAccent: derived.onAccent,
-      success: const Color(0xFF6CCB5F),
-      successSoft: const Color(0xFF1C301E),
-      warning: const Color(0xFFE8B339),
-      warningSoft: const Color(0xFF302814),
-      error: const Color(0xFFFF99A4),
-      errorSoft: const Color(0xFF382024),
-      info: accent,
-      infoSoft: derived.soft,
-      severityInfo: accent,
-      severityWarning: const Color(0xFFE8B339),
-      severityError: const Color(0xFFFF8A96),
-      severitySuccess: const Color(0xFF6CCB5F),
-      severityCritical: const Color(0xFFFF6B7A),
-      radiusSm: 6,
-      radiusMd: 8,
-      radiusLg: 10,
-      radiusXl: 14,
-      radiusCard: 12,
+      success: const Color(0xFF34D399),
+      successSoft: const Color(0xFF0F2A21),
+      warning: const Color(0xFFFFB224),
+      warningSoft: const Color(0xFF2D2310),
+      error: const Color(0xFFFF6B6B),
+      errorSoft: const Color(0xFF2D1415),
+      info: const Color(0xFF6BA4FF),
+      infoSoft: const Color(0xFF14213A),
+      severityInfo: const Color(0xFF6BA4FF),
+      severityWarning: const Color(0xFFFFB224),
+      severityError: const Color(0xFFFF6B6B),
+      severitySuccess: const Color(0xFF34D399),
+      severityCritical: const Color(0xFFFF4D5E),
+      radiusSm: 8,
+      radiusMd: 10,
+      radiusLg: 12,
+      radiusXl: 18,
+      radiusCard: 18,
       radiusPill: 999,
-      radiusIconWell: 10,
-      radiusProcessIcon: 7,
+      radiusIconWell: 12,
+      radiusProcessIcon: 8,
       spaceXs: 4,
       spaceSm: 8,
       spaceMd: 16,
@@ -290,58 +298,57 @@ class PulseThemeData extends ThemeExtension<PulseThemeData> {
     );
   }
 
-  /// Pulse Light — first-class light UI (Win11 Settings / Linear / Raycast).
-  /// Never pure white/black; cards separate via border + soft elevation.
+  /// Pulse Midnight light — neutral zinc surfaces with a darkened accent so
+  /// accent text and fills keep contrast on pale backgrounds.
   factory PulseThemeData.light({Color accent = defaultAccent}) {
-    // Light accent is slightly deeper for contrast on pale surfaces.
     final lightAccent = _lightAccent(accent);
     final derived = _deriveAccent(lightAccent, Brightness.light);
     return PulseThemeData(
       brightness: Brightness.light,
-      canvas: const Color(0xFFF4F5F7),
-      canvasTint: const Color(0xFFE8EEF6),
-      sidebar: const Color(0xF2ECEEF2),
-      sidebarSolid: const Color(0xFFECEEF2),
-      header: const Color(0xFFE8EAEE),
-      micaOverlay: const Color(0x0A1C1E24),
-      surface: const Color(0xFFF9FAFB),
-      surfaceElevated: const Color(0xFFFCFCFD),
-      surfaceHover: const Color(0xFFEEF0F4),
-      surfacePressed: const Color(0xFFE4E7ED),
-      acrylicFill: const Color(0xE6F9FAFB),
-      stroke: const Color(0xFFD8DCE3),
-      strokeSubtle: const Color(0xFFE6E8EE),
-      strokeStrong: const Color(0xFFC2C7D0),
+      canvas: const Color(0xFFEDEDF0),
+      canvasTint: const Color(0xFFE6E6EA),
+      sidebar: const Color(0xFFFFFFFF),
+      sidebarSolid: const Color(0xFFFFFFFF),
+      header: const Color(0xFFEDEDF0),
+      micaOverlay: const Color(0x00000000),
+      surface: const Color(0xFFFFFFFF),
+      surfaceElevated: const Color(0xFFF7F7F8),
+      surfaceHover: const Color(0xFFF0F0F2),
+      surfacePressed: const Color(0xFFE4E4E7),
+      acrylicFill: const Color(0xF2FFFFFF),
+      stroke: const Color(0xFFE4E4E7),
+      strokeSubtle: const Color(0xFFEDEDF0),
+      strokeStrong: const Color(0xFFD4D4D8),
       focusRing: derived.focusRing,
-      textPrimary: const Color(0xFF1C1E24),
-      textSecondary: const Color(0xFF5C6370),
-      textTertiary: const Color(0xFF7A8290),
-      textDisabled: const Color(0xFFA8AEB8),
+      textPrimary: const Color(0xFF09090B),
+      textSecondary: const Color(0xFF52525B),
+      textTertiary: const Color(0xFF71717A),
+      textDisabled: const Color(0xFFA1A1AA),
       accent: lightAccent,
       accentMuted: derived.muted,
       accentSoft: derived.soft,
       onAccent: derived.onAccent,
-      success: const Color(0xFF0F7B0F),
-      successSoft: const Color(0xFFE3F5E1),
+      success: const Color(0xFF047857),
+      successSoft: const Color(0xFFDDF5EA),
       warning: const Color(0xFF9A5B00),
       warningSoft: const Color(0xFFFFF3D6),
-      error: const Color(0xFFC50F1F),
-      errorSoft: const Color(0xFFFDE7EA),
-      info: lightAccent,
-      infoSoft: derived.soft,
-      severityInfo: lightAccent,
+      error: const Color(0xFFC81E1E),
+      errorSoft: const Color(0xFFFDE7E7),
+      info: const Color(0xFF1D4ED8),
+      infoSoft: const Color(0xFFE3EBFD),
+      severityInfo: const Color(0xFF1D4ED8),
       severityWarning: const Color(0xFF9A5B00),
-      severityError: const Color(0xFFC50F1F),
-      severitySuccess: const Color(0xFF0F7B0F),
-      severityCritical: const Color(0xFFA4262C),
-      radiusSm: 6,
-      radiusMd: 8,
-      radiusLg: 10,
-      radiusXl: 14,
-      radiusCard: 12,
+      severityError: const Color(0xFFC81E1E),
+      severitySuccess: const Color(0xFF047857),
+      severityCritical: const Color(0xFFA4161A),
+      radiusSm: 8,
+      radiusMd: 10,
+      radiusLg: 12,
+      radiusXl: 18,
+      radiusCard: 18,
       radiusPill: 999,
-      radiusIconWell: 10,
-      radiusProcessIcon: 7,
+      radiusIconWell: 12,
+      radiusProcessIcon: 8,
       spaceXs: 4,
       spaceSm: 8,
       spaceMd: 16,
@@ -357,25 +364,19 @@ class PulseThemeData extends ThemeExtension<PulseThemeData> {
     );
   }
 
-  /// Soft depth for light; restrained lift for dark. Never harsh black shadows.
+  /// Midnight is flat in dark mode: surfaces separate by tone and hairline
+  /// borders. Light mode keeps a barely visible lift.
   List<BoxShadow> elevationSoft() {
     if (brightness == Brightness.light) {
       return [
         BoxShadow(
-          color: const Color(0xFF1C1E24).withValues(alpha: 0.04),
+          color: const Color(0xFF09090B).withValues(alpha: 0.04),
           blurRadius: 2,
           offset: const Offset(0, 1),
         ),
       ];
     }
-    return [
-      BoxShadow(
-        color: const Color(0xFF050508).withValues(alpha: 0.35),
-        blurRadius: 8,
-        offset: const Offset(0, 1),
-        spreadRadius: -1,
-      ),
-    ];
+    return const [];
   }
 
   List<BoxShadow> elevation1() {
@@ -646,9 +647,15 @@ class PulseThemeData extends ThemeExtension<PulseThemeData> {
 
   static double _lerpDouble(double a, double b, double t) => a + (b - a) * t;
 
+  static const Color _darkPanel = Color(0xFF111114);
+  static const double _darkAccentWashAlpha = 0.14;
+
   /// Map a dark-leaning accent to a light-surface accent without inventing hues.
   static Color _lightAccent(Color accent) {
-    if (accent == accentBlue || accent == defaultAccent) {
+    if (accent == accentLime) {
+      return const Color(0xFF4D7C0F); // lime-700: readable on white
+    }
+    if (accent == accentBlue) {
       return const Color(0xFF0F6CBD); // Win11 Settings blue
     }
     final hsv = HSVColor.fromColor(accent);
@@ -671,19 +678,20 @@ class PulseThemeData extends ThemeExtension<PulseThemeData> {
         )
         .toColor();
 
+    // Dark: a 14 % accent wash over the Midnight panel color, so selected
+    // states read as the accent rather than a muddy desaturated tone.
     final soft = brightness == Brightness.dark
-        ? hsv
-            .withSaturation((hsv.saturation * 0.5).clamp(0.0, 1.0))
-            .withValue(0.18)
-            .toColor()
+        ? Color.alphaBlend(
+            accent.withValues(alpha: _darkAccentWashAlpha),
+            _darkPanel,
+          )
         : hsv
             .withSaturation((hsv.saturation * 0.18).clamp(0.0, 1.0))
             .withValue(0.93)
             .toColor();
 
-    // Avoid pure white/black for on-accent labels.
     final onAccent = accent.computeLuminance() > 0.45
-        ? const Color(0xFF0A1F2C)
+        ? const Color(0xFF09090B)
         : const Color(0xFFF5F7FA);
 
     final focusRing = hsv
@@ -762,22 +770,24 @@ abstract final class PulseTokens {
   static Color get severitySuccess => _t.severitySuccess;
   static Color get severityCritical => _t.severityCritical;
 
-  static const double radiusSm = 6;
-  static const double radiusMd = 8;
-  static const double radiusLg = 10;
-  static const double radiusXl = 14;
-  static const double radiusCard = 12;
+  static const double radiusSm = 8;
+  static const double radiusMd = 10;
+  static const double radiusLg = 12;
+  static const double radiusXl = 18;
+  static const double radiusCard = 18;
   static const double radiusPill = 999;
-  static const double radiusIconWell = 10;
-  static const double radiusProcessIcon = 7;
+  static const double radiusIconWell = 12;
+  static const double radiusProcessIcon = 8;
 
   static const double iconSm = 14;
   static const double iconMd = 16;
   static const double iconLg = 18;
-  static const double iconNav = 17;
+  static const double iconNav = PulseThemeData.iconNav;
 
   static const double sidebarWidth = 256;
   static const double sidebarNarrow = 216;
+  static const double railWidth = PulseThemeData.railWidth;
+  static const double shellGutter = PulseThemeData.shellGutter;
   static const double appBarHeight = 52;
   static const double contentMaxWidth = 1600;
 
@@ -825,7 +835,15 @@ abstract final class PulseTokens {
 }
 
 class PulseTheme {
-  static const String _font = 'Segoe UI';
+  /// Bundled UI family (assets/fonts, OFL). See ADR-012.
+  static const String _font = 'Geist';
+
+  /// Bundled monospace family for numbers, identifiers and raw XML.
+  static const String monoFont = 'GeistMono';
+
+  /// Fallbacks when a glyph is missing from Geist (e.g. rare scripts).
+  static const List<String> fontFallback = ['Segoe UI Variable Text', 'Segoe UI'];
+  static const List<String> monoFallback = ['Cascadia Mono', 'Consolas'];
 
   static ThemeData dark({Color? accent}) {
     final tokens = PulseThemeData.dark(accent: accent ?? PulseThemeData.defaultAccent);
@@ -844,6 +862,7 @@ class PulseTheme {
         .textTheme
         .apply(
           fontFamily: _font,
+          fontFamilyFallback: fontFallback,
           bodyColor: tokens.textPrimary,
           displayColor: tokens.textPrimary,
         );
@@ -851,28 +870,28 @@ class PulseTheme {
     final textTheme = base.copyWith(
       headlineMedium: base.headlineMedium?.copyWith(
         fontWeight: FontWeight.w600,
-        letterSpacing: -0.45,
-        fontSize: 28,
-        height: 1.22,
+        letterSpacing: -0.9,
+        fontSize: 30,
+        height: 1.2,
         color: tokens.textPrimary,
       ),
       headlineSmall: base.headlineSmall?.copyWith(
         fontWeight: FontWeight.w600,
-        letterSpacing: -0.28,
+        letterSpacing: -0.55,
         fontSize: 22,
         height: 1.28,
         color: tokens.textPrimary,
       ),
       titleLarge: base.titleLarge?.copyWith(
         fontWeight: FontWeight.w600,
-        letterSpacing: -0.22,
+        letterSpacing: -0.4,
         fontSize: 20,
         height: 1.28,
         color: tokens.textPrimary,
       ),
       titleMedium: base.titleMedium?.copyWith(
         fontWeight: FontWeight.w600,
-        letterSpacing: -0.12,
+        letterSpacing: -0.15,
         fontSize: 15,
         height: 1.38,
         color: tokens.textPrimary,
@@ -889,8 +908,8 @@ class PulseTheme {
         color: tokens.textPrimary,
       ),
       bodyMedium: base.bodyMedium?.copyWith(
-        height: 1.55,
-        fontSize: 13.5,
+        height: 1.5,
+        fontSize: 14,
         color: tokens.textSecondary,
       ),
       bodySmall: base.bodySmall?.copyWith(
@@ -944,6 +963,7 @@ class PulseTheme {
       useMaterial3: true,
       brightness: brightness,
       fontFamily: _font,
+      fontFamilyFallback: fontFallback,
       scaffoldBackgroundColor: tokens.canvas,
       canvasColor: tokens.canvas,
       cardColor: tokens.surface,

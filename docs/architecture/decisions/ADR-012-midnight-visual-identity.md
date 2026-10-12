@@ -46,7 +46,7 @@ Information severity is blue, not the accent, so the signature color never reads
 
 ### D3 — Accent presets
 
-New `lime` preset becomes the default. Existing `blue`, `green`, `purple`, `orange` and `custom` keys keep working, so persisted preferences are never rewritten. Users who never chose an accent (no stored key) get lime.
+New `lime` preset becomes the default. `blue`, `green`, `purple`, `orange` and `custom` remain available. The preference moves to a new key (`appearance.accent_preset.midnight`), so every install starts on lime after the upgrade: accents chosen against the old palette were tuned for different surfaces, and the old default was saved for most users without an explicit choice. The old key is left untouched and ignored.
 
 ### D4 — Typography
 

@@ -1517,7 +1517,8 @@ class _InventoryDetail extends StatelessWidget {
             row.id,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: PulseTokens.textSecondary,
-                  fontFamily: 'Consolas',
+                  fontFamily: PulseTheme.monoFont,
+                  fontFamilyFallback: PulseTheme.monoFallback,
                 ),
           ),
           if (sections.isEmpty) ...[

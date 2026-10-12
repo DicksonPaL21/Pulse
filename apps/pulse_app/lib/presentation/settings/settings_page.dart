@@ -584,6 +584,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   runSpacing: 10,
                   children: [
                     for (final preset in [
+                      ('lime', PulseThemeData.accentForPreset('lime', Theme.of(context).brightness)),
                       ('blue', PulseThemeData.accentForPreset('blue', Theme.of(context).brightness)),
                       ('green', PulseThemeData.accentForPreset('green', Theme.of(context).brightness)),
                       ('purple', PulseThemeData.accentForPreset('purple', Theme.of(context).brightness)),
