@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
+import '../../app/dev_flags.dart';
 import '../../app/theme/pulse_theme.dart';
 import '../../app/theme/pulse_window_chrome.dart';
 import '../../application/diagnostics_controller.dart';
@@ -49,7 +50,9 @@ class AppShell extends StatefulWidget {
 }
 
 class _AppShellState extends State<AppShell> {
-  int _index = PulseShellPages.timeline;
+  int _index = kStartPage >= 0 && kStartPage < PulseShellPages.count
+      ? kStartPage
+      : PulseShellPages.timeline;
   bool _paletteOpen = false;
   ShellNavigation? _shellNav;
 
