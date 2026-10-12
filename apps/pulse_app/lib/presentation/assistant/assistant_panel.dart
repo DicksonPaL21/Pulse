@@ -510,7 +510,7 @@ class _LocalAiSelectionControls extends StatelessWidget {
     final selectedModel = assistant.selectedModel;
     final enabled = !assistant.awaitingReply;
 
-    return Column(
+    final providerField = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
@@ -551,7 +551,11 @@ class _LocalAiSelectionControls extends StatelessWidget {
               ),
             ),
           ),
-        SizedBox(height: compact ? PulseTokens.spaceSm : PulseTokens.spaceMd),
+      ],
+    );
+    final modelField = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
         Text(
           'Model',
           style: Theme.of(context).textTheme.labelMedium?.copyWith(
@@ -602,6 +606,26 @@ class _LocalAiSelectionControls extends StatelessWidget {
           ),
       ],
     );
+
+    // Compact (chat header): provider and model sit side by side.
+    if (compact) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(child: providerField),
+          const SizedBox(width: PulseTokens.spaceSm + 4),
+          Expanded(child: modelField),
+        ],
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        providerField,
+        const SizedBox(height: PulseTokens.spaceMd),
+        modelField,
+      ],
+    );
   }
 }
 
@@ -613,6 +637,9 @@ class _ChatReadyState extends StatefulWidget {
 }
 
 class _ChatReadyStateState extends State<_ChatReadyState> {
+  /// Large enough to stay pill-shaped while the composer grows to 4 lines.
+  static const double _composerRadius = 24;
+
   final _scroll = ScrollController();
   final _composer = TextEditingController();
 
@@ -751,18 +778,24 @@ class _ChatReadyStateState extends State<_ChatReadyState> {
                   decoration: InputDecoration(
                     hintText: 'Ask about this PC…',
                     filled: true,
-                    fillColor: PulseTokens.card,
+                    fillColor: PulseTokens.surface,
                     contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
+                      horizontal: 20,
+                      vertical: 14,
                     ),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(PulseTokens.radiusMd),
-                      borderSide: BorderSide(color: PulseTokens.border),
+                      borderRadius: BorderRadius.circular(_composerRadius),
+                      borderSide: BorderSide(color: PulseTokens.strokeStrong),
                     ),
                     enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(PulseTokens.radiusMd),
-                      borderSide: BorderSide(color: PulseTokens.border),
+                      borderRadius: BorderRadius.circular(_composerRadius),
+                      borderSide: BorderSide(color: PulseTokens.strokeStrong),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(_composerRadius),
+                      borderSide: BorderSide(
+                        color: PulseTokens.accent.withValues(alpha: 0.6),
+                      ),
                     ),
                   ),
                   onChanged: assistant.setDraft,
@@ -785,8 +818,9 @@ class _ChatReadyStateState extends State<_ChatReadyState> {
                   tooltip: 'Send',
                   onPressed: assistant.canSend ? _submit : null,
                   style: IconButton.styleFrom(
+                    minimumSize: const Size(46, 46),
                     backgroundColor: PulseTokens.accent,
-                    foregroundColor: Colors.white,
+                    foregroundColor: PulseTokens.onAccent,
                     disabledBackgroundColor:
                         PulseTokens.accent.withValues(alpha: 0.35),
                   ),
@@ -807,47 +841,71 @@ class _EmptyChatHints extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      padding: const EdgeInsets.fromLTRB(20, 32, 20, 16),
       children: [
-        Text(
-          'Ask about this Windows PC',
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          'Pulse Assistant can inspect read-only diagnostics through your local model.',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: PulseTokens.textSecondary,
-                height: 1.4,
-                fontSize: 13,
-              ),
-        ),
-        const SizedBox(height: PulseTokens.spaceMd),
-        for (final prompt in AssistantSuggestedPrompts.values) ...[
-          const SizedBox(height: 8),
-          InkWell(
-            onTap: () => onPrompt(prompt),
-            borderRadius: BorderRadius.circular(PulseTokens.radiusMd),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(PulseTokens.radiusMd),
-                border: Border.all(color: PulseTokens.border),
-                color: PulseTokens.card,
-              ),
-              child: Text(
-                prompt,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontSize: 13,
-                    ),
-              ),
+        Center(
+          child: Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: PulseTokens.accentSoft,
+              borderRadius: BorderRadius.circular(PulseTokens.radiusLg + 4),
+            ),
+            child: Icon(
+              LucideIcons.sparkles,
+              size: 24,
+              color: PulseTokens.accent,
             ),
           ),
-        ],
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'Ask about this Windows PC',
+          textAlign: TextAlign.center,
+          style: textTheme.headlineSmall?.copyWith(fontSize: 24),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Pulse Assistant can inspect read-only diagnostics through your local model.',
+          textAlign: TextAlign.center,
+          style: textTheme.bodyMedium?.copyWith(
+            color: PulseTokens.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 24),
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final prompt in AssistantSuggestedPrompts.values)
+              Material(
+                color: Colors.transparent,
+                shape: StadiumBorder(
+                  side: BorderSide(color: PulseTokens.strokeStrong),
+                ),
+                child: InkWell(
+                  onTap: () => onPrompt(prompt),
+                  customBorder: const StadiumBorder(),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 9,
+                    ),
+                    child: Text(
+                      prompt,
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: PulseTokens.textPrimary,
+                        fontSize: 13.5,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ],
     );
   }
@@ -863,10 +921,14 @@ class _ChatBubble extends StatelessWidget {
     final isUser = message.role == AssistantMessageRole.user;
     final align =
         isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start;
-    final bg = isUser ? PulseTokens.accentSoft : PulseTokens.card;
+    // Midnight: the user's own words are an inverted bubble; replies sit on
+    // the panel color so long answers stay calm to read.
+    final bg = isUser ? PulseTokens.textPrimary : PulseTokens.surfaceElevated;
     final fg = message.isError
         ? PulseTokens.error
-        : PulseTokens.textPrimary;
+        : isUser
+            ? PulseTokens.canvas
+            : PulseTokens.textPrimary;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -877,14 +939,16 @@ class _ChatBubble extends StatelessWidget {
             constraints: BoxConstraints(
               maxWidth: MediaQuery.sizeOf(context).width * 0.78,
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: bg,
-              borderRadius: BorderRadius.circular(PulseTokens.radiusMd),
+              borderRadius: BorderRadius.circular(PulseTokens.radiusXl),
               border: Border.all(
                 color: message.isError
                     ? PulseTokens.error.withValues(alpha: 0.35)
-                    : PulseTokens.border,
+                    : isUser
+                        ? Colors.transparent
+                        : PulseTokens.stroke,
               ),
             ),
             child: Column(
@@ -905,8 +969,8 @@ class _ChatBubble extends StatelessWidget {
                     message.text,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: fg,
-                          height: 1.4,
-                          fontSize: 13.5,
+                          height: 1.5,
+                          fontSize: 14.5,
                         ),
                   )
                 else if (message.isStreaming)
@@ -967,16 +1031,16 @@ InputDecoration _fieldDecoration({bool compact = false}) {
     filled: true,
     fillColor: PulseTokens.card,
     contentPadding: EdgeInsets.symmetric(
-      horizontal: 12,
-      vertical: compact ? 6 : 10,
+      horizontal: 16,
+      vertical: compact ? 8 : 12,
     ),
     border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(PulseTokens.radiusMd),
-      borderSide: BorderSide(color: PulseTokens.border),
+      borderRadius: BorderRadius.circular(PulseTokens.radiusPill),
+      borderSide: BorderSide(color: PulseTokens.stroke),
     ),
     enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(PulseTokens.radiusMd),
-      borderSide: BorderSide(color: PulseTokens.border),
+      borderRadius: BorderRadius.circular(PulseTokens.radiusPill),
+      borderSide: BorderSide(color: PulseTokens.stroke),
     ),
   );
 }
@@ -1090,10 +1154,8 @@ class _PrivacyStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      color: PulseTokens.successSoft.withValues(alpha: 0.45),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       child: Row(
         children: [
           Icon(LucideIcons.shieldCheck, size: 14, color: PulseTokens.success),
@@ -1102,10 +1164,8 @@ class _PrivacyStrip extends StatelessWidget {
             child: Text(
               'Local AI · Your diagnostic data stays on this PC',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: PulseTokens.success,
-                    fontSize: 11.5,
-                    height: 1.3,
-                    fontWeight: FontWeight.w500,
+                    color: PulseTokens.textSecondary,
+                    fontSize: 12,
                   ),
             ),
           ),
