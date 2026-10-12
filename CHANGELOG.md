@@ -5,10 +5,11 @@ All notable changes to Pulse are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.2.0] — 2026-10-12
 
 ### Changed
 
+- Product version stamped **1.2.0** across UI, PulseService, installer, MSIX and PulseMCP
 - **Midnight visual identity** ([ADR-012](docs/architecture/decisions/ADR-012-midnight-visual-identity.md)): near-black canvas, flat panels, lime signature accent, bundled Geist and Geist Mono fonts
 - Icon rail replaces the sidebar; command search moves into the title bar
 - Timeline: plain-language hero for the last hour, 24-hour activity strip, story-feed rows, and an Explained / Technical / Raw XML inspector
@@ -19,10 +20,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - System Health showed "Windows 10" on Windows 11 because the registry ProductName was never updated by Windows
 - Assistant send icon was white on the accent fill and hard to read
+- PulseService registered an unquoted image path (`C:\Program Files\…`), the classic unquoted service path issue; the path is now quoted and Diagnose no longer reports a path mismatch
+- Diagnose showed build version 1.1.0 for the 1.2.0 service
+- Microsoft Store package now embeds the full PulseMCP payload (launcher, private Node runtime and server); earlier Store builds could miss the server files
 
 ### Upgrade notes
 
 - The accent preference is re-keyed: every install starts on the new lime accent once; pick another under Settings → Appearance
+- Install over 1.1.0 using `Pulse-Setup-1.2.0-windows-x64.exe`
+- See [docs/releases/v1.2.0.md](docs/releases/v1.2.0.md) and [docs/guides/upgrade-notes.md](docs/guides/upgrade-notes.md)
 
 ## [1.1.0] — 2026-08-13
 

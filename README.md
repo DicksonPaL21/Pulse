@@ -16,7 +16,7 @@
 <p align="center">
   <img alt="Windows" src="https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4?style=flat-square&logo=windows&logoColor=white" />
   <img alt="CI" src="https://img.shields.io/github/actions/workflow/status/Regncreative/Pulse/ci.yml?branch=master&style=flat-square&label=CI" />
-  <img alt="Release" src="https://img.shields.io/badge/release-v1.1.0-22C55E?style=flat-square" />
+  <img alt="Release" src="https://img.shields.io/badge/release-v1.2.0-22C55E?style=flat-square" />
   <img alt="Flutter" src="https://img.shields.io/badge/UI-Flutter-02569B?style=flat-square&logo=flutter&logoColor=white" />
   <img alt="C++" src="https://img.shields.io/badge/service-C%2B%2B%2020-00599C?style=flat-square&logo=cplusplus&logoColor=white" />
   <img alt="License" src="https://img.shields.io/badge/license-MIT-22C55E?style=flat-square" />
@@ -46,7 +46,7 @@ It turns raw system activity into a readable timeline:
 | Service Control Manager · 7036 | Windows Update service entered the running state. |
 | Kernel-Power · 41 | The system restarted without a clean shutdown. |
 
-Designed to feel like a built-in Windows 11 utility (Fluent Design, Mica, dark-first) — not a typical diagnostics utility.
+Designed in **Midnight**, Pulse's dark-first visual identity: near-black panels, one lime accent for what is live, and plain language before technical detail.
 
 > **Philosophy:** Observation only. No injection. No hooks. No patches. No telemetry. No cloud.
 
@@ -55,7 +55,8 @@ Designed to feel like a built-in Windows 11 utility (Fluent Design, Mica, dark-f
 ## Features
 
 ### Timeline
-- **Human-readable events** — Level 1 plain language first; technical summary and raw XML on demand
+- **Plain-language summary** — the last hour in one sentence, with a 24-hour activity strip
+- **Human-readable events** — story feed with plain language first; Explained / Technical / Raw XML tabs in the inspector
 - **Live monitoring** — Windows Event Log via `EvtSubscribe`, pushed over named-pipe IPC
 - **Historical snapshot** — recent events on connect, then live prepend as Windows works
 - **Search & filters** — severity, source, category, provider, process, and date presets (including last 15 minutes)
@@ -63,6 +64,7 @@ Designed to feel like a built-in Windows 11 utility (Fluent Design, Mica, dark-f
 - **Incidents & export** — correlated groups plus JSON/CSV export of the session
 
 ### System Health
+- **Overview bento** — system pulse with health score, memory ring, CPU, GPU and network tiles
 - **CPU, Memory, GPU, Disk, Network** — live cards and 60-second sparklines
 - **PDH Processor Utility** — frequency-aware CPU % (not just classic Processor Time)
 - **Hardware summary** — OS, CPU, GPU, memory, uptime at a glance
@@ -95,7 +97,7 @@ Designed to feel like a built-in Windows 11 utility (Fluent Design, Mica, dark-f
 - **Local-first** — everything stays on this PC
 - **No telemetry / analytics / ads**
 - **Fast & light** — idle near-zero CPU, responsive scrolling
-- **Native Windows feel** — custom title bar, acrylic/mica, DPI-aware
+- **Native Windows feel** — custom title bar, icon rail, Ctrl+K command search, DPI-aware
 
 ---
 
@@ -172,7 +174,7 @@ ETW, WMI, and plugins are intentional future milestones — see [docs/architectu
 
 ### For everyone (stable installer)
 
-1. Download **`Pulse-Setup-1.1.0-windows-x64.exe`** from [GitHub Releases](https://github.com/Regncreative/Pulse/releases/tag/v1.1.0)
+1. Download **`Pulse-Setup-1.2.0-windows-x64.exe`** from [GitHub Releases](https://github.com/Regncreative/Pulse/releases/tag/v1.2.0)
 2. Run the installer and accept the UAC prompt
 3. PulseService is registered and started automatically
 4. Skip or complete the short welcome — then open Timeline or System Health
@@ -200,7 +202,7 @@ Developers can also build a local package:
 .\tools\scripts\package_beta.ps1
 ```
 
-Output: `dist\Pulse-Setup-1.1.0-windows-x64.exe`, `dist\Pulse\`, and `dist\Pulse-1.1.0-windows-x64.zip`
+Output: `dist\Pulse-Setup-1.2.0-windows-x64.exe`, `dist\Pulse\`, and `dist\Pulse-1.2.0-windows-x64.zip`
 
 ### For developers (day-to-day)
 
@@ -268,7 +270,7 @@ Pulse ships **PulseMCP** — a read-only Model Context Protocol server for Curso
 
 | Layer | Stack |
 |---|---|
-| **UI** | Flutter Desktop · Provider · window_manager · flutter_acrylic · Lucide icons |
+| **UI** | Flutter Desktop · Provider · window_manager · Geist / Geist Mono · Lucide icons |
 | **Service** | C++20 · CMake · Win32 · Wevtapi · PDH · DXGI · IP Helper · SetupAPI / SMBIOS |
 | **IPC** | Named pipes · framed binary protocol (`pulse_wire`) · shared Dart/C++ codec |
 | **Protocol** | `shared/pulse_protocol` (C++ + Dart) · Protobuf schema for FastMCP tools |
@@ -318,6 +320,7 @@ Pulse/
 - [x] Stable installer (`package_beta.ps1` → Inno Setup)
 - [x] **v1.0.0** stable release
 - [x] **v1.1.0** feature release (Assistant, Store MSIX)
+- [x] **v1.2.0** Midnight redesign (icon rail, story Timeline, Overview bento)
 - [ ] GitHub Releases auto-update
 - [ ] Crash / WER timeline
 - [ ] ETW engine (future milestone)
@@ -353,6 +356,7 @@ Every feature should answer one question: **"What is Windows doing right now?"**
 |---|---|
 | [AGENTS.md](AGENTS.md) | Product vision, principles, AI / development rules |
 | [CHANGELOG.md](CHANGELOG.md) | Release history |
+| [docs/releases/v1.2.0.md](docs/releases/v1.2.0.md) | v1.2.0 release notes (Midnight) |
 | [docs/releases/v1.1.0.md](docs/releases/v1.1.0.md) | v1.1.0 release notes |
 | [docs/releases/v1.0.0.md](docs/releases/v1.0.0.md) | v1.0.0 release notes |
 | [docs/architecture/README.md](docs/architecture/README.md) | Full architecture package + ADRs |

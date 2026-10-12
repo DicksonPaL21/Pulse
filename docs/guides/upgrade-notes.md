@@ -1,5 +1,15 @@
 # Upgrade notes
 
+## To 1.2.0
+
+- Installer: `Pulse-Setup-1.2.0-windows-x64.exe`
+- Product stamp is **`1.2.0`** (UI, PulseService, PulseMCP)
+- Midnight redesign ([ADR-012](../architecture/decisions/ADR-012-midnight-visual-identity.md)); no settings migration required
+- After upgrading from **1.1.0**:
+  1. Confirm Diagnose → Service shows **1.2.0**
+  2. The accent starts on lime once; pick another under **Settings → Appearance** if you prefer
+  3. If you use MCP: **Settings → AI Integration → Unregister → Register**
+
 ## To 1.1.0
 
 - Installer: `Pulse-Setup-1.1.0-windows-x64.exe`
