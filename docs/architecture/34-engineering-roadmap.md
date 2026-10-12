@@ -1,7 +1,7 @@
 # 34 — Engineering Roadmap (Remaining Work)
 
 **Status:** **Frozen** (approved 2026-08-01)  
-**Excludes:** Theme redesign (Fluent Light/Dark / ThemeExtension) — separate track.  
+**Excludes:** Theme redesign (Fluent Light/Dark / ThemeExtension) — separate track. Lifted by [ADR-012](decisions/ADR-012-midnight-visual-identity.md) (Midnight).  
 **Constitution:** [AGENTS.md](../../AGENTS.md) — observation only; no fabricated metrics; no collectors without ADRs.
 
 **Change control:** Future work follows this roadmap unless a new ADR explicitly revises direction. Do not reorder waves without an ADR amendment referencing this document.
@@ -522,7 +522,7 @@ Distinct from **Plugin SDK (R13)** (in-process/out-of-process *extensions inside
 
 ## 7. Explicit non-goals (until ADR)
 
-- Theme redesign (excluded)
+- Theme redesign (excluded) — superseded by [ADR-012](decisions/ADR-012-midnight-visual-identity.md)
 - Embedded LLM or API keys in Pulse
 - Administrative MCP tools without ADR
 - Fake inventory catalogs
