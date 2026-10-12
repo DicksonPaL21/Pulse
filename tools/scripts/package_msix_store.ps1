@@ -309,6 +309,32 @@ if (-not (Test-Path -LiteralPath $embedded)) {
   throw "FATAL: service\PulseService.exe missing after copy - refusing to pack Store MSIX."
 }
 
+# --- Embed PulseMCP (AI Integration) ---
+# Same payload as the Inno installer: PulseMCP.exe + .cmd launcher, the
+# private Node runtime and the bundled server. Earlier Store builds only
+# picked these up when they happened to be left in the build folder.
+$mcpPayload = Join-Path $root "dist\Pulse"
+$mcpParts = @("PulseMCP.exe", "PulseMCP.cmd", "runtime\node.exe", "mcp\main.js")
+$mcpMissing = $mcpParts | Where-Object { -not (Test-Path -LiteralPath (Join-Path $mcpPayload $_)) }
+if ($mcpMissing) {
+  Write-Host "==> Packaging PulseMCP (missing: $($mcpMissing -join ', '))"
+  & powershell -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "package_pulsemcp.ps1")
+  if ($LASTEXITCODE -ne 0) { throw "package_pulsemcp.ps1 failed" }
+}
+Write-Host "==> Embedding PulseMCP"
+Copy-Item (Join-Path $mcpPayload "PulseMCP.exe") $buildFilesFolder -Force
+Copy-Item (Join-Path $mcpPayload "PulseMCP.cmd") $buildFilesFolder -Force
+foreach ($dir in @("runtime", "mcp")) {
+  $dest = Join-Path $buildFilesFolder $dir
+  if (Test-Path -LiteralPath $dest) { Remove-Item -LiteralPath $dest -Recurse -Force }
+  Copy-Item (Join-Path $mcpPayload $dir) $dest -Recurse -Force
+}
+foreach ($part in $mcpParts) {
+  if (-not (Test-Path -LiteralPath (Join-Path $buildFilesFolder $part))) {
+    throw "FATAL: $part missing after PulseMCP copy - refusing to pack Store MSIX."
+  }
+}
+
 $manifestPath = Join-Path $buildFilesFolder "AppxManifest.xml"
 if (-not (Test-Path $manifestPath)) {
   throw "AppxManifest.xml missing in staging folder after msix:build"
