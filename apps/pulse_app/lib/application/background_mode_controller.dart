@@ -10,6 +10,8 @@ import 'package:window_manager/window_manager.dart';
 
 import '../ipc/pulse_ipc_client.dart';
 import '../logging/app_logger.dart';
+import '../platform/notification_shortcut.dart';
+import '../platform/pulse_deployment.dart';
 import '../presentation/health/health_view_models.dart';
 import 'alert_state_engine.dart';
 import 'settings_controller.dart';
@@ -66,8 +68,12 @@ class BackgroundModeController extends ChangeNotifier
     settings.addListener(_onSettingsChanged);
 
     try {
+      // Classic installs only: the Store package's identity comes from MSIX.
+      if (Platform.isWindows && !const WindowsPulseDeployment().isPackagedMsix) {
+        removeStaleNotificationShortcut(logger: logger);
+      }
       await localNotifier.setup(
-        appName: 'Pulse Diagnostics',
+        appName: kNotificationAppName,
         shortcutPolicy: ShortcutPolicy.requireCreate,
       );
     } catch (e) {
