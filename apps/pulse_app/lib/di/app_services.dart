@@ -1,3 +1,5 @@
+import 'package:pulse_protocol/pulse_constants.dart';
+
 import '../application/assistant_controller.dart';
 import '../application/background_mode_controller.dart';
 import '../application/client_frame_metrics.dart';
@@ -11,6 +13,7 @@ import '../application/shell_navigation.dart';
 import '../application/timeline_library_controller.dart';
 import '../application/timeline_session_controller.dart';
 import '../ipc/pulse_ipc_client.dart';
+import '../logging/app_log_file.dart';
 import '../logging/app_logger.dart';
 
 class AppServices {
@@ -47,7 +50,8 @@ class AppServices {
   final AssistantController assistant;
 
   static Future<AppServices> create() async {
-    final logger = AppLogger();
+    final logger = AppLogger(file: AppLogFile.openDefault());
+    logger.info('App', 'Pulse $kAppVersion starting');
     final settings = SettingsController(logger: logger);
     await settings.load();
     final timelineLibrary = TimelineLibraryController(logger: logger);
