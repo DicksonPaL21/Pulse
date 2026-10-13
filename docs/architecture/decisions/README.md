@@ -11,8 +11,9 @@
 | [ADR-007](ADR-007-event-log-only-v1.md) | Event Log Only for Timeline v1 (Health ETW: see ADR-009) | Accepted |
 | [ADR-008](ADR-008-hot-cold-live-queues.md) | Hot/Cold Path + Per-Connection Live Queues | Accepted |
 | [ADR-009](ADR-009-health-network-etw.md) | Health per-process network via scoped ETW | Accepted |
-| [ADR-010](ADR-010-mcp-first-class-product.md) | PulseMCP first-class MCP product | Accepted |
+| [ADR-010](ADR-010-mcp-first-class-product.md) | PulseMCP first-class MCP product | Superseded by ADR-013 |
 | [ADR-011](ADR-011-inventory-engine.md) | Inventory Engine (R3) | **Accepted** |
 | [ADR-012](ADR-012-midnight-visual-identity.md) | Midnight visual identity and shell redesign | **Accepted** |
+| [ADR-013](ADR-013-remove-pulsemcp.md) | Remove AI Integration (PulseMCP) | **Accepted** |
 
 To change a locked decision, add a new ADR that references the original.

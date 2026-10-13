@@ -1,5 +1,12 @@
 # Upgrade notes
 
+## To 1.3.0 (unreleased)
+
+- **AI Integration (PulseMCP) is removed** ([ADR-013](../architecture/decisions/ADR-013-remove-pulsemcp.md)); the local **Assistant** stays
+- Setup closes any running PulseMCP and deletes `PulseMCP.exe`, `runtime\` and `mcp\` (~100 MB)
+- On first launch Pulse removes the `pulse` entries it had added to AI client configs (backups are kept next to each file)
+- Leftovers from earlier installs are cleaned up: `service\PulseService.pdb` and `redist\`
+
 ## To 1.2.0
 
 - Installer: `Pulse-Setup-1.2.0-windows-x64.exe`
