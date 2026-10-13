@@ -45,6 +45,9 @@ WizardSmallImageFile=branding\wizard-small-image-100.png,branding\wizard-small-i
 SetupLogging=yes
 UninstallDisplayIcon={app}\{#MyAppExeName}
 CloseApplications=yes
+; Ask Explorer to refresh icons at the end of setup. Without it, an upgrade
+; that changes the app icon showed a blank taskbar icon (stale icon cache).
+ChangesAssociations=yes
 RestartIfNeededByRun=no
 MinVersion=10.0
 
