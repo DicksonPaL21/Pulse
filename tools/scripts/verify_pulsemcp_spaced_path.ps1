@@ -73,7 +73,11 @@ while ((Get-Date) -lt $deadline) {
 
 try {
   if (-not $proc.HasExited) {
-    $proc.Kill()
+    # Kill the whole tree (cmd.exe -> PulseMCP.exe -> node.exe; the launcher's
+    # job object takes node down with it). Process.Kill() only ended cmd.exe,
+    # leaving a status daemon that held the redirected output open and hung
+    # any packaging job waiting on this script.
+    & taskkill.exe /PID $proc.Id /T /F | Out-Null
     [void]$proc.WaitForExit(5000)
   }
 } catch {}
