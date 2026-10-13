@@ -36,7 +36,12 @@ OutputDir={#PulseOutDir}
 OutputBaseFilename=Pulse-Setup-{#MyAppVersion}-windows-x64
 Compression=lzma2
 SolidCompression=yes
-WizardStyle=modern
+; Midnight look (ADR-012): forced dark, no bevel lines, app canvas color.
+; Images come from make_wizard_images.py; Setup picks the best DPI match.
+WizardStyle=modern dark hidebevels
+WizardBackColor=#08080A
+WizardImageFile=branding\wizard-image-100.png,branding\wizard-image-125.png,branding\wizard-image-150.png,branding\wizard-image-175.png,branding\wizard-image-200.png,branding\wizard-image-250.png
+WizardSmallImageFile=branding\wizard-small-image-100.png,branding\wizard-small-image-125.png,branding\wizard-small-image-150.png,branding\wizard-small-image-175.png,branding\wizard-small-image-200.png,branding\wizard-small-image-250.png
 SetupLogging=yes
 UninstallDisplayIcon={app}\{#MyAppExeName}
 CloseApplications=yes
