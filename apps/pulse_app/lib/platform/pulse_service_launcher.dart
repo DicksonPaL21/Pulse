@@ -189,14 +189,46 @@ class WindowsPulseServiceLauncher implements PulseServiceLauncher {
     // mid-call (Pulse.exe crashed with 0xc000041d in flutter_windows.dll after
     // Restart / Start service). A background isolate has its own thread.
     final timeoutMs = timeout.inMilliseconds;
-    return Isolate.run(() => _runElevatedBlocking(exePath, args, timeoutMs));
+    final owner = _pulseMainWindow();
+    return Isolate.run(
+      () => _runElevatedBlocking(exePath, args, timeoutMs, owner),
+    );
+  }
+}
+
+/// Window class of the Flutter runner (windows/runner/win32_window.cpp).
+const String _kRunnerWindowClass = 'FLUTTER_RUNNER_WIN32_WINDOW';
+
+/// Pulse's main window, or NULL. Owning the UAC prompt with it keeps the
+/// prompt in front of Pulse; without an owner it could open behind the window
+/// and look like the action failed ("Administrator approval is required").
+int _pulseMainWindow() {
+  final className = _kRunnerWindowClass.toNativeUtf16();
+  final processId = calloc<DWORD>();
+  try {
+    final self = GetCurrentProcessId();
+    var hwnd = FindWindowEx(NULL, NULL, className, nullptr);
+    while (hwnd != NULL) {
+      GetWindowThreadProcessId(hwnd, processId);
+      if (processId.value == self) return hwnd;
+      hwnd = FindWindowEx(NULL, hwnd, className, nullptr);
+    }
+    return NULL;
+  } finally {
+    free(className);
+    calloc.free(processId);
   }
 }
 
 /// Runs `exePath args` through UAC and waits for it to exit (blocking).
 ///
 /// Call only from a background isolate; see [WindowsPulseServiceLauncher].
-int _runElevatedBlocking(String exePath, String args, int timeoutMs) {
+int _runElevatedBlocking(
+  String exePath,
+  String args,
+  int timeoutMs,
+  int ownerWindow,
+) {
   // ShellExecuteEx may delegate to Shell extensions, which require COM on the
   // calling thread.
   final comResult = CoInitializeEx(
@@ -212,7 +244,7 @@ int _runElevatedBlocking(String exePath, String args, int timeoutMs) {
       info.ref.cbSize = sizeOf<SHELLEXECUTEINFO>();
       info.ref.fMask =
           _kSeeMaskNocloseprocess | _kSeeMaskNoasync | _kSeeMaskFlagNoUi;
-      info.ref.hwnd = NULL;
+      info.ref.hwnd = ownerWindow;
       info.ref.lpVerb = verb;
       info.ref.lpFile = file;
       info.ref.lpParameters = parameters;
@@ -229,7 +261,8 @@ int _runElevatedBlocking(String exePath, String args, int timeoutMs) {
         }
         if (err == ERROR_ACCESS_DENIED) {
           throw const PulseServiceLaunchException(
-            'Windows denied elevation. Approve the UAC prompt to control PulseService.',
+            'Windows blocked the administrator request (error 5). A security '
+            'policy or security software may be preventing elevation.',
           );
         }
         throw PulseServiceLaunchException(
