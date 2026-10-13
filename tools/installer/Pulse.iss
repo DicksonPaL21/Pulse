@@ -49,8 +49,17 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional icons:"; Flags: unchecked
 
+[InstallDelete]
+; Leftovers from earlier versions that upgrades never removed (~41 MB):
+; debug symbols shipped by an early beta, and the VC++ redistributable that
+; used to be kept in the install folder after setup.
+Type: files; Name: "{app}\service\PulseService.pdb"
+Type: filesandordirs; Name: "{app}\redist"
+
 [Files]
-Source: "{#PulsePayloadDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#PulsePayloadDir}\*"; DestDir: "{app}"; Excludes: "redist\*,*.pdb"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Only needed while installing: extract to the temp folder Setup cleans up.
+Source: "{#PulsePayloadDir}\redist\VC_redist.x64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall
 
 [Icons]
 Name: "{group}\Pulse"; Filename: "{app}\{#MyAppExeName}"
@@ -90,7 +99,7 @@ begin
   if CurStep <> ssPostInstall then
     Exit;
 
-  Redist := ExpandConstant('{app}\redist\VC_redist.x64.exe');
+  Redist := ExpandConstant('{tmp}\VC_redist.x64.exe');
   ServiceExe := ExpandConstant('{app}\service\PulseService.exe');
 
   { 1) Visual C++ Redistributable (quiet). 0 / 1638 / 3010 are acceptable. }
@@ -98,7 +107,7 @@ begin
   begin
     WizardForm.StatusLabel.Caption := 'Installing Visual C++ runtime…';
     if ExecChecked(Redist, '/install /quiet /norestart',
-                   ExpandConstant('{app}\redist'), ResultCode) then
+                   ExpandConstant('{tmp}'), ResultCode) then
     begin
       if (ResultCode <> 0) and (ResultCode <> 1638) and (ResultCode <> 3010) then
         MsgBox('Visual C++ Redistributable returned exit code ' + IntToStr(ResultCode) + '.' + #13#10 +
