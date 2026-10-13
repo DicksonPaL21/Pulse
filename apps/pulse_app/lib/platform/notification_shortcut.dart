@@ -60,6 +60,10 @@ bool _samePath(String a, String b) =>
 
 /// Reads a shortcut target with the Shell's IShellLink (COM must already be
 /// initialized on this thread; the Flutter runner does so for the UI thread).
+///
+/// Do not call `release()` on the COM objects: package:win32 releases them
+/// from a Finalizer, and an extra manual release is a use-after-free that
+/// crashed Pulse.exe a few seconds after startup once the GC ran.
 String? readShortcutTarget(String shortcutPath) {
   final link = ShellLink.createInstance();
   final persist = IPersistFile.from(link);
@@ -75,7 +79,5 @@ String? readShortcutTarget(String shortcutPath) {
   } finally {
     free(path);
     calloc.free(buffer);
-    persist.release();
-    link.release();
   }
 }
