@@ -40,7 +40,7 @@ Prerequisites: Flutter, VS C++ Build Tools, [Inno Setup 6](https://jrsoftware.or
 5. If Offline: use in-app **Start PulseService** / **Repair / Install** (UAC) — do not require Services.msc
 6. Timeline, System Health, Inventory, and Reports populate as expected
 7. Reboot → PulseService still Running (auto-start) → Pulse reconnects
-8. Optional: **Settings → AI Integration** for PulseMCP
+8. Optional: install Ollama or LM Studio for the local **Assistant**
 9. Open **Diagnostics** → confirm service version **1.2.0**
 
 Full stability procedures: [35-product-stability.md](35-product-stability.md). Release notes: [v1.2.0.md](../releases/v1.2.0.md).
