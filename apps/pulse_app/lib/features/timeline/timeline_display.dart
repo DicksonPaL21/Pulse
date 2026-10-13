@@ -67,6 +67,19 @@ extension TimelineEventDisplay on TimelineEvent {
       actionRequired && recommendation.trim().isNotEmpty;
 }
 
+/// Event id of the most recent event in [events], whatever its list position
+/// (pinned events are listed first), or null when none has an id.
+String? latestEventIdOf(Iterable<TimelineEvent> events) {
+  TimelineEvent? latest;
+  for (final e in events) {
+    if (e.eventId.isEmpty) continue;
+    if (latest == null || e.timestampUnixMs > latest.timestampUnixMs) {
+      latest = e;
+    }
+  }
+  return latest?.eventId;
+}
+
 String formatRelativeTime(int unixMs, String iso) {
   if (unixMs > 0) {
     final dt =
