@@ -75,9 +75,10 @@ class _InventoryPageState extends State<InventoryPage>
   }
 
   void _log(String message) {
-    // warn so Release console + AppLogger buffer always keep these lines.
+    // State traces (one per build): debug level, so they reach the on-disk
+    // app log only when Settings → Diagnostics → Debug logging is on.
     try {
-      context.read<AppLogger>().warn('inventory', message);
+      context.read<AppLogger>().debug('inventory', message);
     } catch (_) {
       // ignore: avoid_print
       print('[pulse.inventory] $message');
