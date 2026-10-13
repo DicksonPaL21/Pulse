@@ -57,10 +57,12 @@ async function runStatusDaemon(): Promise<void> {
   });
   status.start(2000);
 
-  // Keep process alive; reconnect IPC periodically.
+  // Keep the process alive and reconnect IPC periodically. This timer must
+  // stay ref'd: when PulseService is not running there is no open pipe, and
+  // an unref'd timer let the daemon exit at once (status went stale).
   setInterval(() => {
     void session.ensureConnected().catch(() => undefined);
-  }, 5000).unref?.();
+  }, 5000);
 
   const shutdown = () => {
     status.stop();
