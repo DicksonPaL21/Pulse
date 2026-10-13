@@ -9,12 +9,10 @@ import 'package:pulse_protocol/pulse_wire.dart';
 import '../../application/client_frame_metrics.dart';
 import '../../application/connection_controller.dart';
 import '../../application/diagnostics_controller.dart';
-import '../../application/mcp_integration_controller.dart';
 import '../../application/settings_controller.dart';
 import '../../application/timeline_session_controller.dart';
 import '../../app/theme/pulse_theme.dart';
 import '../../ipc/pulse_ipc_client.dart';
-import '../../mcp/mcp_paths.dart';
 import '../components/connection_indicator.dart';
 import '../components/pulse_app_bar.dart';
 import '../components/pulse_badge.dart';
@@ -58,35 +56,11 @@ enum _DiagSectionId {
   collectors,
   performance,
   healthChecks,
-  mcp,
   advanced,
 }
 
 class _DiagnosticsPageState extends State<DiagnosticsPage> {
   _DiagSectionId _section = _DiagSectionId.service;
-  Timer? _mcpTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    // Polling is started/stopped by AppShell when this page is selected
-    // (IndexedStack keeps Diagnostics mounted across navigation).
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final mcp = context.read<McpIntegrationController>();
-      unawaited(mcp.refreshStatus());
-      _mcpTimer = Timer.periodic(const Duration(seconds: 2), (_) {
-        if (!mounted) return;
-        unawaited(context.read<McpIntegrationController>().refreshStatus());
-      });
-    });
-  }
-
-  @override
-  void dispose() {
-    _mcpTimer?.cancel();
-    super.dispose();
-  }
 
   void _snackSuccess(String message) {
     if (!mounted) return;
@@ -118,7 +92,6 @@ class _DiagnosticsPageState extends State<DiagnosticsPage> {
     required IpcStatus ipcStatus,
     required ClientFrameMetrics frameMetrics,
     required bool advanced,
-    required McpIntegrationController mcp,
   }) {
     final snap = diag.snapshot;
     final busy = diag.actionBusy;
@@ -178,7 +151,6 @@ class _DiagnosticsPageState extends State<DiagnosticsPage> {
           snapshotLatencyMs: diag.lastSnapshotLatencyMs,
           frameMetrics: frameMetrics,
         ),
-      _DiagSectionId.mcp => _McpDiagnosticsCard(mcp: mcp),
       _DiagSectionId.advanced => advanced
           ? _DeveloperToolsCard(
               busy: busy,
@@ -235,7 +207,6 @@ class _DiagnosticsPageState extends State<DiagnosticsPage> {
     );
     final diag = context.watch<DiagnosticsController>();
     final timeline = context.watch<TimelineSessionController>();
-    final mcp = context.watch<McpIntegrationController>();
     final ipcStatus = context.watch<PulseIpcClient>().status;
     final advanced = context.select<SettingsController, bool>(
       (s) => s.showAdvancedDiagnostics,
@@ -326,7 +297,6 @@ class _DiagnosticsPageState extends State<DiagnosticsPage> {
                                   ipcStatus: ipcStatus,
                                   frameMetrics: frameMetrics,
                                   advanced: advanced,
-                                  mcp: mcp,
                                 ),
                               ],
                             ),
@@ -348,7 +318,6 @@ String _diagSectionTitle(_DiagSectionId id) => switch (id) {
       _DiagSectionId.collectors => 'Collectors',
       _DiagSectionId.performance => 'Performance',
       _DiagSectionId.healthChecks => 'Health Checks',
-      _DiagSectionId.mcp => 'MCP',
       _DiagSectionId.advanced => 'Advanced',
     };
 
@@ -372,8 +341,6 @@ String _diagSectionSubtitle(
           : 'Frame timing and memory. Enable advanced diagnostics for more.',
       _DiagSectionId.healthChecks =>
         'Product budgets from AGENTS.md compared to observed samples.',
-      _DiagSectionId.mcp =>
-        'PulseMCP status heartbeats, metrics, and policy (observation bridge).',
       _DiagSectionId.advanced => advanced
           ? 'Developer tools for Timeline injection, restart, and export.'
           : 'Hidden until enabled in Settings → Diagnostics.',
@@ -398,7 +365,6 @@ class _DiagnosticsNav extends StatelessWidget {
     (_DiagSectionId.collectors, LucideIcons.layers, 'Collectors'),
     (_DiagSectionId.performance, LucideIcons.gauge, 'Performance'),
     (_DiagSectionId.healthChecks, LucideIcons.heartPulse, 'Health Checks'),
-    (_DiagSectionId.mcp, LucideIcons.bot, 'MCP'),
     (_DiagSectionId.advanced, LucideIcons.wrench, 'Advanced'),
   ];
 
@@ -1497,131 +1463,6 @@ Widget _kv(String label, String value) {
       ],
     ),
   );
-}
-
-class _McpDiagnosticsCard extends StatelessWidget {
-  const _McpDiagnosticsCard({required this.mcp});
-
-  final McpIntegrationController mcp;
-
-  @override
-  Widget build(BuildContext context) {
-    final st = mcp.status;
-    final mem = st.memoryBytes;
-    final memLabel = mem == null
-        ? kUnavailableDash
-        : '${(mem / (1024 * 1024)).toStringAsFixed(1)} MB';
-    return _DiagSection(
-      title: 'MCP',
-      icon: LucideIcons.bot,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          HealthSpecSection(
-            title: 'Server',
-            compact: true,
-            rows: [
-              HealthSpecRow(
-                label: 'Server running',
-                value: st.running ? 'Yes' : 'No',
-              ),
-              HealthSpecRow(
-                label: 'Policy enabled',
-                value: mcp.enabled ? 'Yes' : 'No',
-              ),
-              HealthSpecRow(
-                label: 'Version',
-                value: st.version ?? kUnavailableDash,
-              ),
-              HealthSpecRow(
-                label: 'Uptime',
-                value: st.running
-                    ? _formatDuration(Duration(seconds: st.uptimeSeconds))
-                    : kUnavailableDash,
-              ),
-              HealthSpecRow(
-                label: 'Transport',
-                value: st.transport ?? kUnavailableDash,
-              ),
-              HealthSpecRow(
-                label: 'Mode',
-                value: st.mode ?? kUnavailableDash,
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          HealthSpecSection(
-            title: 'Traffic',
-            compact: true,
-            rows: [
-              HealthSpecRow(
-                label: 'Requests served',
-                value: '${st.requestsServed}',
-              ),
-              HealthSpecRow(
-                label: 'Failed requests',
-                value: '${st.requestsFailed}',
-              ),
-              HealthSpecRow(
-                label: 'Average latency',
-                value: '${st.averageLatencyMs} ms',
-              ),
-              HealthSpecRow(
-                label: 'IPC latency',
-                value: '${st.averageIpcLatencyMs} ms',
-              ),
-              HealthSpecRow(
-                label: 'Connected clients',
-                value: '${st.connectedClients}',
-              ),
-              HealthSpecRow(
-                label: 'Client names',
-                value: st.clientNames.isEmpty
-                    ? kUnavailableDash
-                    : st.clientNames.join(', '),
-              ),
-              HealthSpecRow(
-                label: 'Active subscriptions',
-                value: st.activeSubscriptions.isEmpty
-                    ? 'None'
-                    : st.activeSubscriptions.join(', '),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          HealthSpecSection(
-            title: 'Runtime',
-            compact: true,
-            rows: [
-              HealthSpecRow(label: 'Memory usage', value: memLabel),
-              HealthSpecRow(
-                label: 'Last reconnect',
-                value: st.lastReconnectAt ?? kUnavailableDash,
-              ),
-              HealthSpecRow(
-                label: 'Service pipe',
-                value: st.servicePipeConnected ? 'Connected' : 'Disconnected',
-              ),
-              HealthSpecRow(
-                label: 'Enabled namespaces',
-                value: st.namespaces.isEmpty
-                    ? kUnavailableDash
-                    : st.namespaces.join(', '),
-              ),
-              HealthSpecRow(
-                label: 'Status file',
-                value: st.rawPath.isEmpty ? McpPaths.statusFile : st.rawPath,
-              ),
-              HealthSpecRow(
-                label: 'Log path',
-                value: st.logPath ?? McpPaths.logsDir,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 String _formatDuration(Duration d) {

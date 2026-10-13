@@ -7,7 +7,6 @@ import 'package:pulse/application/client_frame_metrics.dart';
 import 'package:pulse/application/connection_controller.dart';
 import 'package:pulse/application/diagnostics_controller.dart';
 import 'package:pulse/application/health_navigation.dart';
-import 'package:pulse/application/mcp_integration_controller.dart';
 import 'package:pulse/application/service_lifecycle_controller.dart';
 import 'package:pulse/application/settings_controller.dart';
 import 'package:pulse/application/shell_navigation.dart';
@@ -58,9 +57,6 @@ Future<Widget> _harness(Widget page) async {
     scm: _StoppedScm(),
   );
   lifecycle.refresh();
-  // Provide MCP without load(); Diagnostics polls refreshStatus via Timer and
-  // must not be paired with pumpAndSettle (never settles).
-  final mcp = McpIntegrationController(logger: logger);
   return MultiProvider(
     providers: [
       ChangeNotifierProvider.value(value: ipc),
@@ -70,7 +66,6 @@ Future<Widget> _harness(Widget page) async {
       ChangeNotifierProvider.value(value: diagnostics),
       ChangeNotifierProvider.value(value: frameMetrics),
       ChangeNotifierProvider.value(value: lifecycle),
-      ChangeNotifierProvider.value(value: mcp),
       ChangeNotifierProvider(create: (_) => HealthNavigation()),
       ChangeNotifierProvider(create: (_) => ShellNavigation()),
     ],
@@ -165,7 +160,6 @@ void main() {
     await tester.pumpWidget(
       await _harness(const DiagnosticsPage(title: 'Diagnostics')),
     );
-    // Diagnostics starts a 2s MCP status timer — do not pumpAndSettle.
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 

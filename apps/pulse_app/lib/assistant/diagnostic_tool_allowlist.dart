@@ -2,15 +2,14 @@ import 'assistant_tools.dart';
 
 /// Explicit Assistant-safe tool allowlist (read-only diagnostics only).
 ///
-/// Wire names match PulseMCP `V1_TOOLS` where applicable.
 /// `report_export` is intentionally excluded — it writes files.
 /// Mutating / shell / install tools must never appear here.
 abstract final class AssistantToolAllowlist {
   static const tools = <AssistantToolDescriptor>[
     AssistantToolDescriptor(
-      name: 'mcp_self',
+      name: 'pulse_status',
       description:
-          'Pulse Assistant / MCP self status: versions and connection health. Observation only.',
+          'Pulse Assistant status: versions and connection health. Observation only.',
     ),
     AssistantToolDescriptor(
       name: 'system_health',

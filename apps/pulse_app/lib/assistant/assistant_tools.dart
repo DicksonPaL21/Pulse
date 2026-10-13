@@ -59,10 +59,9 @@ class AssistantToolResult {
   }
 }
 
-/// Abstraction for Assistant → Pulse diagnostics (shared semantics with MCP).
+/// Abstraction for Assistant → Pulse diagnostics.
 ///
 /// Implementations must use read-only Pulse APIs / IPC only.
-/// The Assistant is not an MCP client.
 abstract class AssistantToolLayer {
   List<AssistantToolDescriptor> listTools();
 

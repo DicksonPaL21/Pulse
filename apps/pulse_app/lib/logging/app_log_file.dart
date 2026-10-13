@@ -7,9 +7,8 @@ const int kAppLogRetentionDays = 14;
 /// Daily JSON-lines log file for Pulse.exe, in the same shape as the
 /// PulseService log (`timestamp`, `level`, `component`, `message`).
 ///
-/// Lives at `%LOCALAPPDATA%\Pulse\logs\app\pulse-app-YYYY-MM-DD.jsonl`, next to
-/// the PulseMCP logs. Writes are synchronous and flushed per line so the last
-/// entries survive a crash. Logging must never break the app: I/O failures
+/// Lives at `%LOCALAPPDATA%\Pulse\logs\app\pulse-app-YYYY-MM-DD.jsonl`. Writes
+/// are synchronous and flushed per line so the last entries survive a crash. Logging must never break the app: I/O failures
 /// disable the sink instead of throwing.
 class AppLogFile {
   AppLogFile(this.directory);

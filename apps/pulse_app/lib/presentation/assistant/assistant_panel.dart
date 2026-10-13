@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 
 import '../../app/theme/pulse_theme.dart';
 import '../../application/assistant_controller.dart';
-import '../../application/shell_navigation.dart';
 import '../../assistant/assistant_models.dart';
 import '../../assistant/local_ai_types.dart';
 import '../components/pulse_button.dart';
@@ -187,9 +186,7 @@ class _EmptyLocalAiState extends StatelessWidget {
       '(for example Ollama or LM Studio).\n\n'
       'Pulse never downloads AI models, never runs third-party installers, and never '
       'modifies your system to set up AI software.\n\n'
-      'After a supported runtime is available on this PC, return here to connect it. '
-      'You can also use Pulse diagnostics today through local MCP integrations in '
-      'Cursor, Claude Desktop, Windsurf, Cline, or VS Code.';
+      'After a supported runtime is available on this PC, return here to connect it.';
 
   @override
   Widget build(BuildContext context) {
@@ -317,16 +314,6 @@ class _EmptyLocalAiState extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 4),
-          _FullWidthAction(
-            label: 'Explore MCP integrations',
-            icon: LucideIcons.bot,
-            primary: false,
-            onPressed: () {
-              final nav = context.read<ShellNavigation>();
-              nav.openAiIntegrationSettings();
-            },
-          ),
         ],
       ),
     );
@@ -413,16 +400,6 @@ class _NoModelsState extends StatelessWidget {
             expanded: true,
             onPressed: () =>
                 context.read<AssistantController>().refreshConnection(),
-          ),
-          const SizedBox(height: 10),
-          _FullWidthAction(
-            label: 'Explore MCP integrations',
-            icon: LucideIcons.bot,
-            primary: false,
-            onPressed: () {
-              final nav = context.read<ShellNavigation>();
-              nav.openAiIntegrationSettings();
-            },
           ),
         ],
       ),
@@ -1091,59 +1068,6 @@ class _RuntimeChip extends StatelessWidget {
               color: PulseTokens.textSecondary,
               fontWeight: FontWeight.w500,
             ),
-      ),
-    );
-  }
-}
-
-class _FullWidthAction extends StatelessWidget {
-  const _FullWidthAction({
-    required this.label,
-    required this.icon,
-    required this.onPressed,
-    required this.primary,
-  });
-
-  final String label;
-  final IconData icon;
-  final VoidCallback onPressed;
-  final bool primary;
-
-  @override
-  Widget build(BuildContext context) {
-    final bg = primary ? PulseTokens.accent : PulseTokens.card;
-    final fg = primary ? Colors.white : PulseTokens.textPrimary;
-    return Material(
-      color: bg,
-      borderRadius: BorderRadius.circular(PulseTokens.radiusMd),
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(PulseTokens.radiusMd),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(PulseTokens.radiusMd),
-            border: primary
-                ? null
-                : Border.all(color: PulseTokens.border),
-          ),
-          child: Row(
-            children: [
-              Icon(icon, size: 16, color: fg),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  label,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: fg,
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

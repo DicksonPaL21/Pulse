@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:pulse_protocol/pulse_constants.dart';
 
 import '../application/assistant_controller.dart';
@@ -6,7 +8,7 @@ import '../application/client_frame_metrics.dart';
 import '../application/connection_controller.dart';
 import '../application/diagnostics_controller.dart';
 import '../application/health_navigation.dart';
-import '../application/mcp_integration_controller.dart';
+import '../application/legacy_mcp_cleanup.dart';
 import '../application/service_lifecycle_controller.dart';
 import '../application/settings_controller.dart';
 import '../application/shell_navigation.dart';
@@ -28,7 +30,6 @@ class AppServices {
     required this.serviceLifecycle,
     required this.clientFrameMetrics,
     required this.healthNavigation,
-    required this.mcpIntegration,
     required this.shellNavigation,
     required this.backgroundMode,
     required this.assistant,
@@ -44,7 +45,6 @@ class AppServices {
   final ServiceLifecycleController serviceLifecycle;
   final ClientFrameMetrics clientFrameMetrics;
   final HealthNavigation healthNavigation;
-  final McpIntegrationController mcpIntegration;
   final ShellNavigation shellNavigation;
   final BackgroundModeController backgroundMode;
   final AssistantController assistant;
@@ -76,8 +76,8 @@ class AppServices {
     final serviceLifecycle = ServiceLifecycleController(logger: logger);
     serviceLifecycle.startPolling();
     final healthNavigation = HealthNavigation();
-    final mcpIntegration = McpIntegrationController(logger: logger);
-    await mcpIntegration.load();
+    // AI Integration (PulseMCP) was removed in 1.3; tidy up what it left.
+    unawaited(LegacyMcpCleanup(logger: logger).run());
     final shellNavigation = ShellNavigation();
     final backgroundMode = BackgroundModeController(
       settings: settings,
@@ -104,7 +104,6 @@ class AppServices {
       serviceLifecycle: serviceLifecycle,
       clientFrameMetrics: frameMetrics,
       healthNavigation: healthNavigation,
-      mcpIntegration: mcpIntegration,
       shellNavigation: shellNavigation,
       backgroundMode: backgroundMode,
       assistant: assistant,

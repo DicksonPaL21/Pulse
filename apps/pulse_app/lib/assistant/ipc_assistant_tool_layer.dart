@@ -10,7 +10,7 @@ import 'diagnostic_tool_allowlist.dart';
 String assistantToolActivityLabel(String toolName) {
   final n = AssistantToolAllowlist.normalize(toolName);
   return switch (n) {
-    'mcp_self' => 'Checking Assistant status...',
+    'pulse_status' => 'Checking Assistant status...',
     'system_health' => 'Checking system health...',
     'system_cpu' => 'Checking CPU usage...',
     'system_memory' => 'Checking memory usage...',
@@ -28,8 +28,8 @@ String assistantToolActivityLabel(String toolName) {
 
 /// Read-only diagnostic tools for Pulse Assistant via PulseService IPC.
 ///
-/// Shared backend with PulseMCP: both call PulseService. This layer does not
-/// speak MCP and does not mutate Windows or Pulse configuration.
+/// Calls PulseService over IPC. This layer does not mutate Windows or Pulse
+/// configuration.
 class IpcAssistantToolLayer implements AssistantToolLayer {
   IpcAssistantToolLayer({required this._ipc});
 
@@ -86,8 +86,8 @@ class IpcAssistantToolLayer implements AssistantToolLayer {
     Map<String, Object?> args,
   ) async {
     switch (name) {
-      case 'mcp_self':
-        return _mcpSelf();
+      case 'pulse_status':
+        return _pulseStatus();
       case 'system_health':
         return _systemHealth(args);
       case 'system_cpu':
@@ -123,7 +123,7 @@ class IpcAssistantToolLayer implements AssistantToolLayer {
     }
   }
 
-  Future<AssistantToolResult> _mcpSelf() async {
+  Future<AssistantToolResult> _pulseStatus() async {
     DiagnosticsSnapshot? diag;
     try {
       diag = await _ipc.getDiagnosticsSnapshot();

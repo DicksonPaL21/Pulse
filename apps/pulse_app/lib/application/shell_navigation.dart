@@ -56,19 +56,7 @@ class ShellNavigation extends ChangeNotifier {
         _pendingHealthPanel = null;
         _clearHealthPanel = false;
         _pendingSettingsCategory = null;
-      case PulseNavTarget.aiIntegrationSettings:
-        openAiIntegrationSettings();
-        return;
     }
-    notifyListeners();
-  }
-
-  /// Opens Settings → AI Integration (MCP client registration).
-  void openAiIntegrationSettings() {
-    _pendingShellPage = PulseShellPages.settings;
-    _pendingHealthPanel = null;
-    _clearHealthPanel = false;
-    _pendingSettingsCategory = SettingsCategoryId.aiIntegration;
     notifyListeners();
   }
 
@@ -112,5 +100,4 @@ enum PulseNavTarget {
   network,
   eventLogs,
   settings,
-  aiIntegrationSettings,
 }

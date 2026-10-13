@@ -15,8 +15,6 @@ import 'package:pulse/ipc/pulse_ipc_client.dart';
 import 'package:pulse/logging/app_logger.dart';
 import 'package:pulse/presentation/assistant/assistant_host.dart';
 import 'package:pulse/presentation/assistant/assistant_page.dart';
-import 'package:pulse/presentation/settings/settings_category.dart';
-import 'package:pulse/presentation/shell/app_shell.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _FakeProvider implements LocalAiProvider {
@@ -147,24 +145,16 @@ void main() {
     expect(find.byType(FloatingActionButton), findsNothing);
   });
 
-  testWidgets('Explore MCP integrations opens AI Integration settings',
+  testWidgets('empty state no longer links to AI Integration (removed in 1.3)',
       (tester) async {
     final assistant = await _controller(providers: const []);
-    final shellNav = ShellNavigation();
     await tester.pumpWidget(
-      _wrapAssistantPage(assistant: assistant, shellNav: shellNav),
+      _wrapAssistantPage(assistant: assistant, shellNav: ShellNavigation()),
     );
     await tester.pump();
-    await tester.pump();
-    await tester.ensureVisible(find.text('Explore MCP integrations'));
-    await tester.tap(find.text('Explore MCP integrations'));
     await tester.pump();
 
-    expect(
-      shellNav.pendingSettingsCategory,
-      SettingsCategoryId.aiIntegration,
-    );
-    expect(shellNav.pendingShellPage, PulseShellPages.settings);
+    expect(find.textContaining('MCP'), findsNothing);
   });
 
   testWidgets('no models state shows guidance', (tester) async {

@@ -23,14 +23,12 @@ class InventoryDomainNode {
     required this.label,
     required this.icon,
     required this.implemented,
-    required this.mcpTool,
   });
 
   final InventoryDomainId id;
   final String label;
   final IconData icon;
   final bool implemented;
-  final String mcpTool;
 }
 
 const kInventoryBrowserGroups = <InventoryBrowserGroup>[
@@ -44,49 +42,42 @@ const kInventoryBrowserGroups = <InventoryBrowserGroup>[
         label: 'Motherboard',
         icon: LucideIcons.circuitBoard,
         implemented: true,
-        mcpTool: 'inventory.motherboard',
       ),
       InventoryDomainNode(
         id: InventoryDomainId.bios,
         label: 'BIOS',
         icon: LucideIcons.cpu,
         implemented: true,
-        mcpTool: 'inventory.bios',
       ),
       InventoryDomainNode(
         id: InventoryDomainId.cpu,
         label: 'CPU',
         icon: LucideIcons.cpu,
         implemented: true,
-        mcpTool: 'inventory.cpu',
       ),
       InventoryDomainNode(
         id: InventoryDomainId.memoryModules,
         label: 'Memory',
         icon: LucideIcons.database,
         implemented: true,
-        mcpTool: 'inventory.memory',
       ),
       InventoryDomainNode(
         id: InventoryDomainId.storage,
         label: 'Storage',
         icon: LucideIcons.database,
         implemented: true,
-        mcpTool: 'inventory.storage',
       ),
       InventoryDomainNode(
         id: InventoryDomainId.networkAdapters,
         label: 'Network',
         icon: LucideIcons.globe,
         implemented: true,
-        mcpTool: 'inventory.network',
       ),
       InventoryDomainNode(
         id: InventoryDomainId.battery,
         label: 'Battery',
         icon: LucideIcons.zap,
         implemented: true,
-        mcpTool: 'inventory.battery',
       ),
     ],
   ),
@@ -100,42 +91,36 @@ const kInventoryBrowserGroups = <InventoryBrowserGroup>[
         label: 'USB',
         icon: LucideIcons.usb,
         implemented: true,
-        mcpTool: 'inventory.usb',
       ),
       InventoryDomainNode(
         id: InventoryDomainId.pci,
         label: 'PCI',
         icon: LucideIcons.circuitBoard,
         implemented: true,
-        mcpTool: 'inventory.pci',
       ),
       InventoryDomainNode(
         id: InventoryDomainId.displays,
         label: 'Displays',
         icon: LucideIcons.monitor,
         implemented: true,
-        mcpTool: 'inventory.displays',
       ),
       InventoryDomainNode(
         id: InventoryDomainId.audio,
         label: 'Audio',
         icon: LucideIcons.headphones,
         implemented: true,
-        mcpTool: 'inventory.audio',
       ),
       InventoryDomainNode(
         id: InventoryDomainId.bluetooth,
         label: 'Bluetooth',
         icon: LucideIcons.radio,
         implemented: true,
-        mcpTool: 'inventory.bluetooth',
       ),
       InventoryDomainNode(
         id: InventoryDomainId.printers,
         label: 'Printers',
         icon: LucideIcons.fileText,
         implemented: true,
-        mcpTool: 'inventory.printers',
       ),
     ],
   ),
@@ -149,21 +134,18 @@ const kInventoryBrowserGroups = <InventoryBrowserGroup>[
         label: 'Installed software',
         icon: LucideIcons.package,
         implemented: true,
-        mcpTool: 'inventory.software',
       ),
       InventoryDomainNode(
         id: InventoryDomainId.drivers,
         label: 'Drivers',
         icon: LucideIcons.cpu,
         implemented: true,
-        mcpTool: 'inventory.drivers',
       ),
       InventoryDomainNode(
         id: InventoryDomainId.services,
         label: 'Services',
         icon: LucideIcons.cog,
         implemented: true,
-        mcpTool: 'inventory.services',
       ),
     ],
   ),

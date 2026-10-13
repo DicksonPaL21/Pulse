@@ -81,7 +81,7 @@ String assistantConnectionLabel(LocalAiConnectionState state) {
 
 String assistantToolConsultedLabel(String toolName) {
   return switch (toolName) {
-    'mcp_self' => 'Assistant status',
+    'pulse_status' => 'Assistant status',
     'system_health' => 'System health',
     'system_cpu' => 'CPU',
     'system_memory' => 'Memory',

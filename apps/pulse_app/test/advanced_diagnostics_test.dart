@@ -6,7 +6,6 @@ import 'package:pulse/application/client_frame_metrics.dart';
 import 'package:pulse/application/connection_controller.dart';
 import 'package:pulse/application/diagnostics_controller.dart';
 import 'package:pulse/application/health_navigation.dart';
-import 'package:pulse/application/mcp_integration_controller.dart';
 import 'package:pulse/application/service_lifecycle_controller.dart';
 import 'package:pulse/application/settings_controller.dart';
 import 'package:pulse/application/timeline_session_controller.dart';
@@ -80,8 +79,6 @@ Future<(Widget, SettingsController, DiagnosticsController, PulseIpcClient)>
     scm: _RunningScm(),
   );
   lifecycle.refresh();
-  // Provide MCP without load(); page polls via Timer — avoid pumpAndSettle.
-  final mcp = McpIntegrationController(logger: logger);
   final tree = MultiProvider(
     providers: [
       ChangeNotifierProvider.value(value: ipc),
@@ -91,7 +88,6 @@ Future<(Widget, SettingsController, DiagnosticsController, PulseIpcClient)>
       ChangeNotifierProvider.value(value: diagnostics),
       ChangeNotifierProvider.value(value: frameMetrics),
       ChangeNotifierProvider.value(value: lifecycle),
-      ChangeNotifierProvider.value(value: mcp),
       ChangeNotifierProvider(create: (_) => HealthNavigation()),
     ],
     child: MaterialApp(
