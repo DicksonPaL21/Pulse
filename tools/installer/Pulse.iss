@@ -62,7 +62,7 @@ Type: files; Name: "{app}\service\PulseService.pdb"
 Type: filesandordirs; Name: "{app}\redist"
 
 [Files]
-Source: "{#PulsePayloadDir}\*"; DestDir: "{app}"; Excludes: "redist\*,*.pdb"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#PulsePayloadDir}\*"; DestDir: "{app}"; Excludes: "redist\*,*.pdb"; Flags: ignoreversion recursesubdirs
 ; Only needed while installing: extract to the temp folder Setup cleans up.
 Source: "{#PulsePayloadDir}\redist\VC_redist.x64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall
 
