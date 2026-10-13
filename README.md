@@ -16,7 +16,7 @@
 <p align="center">
   <img alt="Windows" src="https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4?style=flat-square&logo=windows&logoColor=white" />
   <img alt="CI" src="https://img.shields.io/github/actions/workflow/status/Regncreative/Pulse/ci.yml?branch=master&style=flat-square&label=CI" />
-  <img alt="Release" src="https://img.shields.io/badge/release-v1.2.0-22C55E?style=flat-square" />
+  <img alt="Release" src="https://img.shields.io/badge/release-v1.3.0-22C55E?style=flat-square" />
   <img alt="Flutter" src="https://img.shields.io/badge/UI-Flutter-02569B?style=flat-square&logo=flutter&logoColor=white" />
   <img alt="C++" src="https://img.shields.io/badge/service-C%2B%2B%2020-00599C?style=flat-square&logo=cplusplus&logoColor=white" />
   <img alt="License" src="https://img.shields.io/badge/license-MIT-22C55E?style=flat-square" />
@@ -84,12 +84,10 @@ Designed in **Midnight**, Pulse's dark-first visual identity: near-black panels,
 ### Diagnostics
 - **Service snapshot** — SCM state, uptime, identity, binary path, connected clients
 - **IPC & pipeline** — named-pipe health, collectors, performance budgets
-- **MCP status** — PulseMCP bridge metrics when AI Integration is enabled
 - **Copy diagnostics** — support bundle without leaving the machine
 
 ### Settings
 - General, Appearance, System Health, Timeline, Diagnostics, Performance, Privacy
-- **AI Integration** — opt-in PulseMCP registration for Cursor / Claude Desktop
 - Preferences persist locally (`SharedPreferences`) — no account, no sync
 
 ### Product principles
@@ -133,7 +131,7 @@ Designed in **Midnight**, Pulse's dark-first visual identity: near-black panels,
 
 <p align="center">
   <strong>Diagnostics</strong> — service, IPC, pipeline &nbsp;·&nbsp;
-  <strong>Settings</strong> — local preferences &amp; AI Integration
+  <strong>Settings</strong> — local preferences
 </p>
 
 ---
@@ -174,7 +172,7 @@ ETW, WMI, and plugins are intentional future milestones — see [docs/architectu
 
 ### For everyone (stable installer)
 
-1. Download **`Pulse-Setup-1.2.0-windows-x64.exe`** from [GitHub Releases](https://github.com/Regncreative/Pulse/releases/tag/v1.2.0)
+1. Download **`Pulse-Setup-1.3.0-windows-x64.exe`** from [GitHub Releases](https://github.com/Regncreative/Pulse/releases/tag/v1.3.0)
 2. Run the installer and accept the UAC prompt
 3. PulseService is registered and started automatically
 4. Skip or complete the short welcome — then open Timeline or System Health
@@ -202,7 +200,7 @@ Developers can also build a local package:
 .\tools\scripts\package_beta.ps1
 ```
 
-Output: `dist\Pulse-Setup-1.2.0-windows-x64.exe`, `dist\Pulse\`, and `dist\Pulse-1.2.0-windows-x64.zip`
+Output: `dist\Pulse-Setup-1.3.0-windows-x64.exe`, `dist\Pulse\`, and `dist\Pulse-1.3.0-windows-x64.zip`
 
 ### For developers (day-to-day)
 
@@ -239,15 +237,17 @@ Full prerequisites and flags: [BUILD.md](BUILD.md) · [DEVELOPMENT.md](DEVELOPME
 
 ---
 
-## AI Integration (MCP)
+## Local AI Assistant
 
-Pulse ships **PulseMCP** — a read-only Model Context Protocol server for Cursor, Claude Desktop, and future clients.
+Ask about this PC in plain language. The **Assistant** talks to a local model you run yourself — **Ollama** or **LM Studio** — and answers from Pulse's read-only diagnostics.
 
-- Enable in **Settings → AI Integration** (opt-in policy file)
-- One-click **Register** for Cursor (global `~\.cursor\mcp.json`) with backup + safe merge
-- Bundled private Node runtime — no system Node.js required
-- Diagnostics → **MCP** for live status metrics
-- Guides: [AI Integration](docs/guides/ai-integration.md) · [Installation](docs/guides/installation.md) · [Troubleshooting](docs/guides/troubleshooting.md) · [Security](docs/guides/security.md)
+- Localhost only: Pulse refuses non-local AI endpoints, so diagnostics never leave the PC
+- Read-only tools: the Assistant cannot run commands, change settings or modify Windows
+- Pulse never downloads models or installs AI software for you
+
+AI Integration for external MCP clients (PulseMCP) was removed in 1.3 — see [ADR-013](docs/architecture/decisions/ADR-013-remove-pulsemcp.md).
+
+Guides: [Installation](docs/guides/installation.md) · [Troubleshooting](docs/guides/troubleshooting.md) · [Security](docs/guides/security.md)
 
 ---
 
@@ -273,8 +273,8 @@ Pulse ships **PulseMCP** — a read-only Model Context Protocol server for Curso
 | **UI** | Flutter Desktop · Provider · window_manager · Geist / Geist Mono · Lucide icons |
 | **Service** | C++20 · CMake · Win32 · Wevtapi · PDH · DXGI · IP Helper · SetupAPI / SMBIOS |
 | **IPC** | Named pipes · framed binary protocol (`pulse_wire`) · shared Dart/C++ codec |
-| **Protocol** | `shared/pulse_protocol` (C++ + Dart) · Protobuf schema for FastMCP tools |
-| **AI** | PulseMCP (Node) — read-only tools/resources over the same named pipe |
+| **Protocol** | `shared/pulse_protocol` (C++ + Dart) |
+| **AI** | Local Assistant — Ollama / LM Studio over localhost, read-only tools via IPC |
 | **Persistence (app)** | SharedPreferences for settings · local reports & diagnostics export |
 | **CI** | GitHub Actions — Windows service build/tests + Flutter analyze/test |
 
@@ -286,7 +286,6 @@ Pulse ships **PulseMCP** — a read-only Model Context Protocol server for Curso
 Pulse/
 ├── apps/pulse_app/          Flutter Desktop UI (Timeline, Health, Inventory, Reports, …)
 ├── service/pulse_service/   Native Windows service (collector, humanizer, health, IPC)
-├── apps/pulse_mcp/          PulseMCP bridge (private Node runtime)
 ├── shared/
 │   ├── pulse_common/        Version, errors, constants
 │   └── pulse_protocol/      Wire codec (C++ + Dart) + proto
@@ -312,7 +311,7 @@ Pulse/
 - [x] Inventory (system, devices, software)
 - [x] Reports (JSON / CSV / HTML / PDF)
 - [x] Diagnostics page + local export
-- [x] Settings persistence + AI Integration (PulseMCP)
+- [x] Settings persistence
 - [x] Fluent dark-first UI polish
 - [x] Official screenshots in README
 - [x] First-launch welcome (skippable)
@@ -321,6 +320,7 @@ Pulse/
 - [x] **v1.0.0** stable release
 - [x] **v1.1.0** feature release (Assistant, Store MSIX)
 - [x] **v1.2.0** Midnight redesign (icon rail, story Timeline, Overview bento)
+- [x] **v1.3.0** Stability release (service-restart crash, pipe leaks, ~140 MB smaller install; AI Integration removed)
 - [ ] GitHub Releases auto-update
 - [ ] Crash / WER timeline
 - [ ] ETW engine (future milestone)
@@ -350,18 +350,33 @@ Every feature should answer one question: **"What is Windows doing right now?"**
 
 ---
 
+## Code signing policy
+
+Windows releases of Pulse are being moved to signing through the SignPath Foundation's free program for open-source projects (application in review):
+
+Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).
+
+- **Committers and reviewers:** [Regncreative](https://github.com/Regncreative) (maintainer)
+- **Approvers:** [Regncreative](https://github.com/Regncreative)
+- Only release builds produced by this repository's GitHub Actions workflow are signed. Every signing request is approved manually.
+- The Microsoft Store edition is signed by Microsoft.
+
+**Privacy:** This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it. The optional Assistant only talks to an AI runtime on `localhost`. See the [privacy policy](https://pulse.regncreative.com/privacy).
+
+---
+
 ## Documentation
 
 | Doc | Purpose |
 |---|---|
 | [AGENTS.md](AGENTS.md) | Product vision, principles, AI / development rules |
 | [CHANGELOG.md](CHANGELOG.md) | Release history |
+| [docs/releases/v1.3.0.md](docs/releases/v1.3.0.md) | v1.3.0 release notes (stability) |
 | [docs/releases/v1.2.0.md](docs/releases/v1.2.0.md) | v1.2.0 release notes (Midnight) |
 | [docs/releases/v1.1.0.md](docs/releases/v1.1.0.md) | v1.1.0 release notes |
 | [docs/releases/v1.0.0.md](docs/releases/v1.0.0.md) | v1.0.0 release notes |
 | [docs/architecture/README.md](docs/architecture/README.md) | Full architecture package + ADRs |
 | [docs/architecture/24-health-metrics-task-manager.md](docs/architecture/24-health-metrics-task-manager.md) | Health metrics vs Task Manager |
-| [docs/guides/ai-integration.md](docs/guides/ai-integration.md) | PulseMCP setup |
 | [BUILD.md](BUILD.md) | Prerequisites & build |
 | [DEVELOPMENT.md](DEVELOPMENT.md) | Local workflow |
 | [IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md) | Implementation notes |

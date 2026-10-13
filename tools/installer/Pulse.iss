@@ -5,7 +5,7 @@
 ; No PowerShell. No ExecutionPolicy. UAC elevation only.
 
 #define MyAppName "Pulse"
-#define MyAppVersion "1.2.0"
+#define MyAppVersion "1.3.0"
 #define MyAppPublisher "Regncreative"
 #define MyAppURL "https://github.com/Regncreative/Pulse"
 #define MyAppExeName "Pulse.exe"
@@ -36,10 +36,18 @@ OutputDir={#PulseOutDir}
 OutputBaseFilename=Pulse-Setup-{#MyAppVersion}-windows-x64
 Compression=lzma2
 SolidCompression=yes
-WizardStyle=modern
+; Midnight look (ADR-012): forced dark, no bevel lines, app canvas color.
+; Images come from make_wizard_images.py; Setup picks the best DPI match.
+WizardStyle=modern dark hidebevels
+WizardBackColor=#08080A
+WizardImageFile=branding\wizard-image-100.png,branding\wizard-image-125.png,branding\wizard-image-150.png,branding\wizard-image-175.png,branding\wizard-image-200.png,branding\wizard-image-250.png
+WizardSmallImageFile=branding\wizard-small-image-100.png,branding\wizard-small-image-125.png,branding\wizard-small-image-150.png,branding\wizard-small-image-175.png,branding\wizard-small-image-200.png,branding\wizard-small-image-250.png
 SetupLogging=yes
 UninstallDisplayIcon={app}\{#MyAppExeName}
 CloseApplications=yes
+; Ask Explorer to refresh icons at the end of setup. Without it, an upgrade
+; that changes the app icon showed a blank taskbar icon (stale icon cache).
+ChangesAssociations=yes
 RestartIfNeededByRun=no
 MinVersion=10.0
 
@@ -49,8 +57,26 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional icons:"; Flags: unchecked
 
+[InstallDelete]
+; Leftovers from earlier versions that upgrades never removed (~41 MB):
+; debug symbols shipped by an early beta, and the VC++ redistributable that
+; used to be kept in the install folder after setup.
+Type: files; Name: "{app}\service\PulseService.pdb"
+Type: filesandordirs; Name: "{app}\redist"
+; AI Integration (PulseMCP) was removed in 1.3 (ADR-013): ~100 MB of private
+; Node runtime and MCP server. Running instances are closed first (see
+; RegisterExtraCloseApplicationsResources); the app removes its client
+; registrations on first launch.
+Type: files; Name: "{app}\PulseMCP.exe"
+Type: files; Name: "{app}\PulseMCP.cmd"
+Type: filesandordirs; Name: "{app}\runtime"
+Type: filesandordirs; Name: "{app}\mcp"
+Type: files; Name: "{app}\docs\guides\ai-integration.md"
+
 [Files]
-Source: "{#PulsePayloadDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#PulsePayloadDir}\*"; DestDir: "{app}"; Excludes: "redist\*,*.pdb"; Flags: ignoreversion recursesubdirs
+; Only needed while installing: extract to the temp folder Setup cleans up.
+Source: "{#PulsePayloadDir}\redist\VC_redist.x64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall
 
 [Icons]
 Name: "{group}\Pulse"; Filename: "{app}\{#MyAppExeName}"
@@ -68,14 +94,17 @@ Filename: "{app}\service\PulseService.exe"; \
   Parameters: "--uninstall"; \
   Flags: runhidden waituntilterminated; \
   RunOnceId: "UninstallPulseService"
-; Remove Pulse-created AI client MCP registrations only (never other servers).
-; Prefer PulseMCP.exe (bundled private Node); fall back to PulseMCP.cmd.
-Filename: "{cmd}"; \
-  Parameters: "/c if exist ""{app}\PulseMCP.exe"" (""{app}\PulseMCP.exe"" --cleanup-registrations) else if exist ""{app}\PulseMCP.cmd"" (""{app}\PulseMCP.cmd"" --cleanup-registrations)"; \
-  Flags: runhidden waituntilterminated; \
-  RunOnceId: "CleanupPulseMcpRegistrations"
 
 [Code]
+// Close PulseMCP processes left by 1.2 (the status daemon and AI-client
+// sessions run runtime\node.exe) so [InstallDelete] can remove them. Setup
+// only checks files it installs unless told otherwise.
+procedure RegisterExtraCloseApplicationsResources;
+begin
+  RegisterExtraCloseApplicationsResource(False, ExpandConstant('{app}\runtime\node.exe'));
+  RegisterExtraCloseApplicationsResource(False, ExpandConstant('{app}\PulseMCP.exe'));
+end;
+
 function ExecChecked(const FileName, Params, WorkDir: String; var ResultCode: Integer): Boolean;
 begin
   Result := Exec(FileName, Params, WorkDir, SW_HIDE, ewWaitUntilTerminated, ResultCode);
@@ -90,7 +119,7 @@ begin
   if CurStep <> ssPostInstall then
     Exit;
 
-  Redist := ExpandConstant('{app}\redist\VC_redist.x64.exe');
+  Redist := ExpandConstant('{tmp}\VC_redist.x64.exe');
   ServiceExe := ExpandConstant('{app}\service\PulseService.exe');
 
   { 1) Visual C++ Redistributable (quiet). 0 / 1638 / 3010 are acceptable. }
@@ -98,7 +127,7 @@ begin
   begin
     WizardForm.StatusLabel.Caption := 'Installing Visual C++ runtime…';
     if ExecChecked(Redist, '/install /quiet /norestart',
-                   ExpandConstant('{app}\redist'), ResultCode) then
+                   ExpandConstant('{tmp}'), ResultCode) then
     begin
       if (ResultCode <> 0) and (ResultCode <> 1638) and (ResultCode <> 3010) then
         MsgBox('Visual C++ Redistributable returned exit code ' + IntToStr(ResultCode) + '.' + #13#10 +

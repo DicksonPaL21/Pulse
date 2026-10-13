@@ -11,15 +11,15 @@
   GitHub / Inno Setup packaging is unchanged (package_beta.ps1 + Pulse.iss).
 
   Outputs under dist/msix/:
-    PulseDiagnostics-1.2.0-Store.msix
-    PulseDiagnostics-1.2.0-Store.msixupload
+    PulseDiagnostics-1.3.0-Store.msix
+    PulseDiagnostics-1.3.0-Store.msixupload
     AppxManifest.identity.txt
     store-validation-report.txt
 #>
 $ErrorActionPreference = "Stop"
 
-$Version = "1.2.0"
-$MsixVersion = "1.2.0.0"
+$Version = "1.3.0"
+$MsixVersion = "1.3.0.0"
 $ExpectedIdentity = "Regncreative.PulseDiagnostics"
 $ExpectedPublisher = "CN=72B69D57-C9E8-4280-AF56-B142286B0D20"
 $ExpectedDisplayName = "Pulse Diagnostics"
@@ -309,29 +309,14 @@ if (-not (Test-Path -LiteralPath $embedded)) {
   throw "FATAL: service\PulseService.exe missing after copy - refusing to pack Store MSIX."
 }
 
-# --- Embed PulseMCP (AI Integration) ---
-# Same payload as the Inno installer: PulseMCP.exe + .cmd launcher, the
-# private Node runtime and the bundled server. Earlier Store builds only
-# picked these up when they happened to be left in the build folder.
-$mcpPayload = Join-Path $root "dist\Pulse"
-$mcpParts = @("PulseMCP.exe", "PulseMCP.cmd", "runtime\node.exe", "mcp\main.js")
-$mcpMissing = $mcpParts | Where-Object { -not (Test-Path -LiteralPath (Join-Path $mcpPayload $_)) }
-if ($mcpMissing) {
-  Write-Host "==> Packaging PulseMCP (missing: $($mcpMissing -join ', '))"
-  & powershell -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "package_pulsemcp.ps1")
-  if ($LASTEXITCODE -ne 0) { throw "package_pulsemcp.ps1 failed" }
-}
-Write-Host "==> Embedding PulseMCP"
-Copy-Item (Join-Path $mcpPayload "PulseMCP.exe") $buildFilesFolder -Force
-Copy-Item (Join-Path $mcpPayload "PulseMCP.cmd") $buildFilesFolder -Force
-foreach ($dir in @("runtime", "mcp")) {
-  $dest = Join-Path $buildFilesFolder $dir
-  if (Test-Path -LiteralPath $dest) { Remove-Item -LiteralPath $dest -Recurse -Force }
-  Copy-Item (Join-Path $mcpPayload $dir) $dest -Recurse -Force
-}
-foreach ($part in $mcpParts) {
-  if (-not (Test-Path -LiteralPath (Join-Path $buildFilesFolder $part))) {
-    throw "FATAL: $part missing after PulseMCP copy - refusing to pack Store MSIX."
+# AI Integration (PulseMCP) was removed in 1.3 (ADR-013). The Flutter build
+# folder can still hold a stale private Node runtime from older packaging, so
+# make sure none of it reaches the Store package.
+foreach ($stale in @("PulseMCP.exe", "PulseMCP.cmd", "runtime", "mcp")) {
+  $p = Join-Path $buildFilesFolder $stale
+  if (Test-Path -LiteralPath $p) {
+    Write-Host "    Removing stale $stale from Store staging"
+    Remove-Item -LiteralPath $p -Recurse -Force
   }
 }
 

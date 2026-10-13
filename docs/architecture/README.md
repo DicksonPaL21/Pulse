@@ -60,7 +60,7 @@ Each feature should answer: **"What is Windows doing right now?"**
 | 30 | [Health validation methodology](30-health-validation.md) | TM / RM / PerfMon / SI comparison matrix |
 | 31 | [UI design system](31-ui-design-system.md) | ThemeExtension, accents, PulseSection, PulseThemeScope |
 | 32 | [UX / UI redesign milestone](32-ux-redesign-milestone.md) | Themes, Settings, Reports, Health sections, command palette |
-| 33 | [PulseMCP product & API](33-mcp-bridge.md) | First-class MCP server, tools, resources, schemas |
+| 33 | [PulseMCP product & API](33-mcp-bridge.md) | Historical — removed in 1.3 ([ADR-013](decisions/ADR-013-remove-pulsemcp.md)) |
 | 34 | [Engineering roadmap (remaining)](34-engineering-roadmap.md) | **Frozen** R0–R17; theme redesign excluded; ADR to change |
 | 35 | [Product stability (R1)](35-product-stability.md) | Budgets, diagnostics, soak — **Wave A closed** |
 | 36 | [Timeline Intelligence (R2)](36-timeline-intelligence-r2.md) | Flagship Timeline plan — incidents, RCA, details, export |
@@ -123,7 +123,7 @@ Never expose technical information first.
 | M2 | ETW consumer (see [20](20-etw-integration.md)) |
 | M3 | WMI indications (see [22](22-wmi-integration.md)) — no `WITHIN` process polling |
 | M4 | Out-of-process plugins (see [14](14-plugins-future.md)) |
-| MCP | PulseMCP first-class product (see [33](33-mcp-bridge.md), [ADR-010](decisions/ADR-010-mcp-first-class-product.md)) |
+| MCP | Removed in 1.3 — local Assistant only ([ADR-013](decisions/ADR-013-remove-pulsemcp.md)) |
 | Later | Timeline replay, export, registry/file/network engines |
 
 ---

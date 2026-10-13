@@ -14,6 +14,7 @@ import '../../application/connection_controller.dart';
 import '../../application/timeline_library_controller.dart';
 import '../../application/timeline_session_controller.dart';
 import '../../features/timeline/timeline_activity.dart';
+import '../../features/timeline/timeline_display.dart';
 import '../../features/timeline/timeline_export.dart';
 import '../../features/timeline/timeline_incident_engine.dart';
 import '../../features/timeline/timeline_empty_copy.dart';
@@ -683,6 +684,10 @@ class _TimelineBody extends StatelessWidget {
                     selectedEvent!.timestampUnixMs <
                 120000;
 
+        // "Latest" marks the newest event, not row 0: pinned events sort
+        // first and would otherwise be labelled Latest.
+        final latestEventId = latestEventIdOf(allVisibleEvents);
+
         final now = DateTime.now();
         final activity = TimelineActivitySummary.fromEvents(
           sessionEvents,
@@ -796,7 +801,8 @@ class _TimelineBody extends StatelessWidget {
                                 event: event,
                                 isFirst: i == 0,
                                 isLast: i == listItems.length - 1,
-                                emphasize: i == 0 && !filtersActive,
+                                emphasize: !filtersActive &&
+                                    event.eventId == latestEventId,
                                 animationIndex: i.clamp(0, 12),
                                 selected: selectedEventId != null &&
                                     event.eventId == selectedEventId,

@@ -275,15 +275,6 @@ class _AppShellState extends State<AppShell> {
         onInvoke: () => go(PulseShellPages.assistant),
       ),
       PulseCommand(
-        id: 'nav.aiIntegration',
-        title: 'Go to AI Integration',
-        icon: LucideIcons.bot,
-        keywords: const ['mcp', 'cursor', 'claude', 'copilot'],
-        onInvoke: () {
-          context.read<ShellNavigation>().openAiIntegrationSettings();
-        },
-      ),
-      PulseCommand(
         id: 'theme.cycle',
         title: 'Toggle theme',
         subtitle: 'Cycle light / dark / system',

@@ -17,4 +17,19 @@ void main() {
       contains('Looking for PulseService'),
     );
   });
+
+  test('UAC cancel and Windows denial get different messages', () {
+    final cancelled = PulseUserErrors.fromMessage(
+      'Administrator approval was cancelled. Pulse did not change the service.',
+    );
+    final denied = PulseUserErrors.fromMessage(
+      'Windows blocked the administrator request (error 5). A security '
+      'policy or security software may be preventing elevation.',
+    );
+
+    expect(cancelled, contains('cancelled'));
+    expect(denied, contains('error 5'));
+    expect(denied, contains('services.msc'));
+    expect(cancelled, isNot(equals(denied)));
+  });
 }

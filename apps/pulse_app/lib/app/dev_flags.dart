@@ -18,3 +18,10 @@ const int kStartPage = int.fromEnvironment(
   'PULSE_START_PAGE',
   defaultValue: 0,
 );
+
+/// Named pipe the IPC client connects to (development and testing only).
+///
+/// Pair with `PulseService.exe --console --pipe <name>` to test reconnects
+/// without touching the installed service:
+/// `flutter run -d windows --dart-define=PULSE_PIPE_NAME=\.\pipe\PulseServiceDev`
+const String kPipeNameOverride = String.fromEnvironment('PULSE_PIPE_NAME');

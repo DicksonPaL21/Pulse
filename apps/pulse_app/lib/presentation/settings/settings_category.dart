@@ -1,4 +1,4 @@
-/// Public Settings categories for deep-links (Assistant → AI Integration, etc.).
+/// Public Settings categories for deep-links.
 enum SettingsCategoryId {
   general,
   appearance,
@@ -8,7 +8,6 @@ enum SettingsCategoryId {
   diagnostics,
   performance,
   privacy,
-  aiIntegration,
   updates,
   developer,
 }

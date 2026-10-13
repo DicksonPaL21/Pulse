@@ -36,9 +36,15 @@ abstract final class PulseUserErrors {
         lower.contains('another service action')) {
       return 'Wait for the current action to finish.';
     }
-    if (lower.contains('administrator approval was cancelled') ||
-        lower.contains('uac')) {
-      return 'Administrator approval is required to control PulseService.';
+    // Keep "you said No" apart from "Windows refused": the old single
+    // message hid policy / security-software blocks behind a consent prompt.
+    if (lower.contains('administrator approval was cancelled')) {
+      return 'The administrator prompt was cancelled. PulseService was not changed.';
+    }
+    if (lower.contains('windows blocked the administrator request')) {
+      return 'Windows blocked the administrator request (error 5). A security '
+          'policy or security software may be preventing Pulse from controlling '
+          'PulseService. You can use Services (services.msc) instead.';
     }
     if (lower.contains('not installed') ||
         lower.contains('not registered by this store') ||

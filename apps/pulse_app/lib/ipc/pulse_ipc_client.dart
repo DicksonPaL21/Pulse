@@ -10,7 +10,13 @@ import 'package:pulse_protocol/pulse_constants.dart';
 import 'package:pulse_protocol/pulse_wire.dart';
 import 'package:win32/win32.dart';
 
+import '../app/dev_flags.dart';
+
 enum IpcConnectionState { disconnected, connecting, connected, error }
+
+/// How long [PulseIpcClient.disposeClient] waits for the worker to close its
+/// pipe before force-killing the isolate.
+const Duration _kWorkerShutdownTimeout = Duration(seconds: 2);
 
 /// One IPC reconnect transition recorded on the Flutter client.
 class IpcReconnectEvent {
@@ -112,12 +118,17 @@ class IpcStatus {
 
 /// UI-facing IPC client. Pipe I/O runs on a dedicated isolate (ADR-008 / P0-5).
 class PulseIpcClient extends ChangeNotifier {
-  PulseIpcClient({this.reconnectHistoryCapacity = 12});
+  PulseIpcClient({this.reconnectHistoryCapacity = 12, String? pipeName})
+      : pipeName = pipeName ??
+            (kPipeNameOverride.isEmpty ? kPipeName : kPipeNameOverride);
 
   /// Reserved for ClientHello only — must stay out of UI RPC id space (>= 1000).
   static const int kHandshakeRequestId = 1;
 
   final int reconnectHistoryCapacity;
+
+  /// Named pipe of PulseService (overridable for tests and development).
+  final String pipeName;
 
   IpcStatus _status = const IpcStatus(state: IpcConnectionState.disconnected);
   IpcStatus get status => _status;
@@ -157,7 +168,10 @@ class PulseIpcClient extends ChangeNotifier {
         _onIsolateMessage(message);
       }
     });
-    _isolate = await Isolate.spawn(_ipcIsolateMain, response.sendPort);
+    _isolate = await Isolate.spawn(
+      _ipcIsolateMain,
+      (response.sendPort, pipeName),
+    );
     _cmdPort = await ready.future;
     _cmdPort!.send({'cmd': 'connect'});
     _setStatus(_status.copyWith(
@@ -167,10 +181,24 @@ class PulseIpcClient extends ChangeNotifier {
   }
 
   Future<void> disposeClient() async {
-    _cmdPort?.send({'cmd': 'shutdown'});
-    _isolate?.kill(priority: Isolate.immediate);
+    final isolate = _isolate;
+    final cmdPort = _cmdPort;
     _isolate = null;
     _cmdPort = null;
+    if (isolate != null) {
+      // Let the worker close its pipe handle before the isolate goes away.
+      // Killing it first leaked the open handle (handles are per process),
+      // so PulseService kept one pipe instance per restart until all 32
+      // were in use.
+      final exited = ReceivePort();
+      isolate.addOnExitListener(exited.sendPort);
+      cmdPort?.send({'cmd': 'shutdown'});
+      await exited.first.timeout(_kWorkerShutdownTimeout, onTimeout: () {
+        isolate.kill(priority: Isolate.immediate);
+        return null;
+      });
+      exited.close();
+    }
     for (final c in _pending.values) {
       if (!c.isCompleted) {
         c.completeError(StateError('IPC shut down'));
@@ -560,14 +588,15 @@ class PulseIpcClient extends ChangeNotifier {
   }
 }
 
-void _ipcIsolateMain(SendPort uiPort) {
-  _IpcWorker(uiPort).start();
+void _ipcIsolateMain((SendPort, String) args) {
+  _IpcWorker(args.$1, args.$2).start();
 }
 
 class _IpcWorker {
-  _IpcWorker(this.uiPort);
+  _IpcWorker(this.uiPort, this.pipeName);
 
   final SendPort uiPort;
+  final String pipeName;
   final cmd = ReceivePort();
   int? handle;
   final buffer = BytesBuilder(copy: false);
@@ -595,6 +624,7 @@ class _IpcWorker {
       readPoll?.cancel();
       closePipe();
       cmd.close();
+      Isolate.exit();
     }
   }
 
@@ -726,7 +756,7 @@ class _IpcWorker {
       setStatus('connecting', message: 'Connecting…');
     }
     closePipe();
-    final name = kPipeName.toNativeUtf16();
+    final name = pipeName.toNativeUtf16();
     try {
       handle = CreateFile(
         name,

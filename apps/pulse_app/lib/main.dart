@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_acrylic/flutter_acrylic.dart';
 import 'package:provider/provider.dart';
@@ -6,6 +8,7 @@ import 'package:window_manager/window_manager.dart';
 import 'app/pulse_app.dart';
 import 'app/theme/pulse_theme.dart';
 import 'di/app_services.dart';
+import 'logging/app_logger.dart';
 
 Future<void> main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,6 +32,7 @@ Future<void> main(List<String> args) async {
   await windowManager.waitUntilReadyToShow(windowOptions);
 
   final services = await AppServices.create();
+  _logUncaughtErrors(services.logger);
   runApp(PulseRoot(services: services));
 
   WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -53,6 +57,20 @@ Future<void> main(List<String> args) async {
   });
 }
 
+/// Records framework and async errors in the app log before the default
+/// handling, so a failure leaves a trace on disk.
+void _logUncaughtErrors(AppLogger logger) {
+  final previousFlutterHandler = FlutterError.onError;
+  FlutterError.onError = (details) {
+    logger.error('Flutter', '${details.exceptionAsString()}\n${details.stack}');
+    previousFlutterHandler?.call(details);
+  };
+  PlatformDispatcher.instance.onError = (error, stack) {
+    logger.error('Uncaught', '$error\n$stack');
+    return true;
+  };
+}
+
 class PulseRoot extends StatelessWidget {
   const PulseRoot({super.key, required this.services});
 
@@ -72,7 +90,6 @@ class PulseRoot extends StatelessWidget {
         ChangeNotifierProvider.value(value: services.serviceLifecycle),
         ChangeNotifierProvider.value(value: services.clientFrameMetrics),
         ChangeNotifierProvider.value(value: services.healthNavigation),
-        ChangeNotifierProvider.value(value: services.mcpIntegration),
         ChangeNotifierProvider.value(value: services.shellNavigation),
         ChangeNotifierProvider.value(value: services.backgroundMode),
         ChangeNotifierProvider.value(value: services.assistant),

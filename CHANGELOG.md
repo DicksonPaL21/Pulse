@@ -5,6 +5,31 @@ All notable changes to Pulse are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] — 2026-10-13
+
+### Removed
+
+- **AI Integration (PulseMCP)** — the MCP bridge for Claude Desktop, Cursor, VS Code, Windsurf and Cline, its private Node runtime (~100 MB), Settings → AI Integration and Diagnose → MCP ([ADR-013](docs/architecture/decisions/ADR-013-remove-pulsemcp.md)). The local Assistant (Ollama / LM Studio) stays. On first launch Pulse removes the client entries it had added (backed up first); Setup deletes the old files
+
+### Changed
+
+- Product version stamped **1.3.0** across UI, PulseService, installer and MSIX
+- Lime Midnight app icon for Pulse.exe, taskbar, tray and Store tile
+- Midnight-styled installer: dark wizard, lime Pulse mark
+- The app log is written to `%LOCALAPPDATA%\Pulse\logs\app\` (JSON lines, 14 days) and records uncaught errors
+- Assistant status tool renamed `mcp_self` → `pulse_status`
+- The UAC prompt for Start / Stop / Restart service opens in front of Pulse; a cancelled prompt and a blocked request (error 5) now show different messages
+- Inventory state traces moved to debug logging
+- LICENSE is detected as MIT on GitHub; README documents the code signing policy
+
+### Fixed
+
+- Pulse.exe could crash (`flutter_windows.dll`, 0xc0000005) after **Start / Stop / Restart service**: the UAC launch and wait ran on the UI thread
+- PulseService connections leaked until the service logged "pipe slots exhausted" and Diagnose → Connected clients kept climbing (PulseMCP handshake failures; Restart IPC Connection)
+- "Latest" badge went to a pinned event instead of the newest one
+- Setup left ~41 MB behind on upgrade (`PulseService.pdb`, `redist\VC_redist.x64.exe`) and an empty `redist` folder; the taskbar icon could stay blank after an icon change
+- Packaging could hang on a leftover smoke-test process
+
 ## [1.2.0] — 2026-10-12
 
 ### Changed

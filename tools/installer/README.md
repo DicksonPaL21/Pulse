@@ -3,7 +3,7 @@
 End-user deliverable is built with **Inno Setup 6**:
 
 ```text
-tools/installer/Pulse.iss  →  dist/Pulse-Setup-1.2.0-windows-x64.exe
+tools/installer/Pulse.iss  →  dist/Pulse-Setup-1.3.0-windows-x64.exe
 ```
 
 ## Behavior
@@ -23,3 +23,18 @@ No PowerShell scripts are required for installation.
 ```
 
 Requires `ISCC.exe` (Inno Setup 6).
+
+Requires Inno Setup **6.7 or later** for the dark wizard style.
+
+## Branding
+
+The wizard uses the Midnight look (forced dark style, `#08080A` background,
+lime Pulse mark). Images live in `branding/` and are generated, not drawn by
+hand:
+
+```powershell
+python tools\installer\make_wizard_images.py
+```
+
+The script writes one side-panel and one small image per DPI scale (100–250 %)
+from the app's theme colors and bundled Geist font (requires Pillow).

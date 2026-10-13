@@ -1,6 +1,6 @@
 # ADR-010: PulseMCP as a First-Class Product Component
 
-**Status:** Accepted — M1 shipped (`apps/pulse_mcp`: stdio, `mcp.self`, policy gate, IPC hello); M2+ per doc 33 / roadmap R5–R7
+**Status:** **Superseded** by [ADR-013](ADR-013-remove-pulsemcp.md) (2026-10-13) — PulseMCP removed in 1.3. Previously: Accepted — M1 shipped (`apps/pulse_mcp`: stdio, `mcp.self`, policy gate, IPC hello); M2+ per doc 33 / roadmap R5–R7
 
 **Date:** 2026-08-01
 

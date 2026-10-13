@@ -1,5 +1,7 @@
 # 33 — PulseMCP Product Architecture & API Surface
 
+> **Historical.** PulseMCP was removed in 1.3 — see [ADR-013](decisions/ADR-013-remove-pulsemcp.md).
+
 **Status:** Architecture accepted — **M1 shipped**; M2–M8 tracked in [34-engineering-roadmap.md](34-engineering-roadmap.md) (R5–R7)  
 **ADR:** [ADR-010](decisions/ADR-010-mcp-first-class-product.md)  
 **MCP spec:** [2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/) (and later negotiated versions via SDK)  
@@ -844,7 +846,7 @@ Dev:
 }
 ```
 
-User guide: [ai-integration.md](../guides/ai-integration.md).
+User guide: `ai-integration.md` (removed in 1.3 with PulseMCP).
 
 ---
 

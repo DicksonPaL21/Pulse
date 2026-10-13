@@ -15,6 +15,7 @@ void PrintUsage() {
   std::wcout << L"PulseService " << pulse::ServiceVersion().ToString().c_str() << L"\n"
              << L"Usage:\n"
              << L"  PulseService.exe --console         Run interactively\n"
+             << L"      [--pipe \\\\.\\pipe\\Name]          Use another pipe (development)\n"
              << L"  PulseService.exe --install         Install Windows service (admin)\n"
              << L"  PulseService.exe --install-start   Install, start, verify (admin)\n"
              << L"  PulseService.exe --start           Start installed service (admin)\n"

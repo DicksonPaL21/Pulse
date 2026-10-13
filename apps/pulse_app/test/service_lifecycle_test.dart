@@ -186,7 +186,7 @@ void main() {
     expect(life.lastError, contains('cancelled'));
     expect(
       PulseUserErrors.fromMessage(life.lastError!),
-      contains('Administrator approval'),
+      contains('administrator prompt was cancelled'),
     );
     expect(life.actionBusy, isFalse);
     expect(life.state, PulseServiceScmState.stopped);
