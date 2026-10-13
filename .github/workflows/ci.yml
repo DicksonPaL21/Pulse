@@ -60,22 +60,3 @@ jobs:
             dist/msix/store-validation-report.txt
             dist/msix/AppxManifest.identity.txt
           if-no-files-found: warn
-
-  pulse_mcp:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: npm
-          cache-dependency-path: apps/pulse_mcp/package-lock.json
-      - name: Install
-        working-directory: apps/pulse_mcp
-        run: npm ci
-      - name: Build
-        working-directory: apps/pulse_mcp
-        run: npm run build
-      - name: Test
-        working-directory: apps/pulse_mcp
-        run: npm test

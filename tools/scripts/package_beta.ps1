@@ -163,14 +163,9 @@ if (-not $vcRedist) { throw "vc_redist.x64.exe not found under Visual Studio Red
 New-Item -ItemType Directory -Force -Path (Join-Path $dist "redist") | Out-Null
 Copy-Item $vcRedist (Join-Path $dist "redist\VC_redist.x64.exe") -Force
 
-Write-Host "==> Packaging PulseMCP"
-& powershell -ExecutionPolicy Bypass -File (Join-Path $root "tools\scripts\package_pulsemcp.ps1")
-if ($LASTEXITCODE -ne 0) { throw "package_pulsemcp.ps1 failed" }
-
-Write-Host "==> Copying AI Integration docs into payload"
+Write-Host "==> Copying user guides into payload"
 $docsOut = Join-Path $dist "docs\guides"
 New-Item -ItemType Directory -Force -Path $docsOut | Out-Null
-Copy-Item (Join-Path $root "docs\guides\ai-integration.md") $docsOut -Force
 $guideExtras = @(
   "installation.md",
   "troubleshooting.md",
@@ -193,11 +188,8 @@ This folder is the install payload. For developers:
 
   service\PulseService.exe --install-start   (elevated)
   Pulse.exe
-  PulseMCP.exe                 (self-contained; private Node runtime - no system Node.js)
-  PulseMCP.cmd                 (compatibility launcher; same private runtime)
 
 Privacy: local-only. No telemetry. Observation only.
-MCP: enable in Settings → AI Integration. Policy: %LOCALAPPDATA%\Pulse\mcp\policy.json
 "@ | Set-Content -Path (Join-Path $dist "README_INSTALL.txt") -Encoding UTF8
 
 # Zip (payload / CI artifact - not the primary end-user deliverable)
@@ -209,14 +201,6 @@ Compress-Archive -Path (Join-Path $dist "*") -DestinationPath $zip -Force
 Write-Host "==> Verifying runtime deps"
 & powershell -ExecutionPolicy Bypass -File (Join-Path $root "tools\scripts\verify_runtime_deps.ps1") -PackageDir $dist
 if ($LASTEXITCODE -ne 0) { throw "verify_runtime_deps.ps1 failed" }
-
-Write-Host "==> Verifying PulseMCP without system Node.js"
-& powershell -ExecutionPolicy Bypass -File (Join-Path $root "tools\scripts\verify_pulsemcp_no_system_node.ps1") -PackageDir $dist
-if ($LASTEXITCODE -ne 0) { throw "verify_pulsemcp_no_system_node.ps1 failed" }
-
-Write-Host "==> Verifying PulseMCP under path with spaces (Program Files shape)"
-& powershell -ExecutionPolicy Bypass -File (Join-Path $root "tools\scripts\verify_pulsemcp_spaced_path.ps1") -PackageDir $dist
-if ($LASTEXITCODE -ne 0) { throw "verify_pulsemcp_spaced_path.ps1 failed" }
 
 Write-Host "==> Building Inno Setup installer (no PowerShell for end users)"
 $iscc = @(

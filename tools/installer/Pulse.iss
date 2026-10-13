@@ -63,6 +63,15 @@ Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription:
 ; used to be kept in the install folder after setup.
 Type: files; Name: "{app}\service\PulseService.pdb"
 Type: filesandordirs; Name: "{app}\redist"
+; AI Integration (PulseMCP) was removed in 1.3 (ADR-013): ~100 MB of private
+; Node runtime and MCP server. Running instances are closed first (see
+; RegisterExtraCloseApplicationsResources); the app removes its client
+; registrations on first launch.
+Type: files; Name: "{app}\PulseMCP.exe"
+Type: files; Name: "{app}\PulseMCP.cmd"
+Type: filesandordirs; Name: "{app}\runtime"
+Type: filesandordirs; Name: "{app}\mcp"
+Type: files; Name: "{app}\docs\guides\ai-integration.md"
 
 [Files]
 Source: "{#PulsePayloadDir}\*"; DestDir: "{app}"; Excludes: "redist\*,*.pdb"; Flags: ignoreversion recursesubdirs
@@ -85,14 +94,17 @@ Filename: "{app}\service\PulseService.exe"; \
   Parameters: "--uninstall"; \
   Flags: runhidden waituntilterminated; \
   RunOnceId: "UninstallPulseService"
-; Remove Pulse-created AI client MCP registrations only (never other servers).
-; Prefer PulseMCP.exe (bundled private Node); fall back to PulseMCP.cmd.
-Filename: "{cmd}"; \
-  Parameters: "/c if exist ""{app}\PulseMCP.exe"" (""{app}\PulseMCP.exe"" --cleanup-registrations) else if exist ""{app}\PulseMCP.cmd"" (""{app}\PulseMCP.cmd"" --cleanup-registrations)"; \
-  Flags: runhidden waituntilterminated; \
-  RunOnceId: "CleanupPulseMcpRegistrations"
 
 [Code]
+// Close PulseMCP processes left by 1.2 (the status daemon and AI-client
+// sessions run runtime\node.exe) so [InstallDelete] can remove them. Setup
+// only checks files it installs unless told otherwise.
+procedure RegisterExtraCloseApplicationsResources;
+begin
+  RegisterExtraCloseApplicationsResource(False, ExpandConstant('{app}\runtime\node.exe'));
+  RegisterExtraCloseApplicationsResource(False, ExpandConstant('{app}\PulseMCP.exe'));
+end;
+
 function ExecChecked(const FileName, Params, WorkDir: String; var ResultCode: Integer): Boolean;
 begin
   Result := Exec(FileName, Params, WorkDir, SW_HIDE, ewWaitUntilTerminated, ResultCode);
