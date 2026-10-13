@@ -9,7 +9,7 @@
 | `0.3.2-beta.x` (pre-release) | No |
 | Older beta / unsigned experimental builds | No |
 
-Pulse **1.2.0** is the current stable release. Security reports are welcome and will remain private until a fix is available.
+Pulse **1.3.0** is the current stable release. Security reports are welcome and will remain private until a fix is available.
 
 ## Reporting a vulnerability
 

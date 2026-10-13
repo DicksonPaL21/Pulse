@@ -5,7 +5,7 @@ All notable changes to Pulse are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.3.0] — 2026-10-13
 
 ### Removed
 
@@ -13,10 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Product version stamped **1.3.0** across UI, PulseService, installer and MSIX
 - Lime Midnight app icon for Pulse.exe, taskbar, tray and Store tile
 - Midnight-styled installer: dark wizard, lime Pulse mark
 - The app log is written to `%LOCALAPPDATA%\Pulse\logs\app\` (JSON lines, 14 days) and records uncaught errors
 - Assistant status tool renamed `mcp_self` → `pulse_status`
+- The UAC prompt for Start / Stop / Restart service opens in front of Pulse; a cancelled prompt and a blocked request (error 5) now show different messages
+- Inventory state traces moved to debug logging
+- LICENSE is detected as MIT on GitHub; README documents the code signing policy
 
 ### Fixed
 
