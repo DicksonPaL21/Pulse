@@ -460,17 +460,25 @@ int UninstallService() {
   return 0;
 }
 
-int RunConsoleMode(int, wchar_t**) {
+int RunConsoleMode(int argc, wchar_t** argv) {
   SetConsoleCtrlHandler(ConsoleCtrlHandler, TRUE);
   ServiceConfig config = DefaultConfig();
   if (!BootstrapFromDisk(&config)) return 1;
+
+  // Development only: `--pipe <name>` runs a second instance next to the
+  // installed service (e.g. to test client reconnect without stopping it).
+  for (int i = 1; i + 1 < argc; ++i) {
+    if (std::wstring(argv[i]) == L"--pipe") {
+      config.pipe_name = argv[i + 1];
+    }
+  }
 
   ServiceCore core;
   if (!core.Initialize(config)) return 1;
   core.SetRunMode("Console");
   if (!core.Start()) return 1;
   Logger::Instance().Info("ServiceCore", "Console mode running. Ctrl+C to stop.");
-  std::wcout << L"PulseService console mode. Pipe: \\\\.\\pipe\\PulseService\n";
+  std::wcout << L"PulseService console mode. Pipe: " << config.pipe_name << L"\n";
   std::wcout << L"Historical Timeline snapshot available via GetTimelineSnapshot (System).\n";
 
   while (!g_stop_console && core.IsRunning()) {
