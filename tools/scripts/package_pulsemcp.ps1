@@ -30,8 +30,19 @@ if (-not $node -or -not $npm) {
 }
 
 function Get-VsDevCmd {
+  # vswhere ships with every Visual Studio 2017+ install (including the GitHub
+  # windows-latest image, which has VS 18 Enterprise under Program Files).
+  $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+  if (Test-Path $vswhere) {
+    $found = & $vswhere -latest -products * `
+      -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+      -find "Common7\Tools\VsDevCmd.bat" | Select-Object -First 1
+    if ($found -and (Test-Path $found)) { return $found }
+  }
+
   $candidates = @(
     "${env:ProgramFiles(x86)}\Microsoft Visual Studio\18\BuildTools\Common7\Tools\VsDevCmd.bat",
+    "${env:ProgramFiles}\Microsoft Visual Studio\18\Enterprise\Common7\Tools\VsDevCmd.bat",
     "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2022\BuildTools\Common7\Tools\VsDevCmd.bat",
     "${env:ProgramFiles}\Microsoft Visual Studio\2022\Community\Common7\Tools\VsDevCmd.bat",
     "${env:ProgramFiles}\Microsoft Visual Studio\2022\Professional\Common7\Tools\VsDevCmd.bat"
