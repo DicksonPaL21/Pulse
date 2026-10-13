@@ -349,6 +349,21 @@ Every feature should answer one question: **"What is Windows doing right now?"**
 
 ---
 
+## Code signing policy
+
+Windows releases of Pulse are being moved to signing through the SignPath Foundation's free program for open-source projects (application in review):
+
+Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).
+
+- **Committers and reviewers:** [Regncreative](https://github.com/Regncreative) (maintainer)
+- **Approvers:** [Regncreative](https://github.com/Regncreative)
+- Only release builds produced by this repository's GitHub Actions workflow are signed. Every signing request is approved manually.
+- The Microsoft Store edition is signed by Microsoft.
+
+**Privacy:** This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it. The optional Assistant only talks to an AI runtime on `localhost`. See the [privacy policy](https://pulse.regncreative.com/privacy).
+
+---
+
 ## Documentation
 
 | Doc | Purpose |
