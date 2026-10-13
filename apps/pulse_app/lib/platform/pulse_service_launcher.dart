@@ -1,12 +1,22 @@
 import 'dart:ffi';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:ffi/ffi.dart';
+import 'package:flutter/foundation.dart';
 import 'package:pulse_protocol/pulse_constants.dart';
 import 'package:win32/win32.dart';
 
 /// SEE_MASK_NOCLOSEPROCESS — keep process handle so we can wait.
 const int _kSeeMaskNocloseprocess = 0x00000040;
+
+/// SEE_MASK_NOASYNC — required when the calling thread has no message loop
+/// (the background isolate that runs the elevated launch).
+const int _kSeeMaskNoasync = 0x00000100;
+
+/// SEE_MASK_FLAG_NO_UI — no shell error dialogs (Pulse shows its own message);
+/// the UAC security prompt is exempt and still appears.
+const int _kSeeMaskFlagNoUi = 0x00000400;
 
 /// win32 package exposes SERVICE_QUERY_STATUS but not SERVICE_QUERY_CONFIG.
 const int _kServiceQueryConfig = 0x0001;
@@ -142,7 +152,7 @@ class WindowsPulseServiceLauncher implements PulseServiceLauncher {
       );
     }
 
-    return _runElevatedAt(exe, args, timeout: timeout);
+    return runElevatedAt(exe, args, timeout: timeout);
   }
 
   /// Parses SCM ImagePath (`"C:\...\PulseService.exe" --arg`) into an exe path.
@@ -166,18 +176,42 @@ class WindowsPulseServiceLauncher implements PulseServiceLauncher {
     return path;
   }
 
-  Future<int> _runElevatedAt(
+  /// Runs [exePath] elevated off the UI isolate. Prefer [runElevated].
+  @visibleForTesting
+  Future<int> runElevatedAt(
     String exePath,
     String args, {
     required Duration timeout,
-  }) async {
+  }) {
+    // ShellExecuteEx shows UAC and runs a nested message loop, then
+    // WaitForSingleObject blocks for the whole service action. On the UI
+    // thread that froze the window and let Windows re-enter the Flutter engine
+    // mid-call (Pulse.exe crashed with 0xc000041d in flutter_windows.dll after
+    // Restart / Start service). A background isolate has its own thread.
+    final timeoutMs = timeout.inMilliseconds;
+    return Isolate.run(() => _runElevatedBlocking(exePath, args, timeoutMs));
+  }
+}
+
+/// Runs `exePath args` through UAC and waits for it to exit (blocking).
+///
+/// Call only from a background isolate; see [WindowsPulseServiceLauncher].
+int _runElevatedBlocking(String exePath, String args, int timeoutMs) {
+  // ShellExecuteEx may delegate to Shell extensions, which require COM on the
+  // calling thread.
+  final comResult = CoInitializeEx(
+    nullptr,
+    COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE,
+  );
+  try {
     final info = calloc<SHELLEXECUTEINFO>();
     final verb = 'runas'.toNativeUtf16();
     final file = exePath.toNativeUtf16();
     final parameters = args.toNativeUtf16();
     try {
       info.ref.cbSize = sizeOf<SHELLEXECUTEINFO>();
-      info.ref.fMask = _kSeeMaskNocloseprocess;
+      info.ref.fMask =
+          _kSeeMaskNocloseprocess | _kSeeMaskNoasync | _kSeeMaskFlagNoUi;
       info.ref.hwnd = NULL;
       info.ref.lpVerb = verb;
       info.ref.lpFile = file;
@@ -211,7 +245,7 @@ class WindowsPulseServiceLauncher implements PulseServiceLauncher {
       }
 
       try {
-        final wait = WaitForSingleObject(process, timeout.inMilliseconds);
+        final wait = WaitForSingleObject(process, timeoutMs);
         if (wait == WAIT_TIMEOUT) {
           throw const PulseServiceLaunchException(
             'PulseService control timed out. Check Services.msc or try again.',
@@ -237,6 +271,8 @@ class WindowsPulseServiceLauncher implements PulseServiceLauncher {
       free(parameters);
       calloc.free(info);
     }
+  } finally {
+    if (comResult >= 0) CoUninitialize();
   }
 }
 
