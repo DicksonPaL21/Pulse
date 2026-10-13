@@ -132,13 +132,22 @@ export class IpcSession {
     return new Promise((resolve, reject) => {
       const socket = net.connect(this.pipeName);
       let settled = false;
+      // Events from a socket that has been replaced must not touch the
+      // session: a late "close" would otherwise orphan the newer, still open
+      // pipe and leak one PulseService connection per reconnect.
+      const isCurrent = () => this.socket === socket || this.socket === null;
 
       const fail = (err: Error) => {
         if (settled) return;
         settled = true;
         clearTimeout(timer);
-        this.helloDone = false;
-        this.socket = null;
+        if (isCurrent()) {
+          this.helloDone = false;
+          this.socket = null;
+        }
+        // Always close our own pipe: a failed handshake (e.g. ServerHello
+        // timeout) that keeps the socket open leaks a service pipe instance.
+        socket.destroy();
         reject(err);
       };
 
@@ -149,10 +158,13 @@ export class IpcSession {
             "TIMEOUT",
           ),
         );
-        socket.destroy();
       }, timeoutMs);
 
       socket.on("connect", () => {
+        if (settled) {
+          socket.destroy();
+          return;
+        }
         this.socket = socket;
         const helloId = this.nextRequestId++;
         const hello: Envelope = {
@@ -192,6 +204,7 @@ export class IpcSession {
       });
 
       socket.on("data", (chunk: Buffer) => {
+        if (this.socket !== socket) return;
         this.buffer = Buffer.concat([this.buffer, chunk]);
         try {
           while (true) {
@@ -223,20 +236,19 @@ export class IpcSession {
       });
 
       socket.on("error", (err) => {
-        this.rejectAll(new PulseIpcError(err.message, "SERVICE_UNAVAILABLE"));
+        if (this.socket === socket) {
+          this.rejectAll(new PulseIpcError(err.message, "SERVICE_UNAVAILABLE"));
+        }
         fail(new PulseIpcError(err.message, "SERVICE_UNAVAILABLE"));
       });
 
       socket.on("close", () => {
-        const wasConnected = this.helloDone;
+        if (this.socket !== socket) return;
         this.helloDone = false;
         this.socket = null;
         this.rejectAll(
           new PulseIpcError("PulseService disconnected", "SERVICE_UNAVAILABLE"),
         );
-        if (!settled && wasConnected === false) {
-          // connect path may still be pending via error handler
-        }
       });
     });
   }
