@@ -6,7 +6,8 @@
 
 <p align="center">
   <strong>See what Windows is really doing.</strong><br />
-  A modern, read-only diagnostics platform for Windows — events you can understand, not logs you decode.
+  A modern, read-only diagnostics platform for Windows — events you can understand, not logs you decode.<br />
+  <strong>Fully offline. Read-only. No telemetry, no account — nothing leaves your PC.</strong>
 </p>
 
 <p align="center">
@@ -49,6 +50,21 @@ It turns raw system activity into a readable timeline:
 Designed in **Midnight**, Pulse's dark-first visual identity: near-black panels, one lime accent for what is live, and plain language before technical detail.
 
 > **Philosophy:** Observation only. No injection. No hooks. No patches. No telemetry. No cloud.
+
+### Pulse, Event Viewer and Reliability Monitor
+
+Windows already ships two tools for this. Pulse does not replace them; it sits between them.
+
+| | Event Viewer | Reliability Monitor | Pulse |
+|---|---|---|---|
+| Language | Event IDs and XML | Short problem titles | Plain sentences first, technical detail and raw XML on demand |
+| Coverage | Every log | Crashes, failed updates, installs | Curated Event Log events, live |
+| Live view | Manual refresh | Daily history | Live timeline and System Health |
+| Hardware and processes | — | — | CPU, memory, GPU, disk, network per process |
+| Related events | Separate rows | Grouped by day | Correlated incidents |
+| Built for | Administrators | Quick crash history | Curious users and IT support |
+
+Reliability Monitor is great for a quick look at what failed this week. Event Viewer has everything, if you can read it. Pulse explains what happened, while it happens.
 
 ---
 
@@ -321,7 +337,10 @@ Pulse/
 - [x] **v1.1.0** feature release (Assistant, Store MSIX)
 - [x] **v1.2.0** Midnight redesign (icon rail, story Timeline, Overview bento)
 - [x] **v1.3.0** Stability release (service-restart crash, pipe leaks, ~140 MB smaller install; AI Integration removed)
-- [ ] GitHub Releases auto-update
+- [ ] Blue screen and sudden-restart explainer (stop codes, hardware errors, power loss)
+- [ ] Open `.evtx` files exported from another PC
+- [ ] Mask user names and paths in exported reports
+- [ ] GitHub Releases update notice
 - [ ] Crash / WER timeline
 - [ ] ETW engine (future milestone)
 - [ ] Plugin system (future milestone)
@@ -347,6 +366,18 @@ Every feature should answer one question: **"What is Windows doing right now?"**
 </p>
 
 <p align="center"><em><a href="https://www.virustotal.com/gui/file/7311a4809e64f77b9c44dc8fd59d04db68e3f07288e2348b6470807be72c41d3">VirusTotal</a> — <code>Pulse-Setup-1.0.0-windows-x64.exe</code> · 0/68</em></p>
+
+---
+
+## How Pulse is built
+
+Pulse is built by one developer with the help of AI coding assistants. [AGENTS.md](AGENTS.md) is the instruction file those assistants follow; it is also the product's rulebook (read-only, local-first, official Windows APIs only).
+
+- I decide what Pulse does, how it looks and what ships.
+- Every change goes through tests and CI; every release is installed and tested on real machines before it is published.
+- The full source is here, under the MIT license, so anyone can review exactly what Pulse runs.
+
+Bug reports and code review are very welcome — open an issue.
 
 ---
 
