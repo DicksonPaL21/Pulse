@@ -1,5 +1,7 @@
 #include "service_core/service_core.hpp"
 
+#include "commands/read_evtx_command.hpp"
+
 #include "logging/logger.hpp"
 #include "pulse/version.hpp"
 
@@ -39,6 +41,15 @@ int wmain(int argc, wchar_t** argv) {
     if (arg == L"--version") {
       std::wcout << pulse::ServiceVersion().ToString().c_str() << L"\n";
       return 0;
+    }
+    if (arg == L"--read-evtx") {
+      std::wstring input;
+      std::wstring output;
+      if (i + 1 < argc) input = argv[i + 1];
+      for (int j = i + 2; j + 1 < argc; ++j) {
+        if (std::wstring(argv[j]) == L"--out") output = argv[j + 1];
+      }
+      return pulse::RunReadEvtxCommand(input, output);
     }
     if (arg == L"--console") {
       return pulse::RunConsoleMode(argc, argv);

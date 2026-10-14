@@ -1,8 +1,6 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pulse_protocol/pulse_constants.dart';
@@ -10,9 +8,11 @@ import 'package:pulse_protocol/pulse_wire.dart';
 
 import '../../application/client_frame_metrics.dart';
 import '../../application/settings_controller.dart';
+import '../../features/privacy/personal_data_redactor.dart';
 import '../../features/timeline/timeline_display.dart';
 import '../../features/timeline/timeline_export.dart';
 import '../../ipc/pulse_ipc_client.dart';
+import '../../platform/export_writer.dart';
 import '../inventory/inventory_detail_model.dart';
 import 'report_models.dart';
 
@@ -68,43 +68,47 @@ class ReportExportInput {
   final bool darkHtml;
 }
 
-/// Builds report bytes/strings and writes under Documents/Pulse/Reports
+/// Builds report bytes/strings and writes under Downloads/Pulse/Reports
 /// (or [SettingsController.exportDirectory] when set).
 class ReportExporter {
-  ReportExporter({this.settings});
+  ReportExporter({this.settings, ExportWriter? writer})
+      : _writer = writer ?? ExportWriter();
 
   final SettingsController? settings;
+  final ExportWriter _writer;
 
-  /// Resolves the export directory: custom path, else Documents/Pulse/Reports.
-  Future<Directory> resolveReportsDirectory() async {
-    final custom = settings?.exportDirectory.trim() ?? '';
-    if (custom.isNotEmpty) {
-      final dir = Directory(custom);
-      if (!await dir.exists()) {
-        await dir.create(recursive: true);
-      }
-      return dir;
-    }
-    final docs = await getApplicationDocumentsDirectory();
-    final dir = Directory(
-      '${docs.path}${Platform.pathSeparator}Pulse'
-      '${Platform.pathSeparator}Reports',
+  /// Masks personal details unless the user turned it off
+  /// (Settings → Privacy → Mask personal details in exports).
+  PersonalDataRedactor? redactorFor(ReportExportInput input) {
+    if (!(settings?.maskPersonalDataInExports ?? true)) return null;
+    return PersonalDataRedactor.forThisPc(
+      extraComputerNames: input.events.map((e) => e.computerName),
+      secrets: hardwareIdentifiers(input),
     );
-    if (!await dir.exists()) {
-      await dir.create(recursive: true);
-    }
-    return dir;
   }
 
-  /// Builds content and writes a file. Returns the absolute path.
-  Future<String> export(ReportExportInput input) async {
+  /// Serial numbers and asset tags in the report's inventory data.
+  static Iterable<String> hardwareIdentifiers(ReportExportInput input) sync* {
+    for (final e in input.inventoryMotherboard?.motherboard ?? const []) {
+      yield e.serialNumber;
+      yield e.assetTag;
+    }
+    for (final e in input.inventoryMemoryModules?.memoryModules ?? const []) {
+      yield e.serialNumber;
+    }
+    for (final e in input.inventoryStorage?.storage ?? const []) {
+      yield e.serialNumber;
+    }
+  }
+
+  /// Builds content and writes a file (see [ExportWriter] for where).
+  Future<ExportResult> export(ReportExportInput input) async {
     if (input.format == ReportFormat.csv && !input.template.supportsCsv) {
       throw ArgumentError(
         'CSV is not supported for ${input.template.title} reports.',
       );
     }
 
-    final dir = await resolveReportsDirectory();
     final stamp = DateTime.now()
         .toIso8601String()
         .replaceAll(':', '-')
@@ -112,26 +116,31 @@ class ReportExporter {
         .first;
     final name =
         '${input.template.fileStem}-$stamp.${input.format.fileExtension}';
-    final path = '${dir.path}${Platform.pathSeparator}$name';
-
-    switch (input.format) {
-      case ReportFormat.json:
-        await File(path).writeAsString(buildJson(input), flush: true);
-      case ReportFormat.csv:
-        await File(path).writeAsString(buildCsv(input), flush: true);
-      case ReportFormat.html:
-        await File(path).writeAsString(buildHtml(input), flush: true);
-      case ReportFormat.pdf:
-        await File(path).writeAsBytes(await buildPdf(input), flush: true);
-    }
-    return path;
+    final redactor = redactorFor(input);
+    String clean(String text) => redactor?.redact(text) ?? text;
+    final List<int> bytes = switch (input.format) {
+      ReportFormat.json => utf8.encode(buildJson(input, redactor: redactor)),
+      ReportFormat.csv => utf8.encode(clean(buildCsv(input))),
+      ReportFormat.html => utf8.encode(clean(buildHtml(input))),
+      ReportFormat.pdf => await buildPdf(input, clean: clean),
+    };
+    return _writer.write(
+      fileName: name,
+      bytes: bytes,
+      defaultSubfolder: const ['Pulse', 'Reports'],
+      customDirectory: settings?.exportDirectory ?? '',
+    );
   }
 
   // ─── Pure builders (unit-tested for JSON / CSV) ─────────────────────────
 
-  static String buildJson(ReportExportInput input) {
+  static String buildJson(
+    ReportExportInput input, {
+    PersonalDataRedactor? redactor,
+  }) {
     final payload = _payloadMap(input);
-    return const JsonEncoder.withIndent('  ').convert(payload);
+    return const JsonEncoder.withIndent('  ')
+        .convert(redactor == null ? payload : redactor.redactJson(payload));
   }
 
   static String buildCsv(ReportExportInput input) {
@@ -203,11 +212,15 @@ class ReportExporter {
 ''';
   }
 
-  static Future<Uint8List> buildPdf(ReportExportInput input) async {
+  /// [clean] is applied to every data cell (personal-data masking).
+  static Future<Uint8List> buildPdf(
+    ReportExportInput input, {
+    String Function(String text) clean = _unchanged,
+  }) async {
     final doc = pw.Document();
     final exportedAt = DateTime.now().toIso8601String();
     final identity = _systemIdentity(input);
-    final tables = _pdfTables(input);
+    final tables = _pdfTables(input, clean);
 
     doc.addPage(
       pw.MultiPage(
@@ -248,7 +261,7 @@ class ReportExporter {
             style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
           ),
           pw.SizedBox(height: 6),
-          _pdfKeyValueTable(identity),
+          _pdfKeyValueTable(identity, clean),
           pw.SizedBox(height: 16),
           ...tables,
         ],
@@ -1303,7 +1316,12 @@ class ReportExporter {
     return buf.toString();
   }
 
-  static List<pw.Widget> _pdfTables(ReportExportInput input) {
+  static String _unchanged(String text) => text;
+
+  static List<pw.Widget> _pdfTables(
+    ReportExportInput input,
+    String Function(String text) clean,
+  ) {
     switch (input.template) {
       case ReportTemplate.timeline:
         return [
@@ -1322,8 +1340,8 @@ class ReportExporter {
                       : e.absoluteTimeLabel,
                   _severityName(e.severity),
                   e.providerName,
-                  e.displayTitle,
-                  e.displaySummary,
+                  clean(e.displayTitle),
+                  clean(e.displaySummary),
                 ],
             ],
             headerStyle: pw.TextStyle(
@@ -1342,7 +1360,7 @@ class ReportExporter {
             style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
           ),
           pw.SizedBox(height: 6),
-          _pdfKeyValueTable(healthMetricsRows(input.health)),
+          _pdfKeyValueTable(healthMetricsRows(input.health), clean),
         ];
       case ReportTemplate.hardwareInventory:
         return [
@@ -1351,17 +1369,17 @@ class ReportExporter {
             style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
           ),
           pw.SizedBox(height: 6),
-          _pdfKeyValueTable(inventorySummaryRows(input.inventoryUsb)),
+          _pdfKeyValueTable(inventorySummaryRows(input.inventoryUsb), clean),
           pw.SizedBox(height: 12),
           pw.Text(
             'PCI inventory',
             style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
           ),
           pw.SizedBox(height: 6),
-          _pdfKeyValueTable(inventorySummaryRows(input.inventoryPci)),
+          _pdfKeyValueTable(inventorySummaryRows(input.inventoryPci), clean),
         ];
       case ReportTemplate.systemInventory:
-        return _systemInventoryPdfWidgets(input);
+        return _systemInventoryPdfWidgets(input, clean);
       case ReportTemplate.serviceInventory:
       case ReportTemplate.driverInventory:
       case ReportTemplate.softwareInventory:
@@ -1371,7 +1389,7 @@ class ReportExporter {
             style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
           ),
           pw.SizedBox(height: 6),
-          _pdfKeyValueTable(inventorySummaryRows(input.inventory)),
+          _pdfKeyValueTable(inventorySummaryRows(input.inventory), clean),
         ];
       case ReportTemplate.diagnostics:
         return [
@@ -1387,6 +1405,7 @@ class ReportExporter {
               frames: input.frameMetrics,
               snapshotError: input.snapshotError,
             ),
+            clean,
           ),
         ];
     }
@@ -1394,7 +1413,10 @@ class ReportExporter {
 
   /// System Inventory PDF widgets — mirrors [_systemInventoryHtml], reusing
   /// the shared [InventoryDetailSection] builders per P2 entry.
-  static List<pw.Widget> _systemInventoryPdfWidgets(ReportExportInput input) {
+  static List<pw.Widget> _systemInventoryPdfWidgets(
+    ReportExportInput input,
+    String Function(String text) clean,
+  ) {
     final widgets = <pw.Widget>[];
     void addEntry(String heading, List<InventoryDetailSection> sections) {
       widgets.addAll([
@@ -1403,7 +1425,7 @@ class ReportExporter {
           style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
         ),
         pw.SizedBox(height: 4),
-        ..._sectionsPdfWidgets(sections),
+        ..._sectionsPdfWidgets(sections, clean),
         pw.SizedBox(height: 10),
       ]);
     }
@@ -1450,6 +1472,7 @@ class ReportExporter {
 
   static List<pw.Widget> _sectionsPdfWidgets(
     List<InventoryDetailSection> sections,
+    String Function(String text) clean,
   ) {
     final widgets = <pw.Widget>[];
     for (final section in sections) {
@@ -1463,18 +1486,21 @@ class ReportExporter {
           ),
         ),
         pw.SizedBox(height: 2),
-        _pdfKeyValueTable(section.fields),
+        _pdfKeyValueTable(section.fields, clean),
         pw.SizedBox(height: 4),
       ]);
     }
     return widgets;
   }
 
-  static pw.Widget _pdfKeyValueTable(List<(String, String)> rows) {
+  static pw.Widget _pdfKeyValueTable(
+    List<(String, String)> rows,
+    String Function(String text) clean,
+  ) {
     return pw.TableHelper.fromTextArray(
       headers: const ['Key', 'Value'],
       data: [
-        for (final row in rows) [row.$1, row.$2],
+        for (final row in rows) [row.$1, clean(row.$2)],
       ],
       headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9),
       cellStyle: const pw.TextStyle(fontSize: 8),

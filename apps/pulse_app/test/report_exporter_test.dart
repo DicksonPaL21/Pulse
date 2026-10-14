@@ -38,6 +38,51 @@ void main() {
       expect(json, contains('cpu_percent'));
     });
 
+    test('masks personal details when a redactor is given', () {
+      final input = ReportExportInput(
+        template: ReportTemplate.systemInventory,
+        format: ReportFormat.json,
+        events: [
+          TimelineEvent(
+            eventId: 'e1',
+            computerName: 'SHOP-PC',
+            summary: r'Crash in C:\Users\jane\app.exe',
+          ),
+        ],
+        inventoryStorage: InventoryDomainSnapshot(
+          domain: InventoryDomainId.storage,
+          storage: [
+            InventoryStorageEntry(
+              id: 'disk0',
+              model: 'Test SSD',
+              serialNumber: 'S5GXNX0T123456',
+            ),
+          ],
+        ),
+      );
+      final exporter = ReportExporter();
+      final json = ReportExporter.buildJson(
+        input,
+        redactor: exporter.redactorFor(input),
+      );
+      expect(json, isNot(contains('S5GXNX0T123456')));
+      expect(json, contains('[serial]'));
+      expect(json, contains('Test SSD'));
+
+      final timeline = ReportExportInput(
+        template: ReportTemplate.timeline,
+        format: ReportFormat.json,
+        events: input.events,
+      );
+      final timelineJson = ReportExporter.buildJson(
+        timeline,
+        redactor: exporter.redactorFor(timeline),
+      );
+      expect(timelineJson, isNot(contains('SHOP-PC')));
+      expect(timelineJson, isNot(contains('jane')));
+      expect(timelineJson, contains('[computer]'));
+    });
+
     test('encodes timeline events', () {
       final events = [
         TimelineEvent(

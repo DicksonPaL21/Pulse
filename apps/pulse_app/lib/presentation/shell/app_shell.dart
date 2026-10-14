@@ -214,9 +214,9 @@ class _AppShellState extends State<AppShell> {
 
     Future<void> exportSettings() async {
       try {
-        final path = await settings.exportSettingsJson();
+        final saved = await settings.exportSettingsJson();
         if (!mounted) return;
-        PulseSnack.success(context, 'Saved: $path');
+        PulseSnack.success(context, saved.summary);
       } catch (e) {
         if (!mounted) return;
         PulseSnack.error(context, 'Failed: $e');

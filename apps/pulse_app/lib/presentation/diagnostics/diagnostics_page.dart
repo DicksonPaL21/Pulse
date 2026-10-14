@@ -177,8 +177,8 @@ class _DiagnosticsPageState extends State<DiagnosticsPage> {
               ),
               onExport: () => _run(
                 () async {
-                  final path = await diag.exportReport();
-                  return 'Exported: $path';
+                  final saved = await diag.exportReport();
+                  return saved.summary;
                 },
                 fallbackOk: 'Export complete',
               ),

@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../app/theme/pulse_theme.dart';
 import '../logging/app_logger.dart';
+import '../platform/export_writer.dart';
 
 /// Persisted user preferences (local-only).
 class SettingsController extends ChangeNotifier {
@@ -38,6 +39,8 @@ class SettingsController extends ChangeNotifier {
   static const _kDashboardDensity = 'health.dashboard.density';
   static const _kPerformanceMode = 'performance.mode';
   static const _kShowAdvancedDiagnostics = 'diagnostics.show_advanced';
+  static const _kMaskPersonalDataInExports = 'privacy.mask_exports';
+  static const _kCheckUpdatesAutomatically = 'updates.check_automatically';
   static const _kExportDirectory = 'exports.directory';
   static const _kBackgroundMode = 'background.mode';
   static const _kStartWithWindows = 'background.start_with_windows';
@@ -48,9 +51,11 @@ class SettingsController extends ChangeNotifier {
   static const _kAssistantLocalAiProvider = 'assistant.local_ai.provider_id';
   static const _kAssistantLocalAiModel = 'assistant.local_ai.model_id';
 
-  static const String buildDate = '2026-08-02';
+  static const String buildDate = '2026-10-14';
   /// Default cooldown between repeat notifications for the same alert kind.
-  static const int defaultNotificationCooldownMinutes = 15;
+  /// One hour: memory hovering around the threshold produced a toast every
+  /// 15 minutes, which piled up in notification history.
+  static const int defaultNotificationCooldownMinutes = 60;
   static const int defaultCustomAccentArgb = 0xFF60CDFF;
   static const String defaultSettingsExportFileName = 'settings-export.json';
   static const String releasesUrl =
@@ -129,7 +134,15 @@ class SettingsController extends ChangeNotifier {
 
   bool showAdvancedDiagnostics = false;
 
-  /// Empty = Documents/Pulse default. Absolute path when set.
+  /// Mask user / computer names, SIDs, IP and MAC addresses and serial
+  /// numbers in exported files. On by default (privacy first).
+  bool maskPersonalDataInExports = true;
+
+  /// Weekly GitHub release check (GitHub edition). Off by default: Pulse
+  /// contacts nothing unless the user turns this on or clicks Check.
+  bool checkUpdatesAutomatically = false;
+
+  /// Empty = Downloads/Pulse default. Absolute path when set.
   String exportDirectory = '';
 
   /// Keep Pulse.exe alive in the system tray when the main window is closed.
@@ -232,6 +245,10 @@ class SettingsController extends ChangeNotifier {
     clock24h = p.getBool(_kClock24h) ?? true;
     performanceMode = _normalizePerformanceMode(p.getString(_kPerformanceMode));
     showAdvancedDiagnostics = p.getBool(_kShowAdvancedDiagnostics) ?? false;
+    maskPersonalDataInExports =
+        p.getBool(_kMaskPersonalDataInExports) ?? true;
+    checkUpdatesAutomatically =
+        p.getBool(_kCheckUpdatesAutomatically) ?? false;
     exportDirectory = p.getString(_kExportDirectory) ?? '';
     backgroundMode = p.getBool(_kBackgroundMode) ?? false;
     startWithWindows = p.getBool(_kStartWithWindows) ?? false;
@@ -392,6 +409,18 @@ class SettingsController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setMaskPersonalDataInExports(bool value) async {
+    maskPersonalDataInExports = value;
+    await _prefs?.setBool(_kMaskPersonalDataInExports, value);
+    notifyListeners();
+  }
+
+  Future<void> setCheckUpdatesAutomatically(bool value) async {
+    checkUpdatesAutomatically = value;
+    await _prefs?.setBool(_kCheckUpdatesAutomatically, value);
+    notifyListeners();
+  }
+
   Future<void> setExportDirectory(String value) async {
     exportDirectory = value.trim();
     await _prefs?.setString(_kExportDirectory, exportDirectory);
@@ -515,6 +544,8 @@ class SettingsController extends ChangeNotifier {
     clock24h = true;
     performanceMode = 'balanced';
     showAdvancedDiagnostics = false;
+    maskPersonalDataInExports = true;
+    checkUpdatesAutomatically = false;
     exportDirectory = '';
     backgroundMode = false;
     startWithWindows = false;
@@ -584,6 +615,8 @@ class SettingsController extends ChangeNotifier {
         'clock_24h': clock24h,
         'performance_mode': performanceMode,
         'show_advanced_diagnostics': showAdvancedDiagnostics,
+        'mask_personal_data_in_exports': maskPersonalDataInExports,
+        'check_updates_automatically': checkUpdatesAutomatically,
         'export_directory': exportDirectory,
         'background_mode': backgroundMode,
         'start_with_windows': startWithWindows,
@@ -673,6 +706,12 @@ class SettingsController extends ChangeNotifier {
     if (map['show_advanced_diagnostics'] is bool) {
       showAdvancedDiagnostics = map['show_advanced_diagnostics'] as bool;
     }
+    if (map['mask_personal_data_in_exports'] is bool) {
+      maskPersonalDataInExports = map['mask_personal_data_in_exports'] as bool;
+    }
+    if (map['check_updates_automatically'] is bool) {
+      checkUpdatesAutomatically = map['check_updates_automatically'] as bool;
+    }
     if (map['export_directory'] is String) {
       exportDirectory = (map['export_directory'] as String).trim();
     }
@@ -736,6 +775,14 @@ class SettingsController extends ChangeNotifier {
       await p.setBool(_kClock24h, clock24h);
       await p.setString(_kPerformanceMode, performanceMode);
       await p.setBool(_kShowAdvancedDiagnostics, showAdvancedDiagnostics);
+      await p.setBool(
+        _kMaskPersonalDataInExports,
+        maskPersonalDataInExports,
+      );
+      await p.setBool(
+        _kCheckUpdatesAutomatically,
+        checkUpdatesAutomatically,
+      );
       await p.setString(_kExportDirectory, exportDirectory);
       await p.setBool(_kBackgroundMode, backgroundMode);
       await p.setBool(_kStartWithWindows, startWithWindows);
@@ -759,39 +806,27 @@ class SettingsController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Resolves the directory used for settings (and future) exports.
-  Future<Directory> resolveExportDirectory() async {
-    final custom = exportDirectory.trim();
-    if (custom.isNotEmpty) {
-      final dir = Directory(custom);
-      if (!await dir.exists()) {
-        await dir.create(recursive: true);
-      }
-      return dir;
-    }
-    final docs = await getApplicationDocumentsDirectory();
-    final dir = Directory(
-      '${docs.path}${Platform.pathSeparator}Pulse',
-    );
-    if (!await dir.exists()) {
-      await dir.create(recursive: true);
-    }
-    return dir;
-  }
-
+  /// Where [exportSettingsJson] writes by default (nothing is created).
   Future<String> defaultSettingsExportPath() async {
-    final dir = await resolveExportDirectory();
-    return '${dir.path}${Platform.pathSeparator}$defaultSettingsExportFileName';
+    final custom = exportDirectory.trim();
+    final dir = custom.isNotEmpty
+        ? custom
+        : [(await ExportWriter().defaultRoot())?.path ?? '', 'Pulse']
+            .join(Platform.pathSeparator);
+    return '$dir${Platform.pathSeparator}$defaultSettingsExportFileName';
   }
 
-  /// Writes current settings JSON to the export path and returns that path.
-  Future<String> exportSettingsJson() async {
-    final path = await defaultSettingsExportPath();
-    final file = File(path);
+  /// Writes current settings JSON (see [ExportWriter] for where).
+  Future<ExportResult> exportSettingsJson() async {
     const encoder = JsonEncoder.withIndent('  ');
-    await file.writeAsString(encoder.convert(toMap()));
-    logger.info('settings', 'Settings exported to $path');
-    return path;
+    final saved = await ExportWriter().write(
+      fileName: defaultSettingsExportFileName,
+      bytes: utf8.encode(encoder.convert(toMap())),
+      defaultSubfolder: const ['Pulse'],
+      customDirectory: exportDirectory,
+    );
+    logger.info('settings', 'Settings exported');
+    return saved;
   }
 
   /// Reads settings JSON from [path] and applies it.
@@ -804,10 +839,24 @@ class SettingsController extends ChangeNotifier {
     await importSettingsFromJsonString(raw);
   }
 
-  /// Restores settings from the last export at the default path.
+  /// Restores settings from the last export. Exports made before 1.4 were
+  /// written to Documents/Pulse; reading them is not blocked by Windows.
   Future<void> importSettingsFromLastExport() async {
-    final path = await defaultSettingsExportPath();
-    await importSettingsJson(path);
+    final defaultPath = await defaultSettingsExportPath();
+    final documents = await getApplicationDocumentsDirectory();
+    final candidates = [
+      defaultPath,
+      if (exportDirectory.trim().isEmpty)
+        [documents.path, 'Pulse', defaultSettingsExportFileName]
+            .join(Platform.pathSeparator),
+    ];
+    for (final path in candidates) {
+      if (await File(path).exists()) {
+        await importSettingsJson(path);
+        return;
+      }
+    }
+    await importSettingsJson(defaultPath);
   }
 
   Future<void> importSettingsFromJsonString(String raw) async {

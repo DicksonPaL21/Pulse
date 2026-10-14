@@ -16,9 +16,9 @@ Runs on `push` to `master`/`main` and on pull requests:
 |-----|----------|
 | **service** | CMake configure + Release build + `ctest -C Release` (all registered service tests) |
 | **flutter** | `flutter analyze` + `flutter test` in `apps/pulse_app` |
-| **pulse_mcp** | `npm ci` + `npm run build` + `npm test` in `apps/pulse_mcp` |
+| **store_msix** | Builds and validates the Store MSIX (`package_msix_store.ps1`) |
 
-Service `ctest` targets today include `pulse_wire_tests`, `event_humanizer_tests`, `event_intelligence_tests`, and `ipc_client_thread_lifetime_test`. Optional IPC ping tools are build artifacts, not CI gates.
+Service `ctest` targets today include `pulse_wire_tests`, `event_humanizer_tests`, `event_intelligence_tests`, `crash_explainer_tests`, the inventory collector tests and `ipc_client_thread_lifetime_test`. Release packages are built by `release.yml` (see [25](25-beta-release.md)), not by CI. Optional IPC ping tools are build artifacts, not CI gates.
 
 ## Unit
 
@@ -27,14 +27,13 @@ Service `ctest` targets today include `pulse_wire_tests`, `event_humanizer_tests
 - MPSC / live queue drop behavior
 - Dedup by channel+record_id
 - Event humanizer + intelligence rules
-- PulseMCP policy, framing, `mcp.self` (Vitest)
+- Crash explainer: Kernel-Power 41, bug check 1001, WHEA (`crash_explainer_tests`)
 
 ## Integration
 
 - Pipe handshake
 - SubscribeLive + QueryRange with fixture-backed store
 - Slow-client live drop does not block writer/ingest (simulated)
-- PulseMCP IPC hello/ping against a live PulseService (manual or local; not required in GitHub-hosted CI until a service fixture exists)
 
 ## Flutter
 
@@ -54,5 +53,5 @@ Service `ctest` targets today include `pulse_wire_tests`, `event_humanizer_tests
 ## Related Documents
 
 - [21 — Event Viewer Integration](21-event-viewer-integration.md)
-- [33 — PulseMCP](33-mcp-bridge.md)
+- [33 — PulseMCP](33-mcp-bridge.md) (historical; removed in 1.3, ADR-013)
 - [34 — Engineering roadmap](34-engineering-roadmap.md)

@@ -13,7 +13,7 @@
   PulseService (--install-start), and launches Pulse — no PowerShell.
 #>
 $ErrorActionPreference = "Stop"
-$Version = "1.3.0"
+$Version = "1.4.0"
 $root = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $dist = Join-Path $root "dist\Pulse"
 $flutterBin = @(
@@ -36,7 +36,21 @@ $vsDevCandidates = @(
   "${env:ProgramFiles}\Microsoft Visual Studio\2022\Community\Common7\Tools\VsDevCmd.bat",
   "${env:ProgramFiles}\Microsoft Visual Studio\2022\Professional\Common7\Tools\VsDevCmd.bat"
 )
-$vsDev = $vsDevCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+# vswhere finds any edition (Build Tools locally, Enterprise on GitHub runners).
+$vsDev = $null
+$vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+if (Test-Path $vswhere) {
+  $vsPath = & $vswhere -latest -products * `
+    -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+    -property installationPath
+  if ($vsPath) {
+    $candidate = Join-Path $vsPath "Common7\Tools\VsDevCmd.bat"
+    if (Test-Path $candidate) { $vsDev = $candidate }
+  }
+}
+if (-not $vsDev) {
+  $vsDev = $vsDevCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+}
 if (-not $vsDev) { throw "VsDevCmd.bat not found. Install VS Build Tools with C++ workload." }
 
 $cmakeCandidates = @(
@@ -124,41 +138,26 @@ Write-Host "==> Copying Flutter Release bundle"
 Copy-Item -Path (Join-Path $runner "*") -Destination $dist -Recurse -Force
 
 Write-Host "==> Bundling Visual C++ runtime (app-local + VC_redist)"
-$crtCandidates = @(
-  "${env:ProgramFiles(x86)}\Microsoft Visual Studio\18\BuildTools\VC\Redist\MSVC\14.50.35710\x64\Microsoft.VC145.CRT",
-  "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2022\BuildTools\VC\Redist\MSVC"
-)
-$crtDir = $null
-foreach ($c in $crtCandidates) {
-  if (Test-Path $c) {
-    if ((Split-Path $c -Leaf) -eq "MSVC") {
-      $ver = Get-ChildItem $c -Directory | Where-Object { $_.Name -match '^\d' } |
-        Sort-Object Name -Descending | Select-Object -First 1
-      $maybe = Join-Path $ver.FullName "x64"
-      $crt = Get-ChildItem $maybe -Directory -ErrorAction SilentlyContinue |
-        Where-Object { $_.Name -like "Microsoft.VC*.CRT" } |
-        Select-Object -First 1
-      if ($crt) { $crtDir = $crt.FullName; break }
-    } else {
-      $crtDir = $c
-      break
-    }
-  }
-}
+# Newest MSVC redistributable of the Visual Studio used for the build.
+$redistRoot = Join-Path $vsInstall "VC\Redist\MSVC"
+$crtDir = Get-ChildItem $redistRoot -Directory -ErrorAction SilentlyContinue |
+  Where-Object { $_.Name -match '^\d+(\.\d+)+$' } |
+  Sort-Object { [version]$_.Name } -Descending |
+  ForEach-Object {
+    Get-ChildItem (Join-Path $_.FullName "x64") -Directory -Filter "Microsoft.VC*.CRT" -ErrorAction SilentlyContinue
+  } |
+  Select-Object -First 1 -ExpandProperty FullName
 if (-not $crtDir -or -not (Test-Path $crtDir)) {
-  throw "MSVC CRT redistributable folder not found. Install VS Build Tools C++ redistributables."
+  throw "MSVC CRT redistributable folder not found under $redistRoot. Install VS Build Tools C++ redistributables."
 }
 Write-Host "    CRT source: $crtDir"
 # App-local next to Pulse.exe and PulseService.exe (licensed REDIST binaries).
 Copy-Item (Join-Path $crtDir "*") -Destination $dist -Force
 Copy-Item (Join-Path $crtDir "*") -Destination (Join-Path $dist "service") -Force
 
-$redistCandidates = @(
-  "${env:ProgramFiles(x86)}\Microsoft Visual Studio\18\BuildTools\VC\Redist\MSVC\v145\vc_redist.x64.exe",
-  "${env:ProgramFiles(x86)}\Microsoft Visual Studio\18\BuildTools\VC\Redist\MSVC\14.50.35710\vc_redist.x64.exe",
-  "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2022\BuildTools\VC\Redist\MSVC\v143\vc_redist.x64.exe"
-)
-$vcRedist = $redistCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+$vcRedist = Get-ChildItem $redistRoot -Recurse -Filter "vc_redist.x64.exe" -ErrorAction SilentlyContinue |
+  Sort-Object LastWriteTime -Descending |
+  Select-Object -First 1 -ExpandProperty FullName
 if (-not $vcRedist) { throw "vc_redist.x64.exe not found under Visual Studio Redist" }
 New-Item -ItemType Directory -Force -Path (Join-Path $dist "redist") | Out-Null
 Copy-Item $vcRedist (Join-Path $dist "redist\VC_redist.x64.exe") -Force

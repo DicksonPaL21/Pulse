@@ -38,4 +38,10 @@ void main() {
     expect(run(r'c:\program files\pulse\PULSE.EXE'), isFalse);
     expect(shortcut.existsSync(), isTrue);
   });
+
+  test('outside a Store package there is no package app id', () {
+    // flutter test runs unpackaged; the Store build gets
+    // "<PackageFamilyName>!pulse" from Windows instead.
+    expect(packagedAppUserModelId(), isNull);
+  });
 }

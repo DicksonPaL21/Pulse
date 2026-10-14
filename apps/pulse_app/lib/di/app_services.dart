@@ -7,6 +7,7 @@ import '../application/background_mode_controller.dart';
 import '../application/client_frame_metrics.dart';
 import '../application/connection_controller.dart';
 import '../application/diagnostics_controller.dart';
+import '../application/evtx_import_controller.dart';
 import '../application/health_navigation.dart';
 import '../application/legacy_mcp_cleanup.dart';
 import '../application/service_lifecycle_controller.dart';
@@ -14,9 +15,11 @@ import '../application/settings_controller.dart';
 import '../application/shell_navigation.dart';
 import '../application/timeline_library_controller.dart';
 import '../application/timeline_session_controller.dart';
+import '../application/update_check_controller.dart';
 import '../ipc/pulse_ipc_client.dart';
 import '../logging/app_log_file.dart';
 import '../logging/app_logger.dart';
+import '../platform/pulse_deployment.dart';
 
 class AppServices {
   AppServices({
@@ -26,6 +29,8 @@ class AppServices {
     required this.settingsController,
     required this.timelineSession,
     required this.timelineLibrary,
+    required this.evtxImport,
+    required this.updateCheck,
     required this.diagnosticsController,
     required this.serviceLifecycle,
     required this.clientFrameMetrics,
@@ -41,6 +46,8 @@ class AppServices {
   final SettingsController settingsController;
   final TimelineSessionController timelineSession;
   final TimelineLibraryController timelineLibrary;
+  final EvtxImportController evtxImport;
+  final UpdateCheckController updateCheck;
   final DiagnosticsController diagnosticsController;
   final ServiceLifecycleController serviceLifecycle;
   final ClientFrameMetrics clientFrameMetrics;
@@ -56,6 +63,7 @@ class AppServices {
     await settings.load();
     final timelineLibrary = TimelineLibraryController(logger: logger);
     await timelineLibrary.load();
+    final evtxImport = EvtxImportController(logger: logger);
 
     final ipc = PulseIpcClient();
     final frameMetrics = ClientFrameMetrics();
@@ -86,6 +94,11 @@ class AppServices {
       logger: logger,
     );
     final assistant = AssistantController(settings: settings, ipc: ipc);
+    final updateCheck = UpdateCheckController(settings: settings, logger: logger);
+    // GitHub edition only, and only when the user turned it on.
+    if (!const WindowsPulseDeployment().isPackagedMsix) {
+      unawaited(updateCheck.checkAutomaticallyIfDue());
+    }
 
     // Attach before start so the connecting→connected edge is never missed.
     // Snapshot loading always goes through TimelineSessionController.reloadSnapshot
@@ -100,6 +113,8 @@ class AppServices {
       settingsController: settings,
       timelineSession: timeline,
       timelineLibrary: timelineLibrary,
+      evtxImport: evtxImport,
+      updateCheck: updateCheck,
       diagnosticsController: diagnostics,
       serviceLifecycle: serviceLifecycle,
       clientFrameMetrics: frameMetrics,

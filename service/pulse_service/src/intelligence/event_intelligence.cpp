@@ -1,8 +1,10 @@
 #include "intelligence/event_intelligence.hpp"
 
-#include <algorithm>
-#include <cctype>
+#include "intelligence/crash_explainer.hpp"
+#include "util/text_match.hpp"
+
 #include <string_view>
+#include <utility>
 
 namespace pulse {
 namespace {
@@ -369,20 +371,6 @@ constexpr IntelligenceRule kRules[] = {
      Importance::Low, InsightCategory::Boot},
 };
 
-bool ContainsIgnoreCase(std::string_view haystack, std::string_view needle) {
-  if (needle.empty()) {
-    return true;
-  }
-  if (haystack.size() < needle.size()) {
-    return false;
-  }
-  auto pred = [](unsigned char a, unsigned char b) {
-    return std::tolower(a) == std::tolower(b);
-  };
-  return std::search(haystack.begin(), haystack.end(), needle.begin(),
-                     needle.end(), pred) != haystack.end();
-}
-
 const IntelligenceRule* MatchRule(const ipc::TimelineEvent& event) {
   if (event.win_event_id == 0) {
     return nullptr;
@@ -508,6 +496,12 @@ const char* InsightCategoryName(InsightCategory value) {
 }
 
 EventInsight EventIntelligence::Analyze(const ipc::TimelineEvent& event) const {
+  // Crash events carry the real cause in their data (stop code, power
+  // button); prefer that over the catalog's generic wording.
+  if (auto crash = ExplainCrashEvent(event)) {
+    return *std::move(crash);
+  }
+
   const IntelligenceRule* rule = MatchRule(event);
   if (rule == nullptr) {
     return Fallback(event);

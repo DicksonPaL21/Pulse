@@ -1,19 +1,23 @@
 import 'dart:async';
-import 'dart:io';
+import 'dart:convert';
 
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:pulse_protocol/pulse_wire.dart';
 
 import '../../app/dev_flags.dart';
 import '../../app/theme/pulse_theme.dart';
 import '../../application/connection_controller.dart';
+import '../../application/evtx_import_controller.dart';
+import '../../application/settings_controller.dart';
 import '../../application/timeline_library_controller.dart';
 import '../../application/timeline_session_controller.dart';
 import '../../features/timeline/timeline_activity.dart';
+import '../../features/privacy/personal_data_redactor.dart';
+import '../../features/timeline/evtx_import.dart';
 import '../../features/timeline/timeline_display.dart';
 import '../../features/timeline/timeline_export.dart';
 import '../../features/timeline/timeline_incident_engine.dart';
@@ -23,6 +27,8 @@ import '../../features/timeline/widgets/timeline_details_panel.dart';
 import '../../features/timeline/widgets/timeline_event_tile.dart';
 import '../../features/timeline/widgets/timeline_overview_header.dart';
 import '../../ipc/pulse_ipc_client.dart';
+import '../../platform/evtx_file_reader.dart';
+import '../../platform/export_writer.dart';
 import '../components/pulse_app_bar.dart';
 import '../components/pulse_badge.dart';
 import '../components/pulse_empty_state.dart';
@@ -54,6 +60,7 @@ class _TimelinePageState extends State<TimelinePage> {
   bool _advancedFiltersOpen = false;
 
   TimelineSessionController? _session;
+  EvtxImport? _shownImport;
   String? _lastTopEventId;
   int _lastEventCount = 0;
 
@@ -237,15 +244,11 @@ class _TimelinePageState extends State<TimelinePage> {
   }
 
   List<TimelineEvent> _visible(List<TimelineEvent> events) {
-    final matched = [for (final e in events) if (_query.matches(e)) e];
     final library = context.read<TimelineLibraryController>();
-    matched.sort((a, b) {
-      final ap = library.isPinned(a.eventId) ? 0 : 1;
-      final bp = library.isPinned(b.eventId) ? 0 : 1;
-      if (ap != bp) return ap.compareTo(bp);
-      return 0;
-    });
-    return matched;
+    return pinnedFirst(
+      events.where(_query.matches),
+      (e) => library.isPinned(e.eventId),
+    );
   }
 
   TimelineEvent? _selectedEvent(List<TimelineEvent> events) {
@@ -363,7 +366,7 @@ class _TimelinePageState extends State<TimelinePage> {
           : (_filtersActive ? 'filtered_visible' : 'visible_all');
       final library = context.read<TimelineLibraryController>();
       final incidentMeta = _incidentMetaFor(visible);
-      final body = asCsv
+      final raw = asCsv
           ? TimelineExport.encodeCsv(
               toExport,
               appliedFilters: _query,
@@ -379,33 +382,68 @@ class _TimelinePageState extends State<TimelinePage> {
               pinnedEventIds: library.pinnedEventIds,
               incidentByEventId: incidentMeta,
             );
-      final docs = await getApplicationDocumentsDirectory();
-      final dir = Directory('${docs.path}${Platform.pathSeparator}Pulse'
-          '${Platform.pathSeparator}exports');
-      if (!await dir.exists()) {
-        await dir.create(recursive: true);
-      }
+      // Settings → Privacy: mask user / computer names, SIDs and addresses
+      // (the clipboard copy is masked too).
+      final body = context.read<SettingsController>().maskPersonalDataInExports
+          ? PersonalDataRedactor.forThisPc(
+              extraComputerNames: toExport.map((e) => e.computerName),
+            ).redact(raw)
+          : raw;
       final stamp = DateTime.now()
           .toIso8601String()
           .replaceAll(':', '-')
           .replaceAll('.', '-');
       final ext = asCsv ? 'csv' : 'json';
-      final file = File(
-        '${dir.path}${Platform.pathSeparator}timeline_$stamp.$ext',
+      final saved = await ExportWriter().write(
+        fileName: 'timeline_$stamp.$ext',
+        bytes: utf8.encode(body),
+        defaultSubfolder: const ['Pulse', 'exports'],
       );
-      await file.writeAsString(body);
       await Clipboard.setData(ClipboardData(text: body));
       if (!mounted) return;
       PulseSnack.success(
         context,
         selected != null
-            ? 'Exported selected event as $ext (also copied).'
-            : 'Exported ${toExport.length} events as $ext (also copied).',
+            ? 'Exported selected event as $ext (also copied). ${saved.summary}'
+            : 'Exported ${toExport.length} events as $ext (also copied). '
+                '${saved.summary}',
       );
     } catch (e) {
       if (!mounted) return;
       PulseSnack.error(context, PulseUserErrors.fromObject(e));
     }
+  }
+
+  static const _evtxTypeGroup = XTypeGroup(
+    label: 'Event log files',
+    extensions: ['evtx'],
+  );
+
+  Future<void> _openEventLogFile() async {
+    final file = await openFile(acceptedTypeGroups: const [_evtxTypeGroup]);
+    if (file == null || !mounted) return;
+    await _importEventLog(file.path);
+  }
+
+  Future<void> _importEventLog(String path) async {
+    try {
+      final imported = await context.read<EvtxImportController>().open(path);
+      if (!mounted) return;
+      final count = imported.events.length;
+      PulseSnack.success(
+        context,
+        count == 0
+            ? '${imported.fileName} has no events.'
+            : 'Opened ${imported.fileName}: $count events.',
+      );
+    } on EvtxImportException catch (e) {
+      if (!mounted) return;
+      PulseSnack.error(context, e.message);
+    }
+  }
+
+  void _closeEventLogFile() {
+    context.read<EvtxImportController>().close();
   }
 
   @override
@@ -423,14 +461,25 @@ class _TimelinePageState extends State<TimelinePage> {
 
     final session = context.watch<TimelineSessionController>();
     context.watch<TimelineLibraryController>();
-    _handleEventsChanged(session);
+    final imports = context.watch<EvtxImportController>();
+    // An opened .evtx replaces this PC's events until it is closed. It is
+    // read without the service, so it also works while PulseService is offline.
+    final imported = imports.current;
+    if (!identical(imported, _shownImport)) {
+      _shownImport = imported;
+      _selectedEventId = null;
+    }
+    final viewingFile = imported != null;
+    if (!viewingFile) _handleEventsChanged(session);
 
-    final events = session.events;
-    final liveActive = session.liveActive;
-    final loadingSnapshot = session.loadingSnapshot;
-    final loadError = session.loadError;
-    final pendingNewCount = session.pendingNewCount;
-    final busy = connecting || loadingSnapshot;
+    final events = imported?.events ?? session.events;
+    final liveActive = !viewingFile && session.liveActive;
+    final loadingSnapshot = !viewingFile && session.loadingSnapshot;
+    final loadError = viewingFile ? null : session.loadError;
+    final pendingNewCount = viewingFile ? 0 : session.pendingNewCount;
+    final offlineView = offline && !viewingFile;
+    final busy =
+        imports.loading || (!viewingFile && (connecting || loadingSnapshot));
 
     final visible = _visible(events);
     final selectedEvent = _selectedEvent(events);
@@ -446,14 +495,27 @@ class _TimelinePageState extends State<TimelinePage> {
           title: widget.title,
           connectionState: state,
           connectionLabel: connectionLabel,
-          searchEnabled: !offline && !busy && loadError == null,
-          searchHint: offline
+          searchEnabled: !offlineView && !busy && loadError == null,
+          searchHint: offlineView
               ? 'Connect PulseService to search events'
               : 'Search provider, Event ID, computer, message, process, PID…',
           searchQuery: _query.searchQuery,
           onSearchChanged: _onSearch,
           actions: [
-            if (kUseMockTimeline)
+            IconButton(
+              tooltip: 'Open an event log file (.evtx) from another PC',
+              onPressed: imports.loading ? null : _openEventLogFile,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+              icon: const Icon(LucideIcons.folderOpen, size: 16),
+            ),
+            if (viewingFile)
+              const PulseBadge(
+                label: 'File',
+                tone: PulseBadgeTone.info,
+                icon: LucideIcons.fileText,
+                compact: true,
+              )
+            else if (kUseMockTimeline)
               const PulseBadge(
                 label: 'Mock',
                 tone: PulseBadgeTone.accent,
@@ -477,7 +539,7 @@ class _TimelinePageState extends State<TimelinePage> {
           ],
         ),
         Expanded(
-          child: offline
+          child: offlineView
               ? const ServiceOfflineRecovery(
                   titleFallback: 'Ready when Windows is',
                 )
@@ -494,6 +556,12 @@ class _TimelinePageState extends State<TimelinePage> {
                           onAction: session.reloadSnapshot,
                         )
                       : _TimelineBody(
+                          importBanner: imported == null
+                              ? null
+                              : _ImportBanner(
+                                  imported: imported,
+                                  onClose: _closeEventLogFile,
+                                ),
                           sessionEvents: events,
                           selectedEventId: _selectedEventId,
                           selectedEvent: selectedEvent,
@@ -541,7 +609,9 @@ class _TimelinePageState extends State<TimelinePage> {
                           onApplySavedSearch: _applySavedSearch,
                           onSelect: _selectEvent,
                           onClear: _clearSelection,
-                          onRefresh: session.reloadSnapshot,
+                          onRefresh: imported == null
+                              ? session.reloadSnapshot
+                              : () => _importEventLog(imported.filePath),
                           onJumpToNewest: _jumpToNewest,
                           onExportJson: () => _exportVisible(asCsv: false),
                           onExportCsv: () => _exportVisible(asCsv: true),
@@ -588,6 +658,7 @@ class _TimelineSkeletonView extends StatelessWidget {
 
 class _TimelineBody extends StatelessWidget {
   const _TimelineBody({
+    this.importBanner,
     required this.sessionEvents,
     required this.selectedEventId,
     required this.selectedEvent,
@@ -627,6 +698,9 @@ class _TimelineBody extends StatelessWidget {
     required this.onExportJson,
     required this.onExportCsv,
   });
+
+  /// Shown instead of the "last hour" overview while an .evtx is open.
+  final Widget? importBanner;
 
   /// Every event held by the session (unfiltered) — feeds the hero summary.
   final List<TimelineEvent> sessionEvents;
@@ -707,7 +781,8 @@ class _TimelineBody extends StatelessWidget {
                   8,
                 ),
                 sliver: SliverToBoxAdapter(
-                  child: TimelineOverviewHeader(summary: activity, now: now),
+                  child: importBanner ??
+                      TimelineOverviewHeader(summary: activity, now: now),
                 ),
               ),
               SliverPadding(
@@ -1468,6 +1543,74 @@ class _NewEventsButton extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Says which file is open and how to get back to this PC's live events.
+class _ImportBanner extends StatelessWidget {
+  const _ImportBanner({required this.imported, required this.onClose});
+
+  final EvtxImport imported;
+  final VoidCallback onClose;
+
+  String get _detail {
+    final count = imported.events.length;
+    final parts = <String>[
+      imported.reachedLimit ? 'Newest $count events' : '$count events',
+    ];
+    final computers = imported.computerNames;
+    if (computers.length == 1) {
+      parts.add('from ${computers.first}');
+    } else if (computers.length > 1) {
+      parts.add('from ${computers.length} computers');
+    }
+    return parts.join(' ');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: PulseTokens.accentSoft.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(PulseTokens.radiusMd),
+        border: Border.all(color: PulseTokens.accent.withValues(alpha: 0.16)),
+      ),
+      child: Row(
+        children: [
+          Icon(LucideIcons.fileText, size: 16, color: PulseTokens.accent),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Viewing ${imported.fileName}',
+                  style: text.titleSmall,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '$_detail. Explained the same way as this PC\'s events; '
+                  'the file was not changed or uploaded.',
+                  style: text.bodySmall?.copyWith(
+                    color: PulseTokens.textSecondary,
+                    height: 1.45,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          TextButton.icon(
+            onPressed: onClose,
+            icon: const Icon(LucideIcons.radio, size: 15),
+            label: const Text('Back to live'),
+          ),
+        ],
       ),
     );
   }

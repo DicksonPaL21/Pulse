@@ -21,7 +21,6 @@ Make Pulse **production-stable** before Timeline Intelligence (R2) and later pla
 | Idle UI RSS | &lt; 150 MB | Diagnostics → Flutter RSS or `measure_performance.ps1` |
 | Idle CPU | Near zero | Task Manager / Diagnostics service CPU when idle |
 | Service working set | Track growth | Diagnostics + soak CSV |
-| MCP memory | Track when running | `measure_performance.ps1` (`PulseMCP` / `node`) |
 | FPS (Diagnostics open) | ≥ 60 | Diagnostics → Flutter FPS |
 | Render latency | Informational | Diagnostics → Frame time |
 | IPC ping RTT | &lt; 50 ms | Diagnostics → Ping Service |

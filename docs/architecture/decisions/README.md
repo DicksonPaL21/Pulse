@@ -15,5 +15,7 @@
 | [ADR-011](ADR-011-inventory-engine.md) | Inventory Engine (R3) | **Accepted** |
 | [ADR-012](ADR-012-midnight-visual-identity.md) | Midnight visual identity and shell redesign | **Accepted** |
 | [ADR-013](ADR-013-remove-pulsemcp.md) | Remove AI Integration (PulseMCP) | **Accepted** |
+| [ADR-014](ADR-014-open-exported-evtx.md) | Open exported .evtx files | **Accepted** |
+| [ADR-015](ADR-015-kernel-activity-via-etw.md) | Kernel activity in the Timeline via ETW (no drivers) | Proposed |
 
 To change a locked decision, add a new ADR that references the original.

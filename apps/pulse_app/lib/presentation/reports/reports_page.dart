@@ -83,10 +83,10 @@ class _ReportsPageState extends State<ReportsPage> {
       );
 
       final exporter = ReportExporter(settings: settings);
-      final path = await exporter.export(input);
+      final saved = await exporter.export(input);
       if (!mounted) return;
-      setState(() => _lastExportPath = path);
-      PulseSnack.success(context, 'Exported to $path');
+      setState(() => _lastExportPath = saved.path);
+      PulseSnack.success(context, 'Exported to ${saved.path}');
     } catch (e) {
       if (!mounted) return;
       PulseSnack.error(context, PulseUserErrors.fromObject(e));
@@ -183,7 +183,7 @@ class _ReportsPageState extends State<ReportsPage> {
   String _destinationLabel(SettingsController settings) {
     final custom = settings.exportDirectory.trim();
     if (custom.isNotEmpty) return custom;
-    return 'Documents / Pulse / exports (default)';
+    return 'Downloads / Pulse / Reports (default)';
   }
 
   @override

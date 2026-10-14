@@ -11,8 +11,11 @@ import '../../application/diagnostics_controller.dart';
 import '../../application/settings_controller.dart';
 import '../../application/shell_navigation.dart';
 import '../../application/timeline_session_controller.dart';
+import '../../application/update_check_controller.dart';
 import '../../app/theme/pulse_theme.dart';
 import '../../ipc/pulse_ipc_client.dart';
+import '../../platform/browser.dart';
+import '../../platform/pulse_deployment.dart';
 import '../components/pulse_app_bar.dart';
 import '../components/pulse_badge.dart';
 import '../components/pulse_button.dart';
@@ -889,15 +892,15 @@ class _SettingsPageState extends State<SettingsPage> {
               _SettingsRow(
                 icon: LucideIcons.fileText,
                 title: 'Export logs',
-                subtitle: 'Write recent app log lines to Documents',
+                subtitle: 'Write recent app log lines to Downloads/Pulse',
                 trailing: PulseButton(
                   label: 'Export',
                   icon: LucideIcons.download,
                   variant: PulseButtonVariant.secondary,
                   onPressed: () async {
                     try {
-                      final path = await diag.exportLogsOnly();
-                      if (context.mounted) _snack(context, 'Saved: $path');
+                      final saved = await diag.exportLogsOnly();
+                      if (context.mounted) _snack(context, saved.summary);
                     } catch (e) {
                       if (context.mounted) {
                         _snack(context, 'Failed: $e', error: true);
@@ -994,6 +997,19 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               const SoftDivider(indent: 52),
               _SettingsRow(
+                icon: LucideIcons.userX,
+                title: 'Mask personal details in exports',
+                subtitle:
+                    'Hide user and computer names, account SIDs, IP and MAC '
+                    'addresses and serial numbers in reports and exports, so '
+                    'they are safe to share',
+                trailing: Switch(
+                  value: settings.maskPersonalDataInExports,
+                  onChanged: settings.setMaskPersonalDataInExports,
+                ),
+              ),
+              const SoftDivider(indent: 52),
+              _SettingsRow(
                 icon: LucideIcons.history,
                 title: 'Clear local history',
                 subtitle: 'Remove Timeline events from this session',
@@ -1035,6 +1051,9 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ],
       SettingsCategoryId.updates => [
+          // The Store edition is updated by the Store.
+          if (!const WindowsPulseDeployment().isPackagedMsix)
+            const _UpdatesGroup(),
           _SettingsGroup(
             title: 'About',
             children: [
@@ -1103,16 +1122,16 @@ class _SettingsPageState extends State<SettingsPage> {
                 icon: LucideIcons.upload,
                 title: 'Export settings',
                 subtitle:
-                    'Write JSON to Documents/Pulse/settings-export.json',
+                    'Write JSON to Downloads/Pulse/settings-export.json',
                 trailing: PulseButton(
                   label: 'Export',
                   icon: LucideIcons.download,
                   variant: PulseButtonVariant.secondary,
                   onPressed: () async {
                     try {
-                      final path = await settings.exportSettingsJson();
+                      final saved = await settings.exportSettingsJson();
                       if (context.mounted) {
-                        _snack(context, 'Saved: $path');
+                        _snack(context, saved.summary);
                       }
                     } catch (e) {
                       if (context.mounted) {
@@ -1126,7 +1145,7 @@ class _SettingsPageState extends State<SettingsPage> {
               _SettingsRow(
                 icon: LucideIcons.import,
                 title: 'Restore from last export',
-                subtitle: 'Import Documents/Pulse/settings-export.json',
+                subtitle: 'Import Downloads/Pulse/settings-export.json',
                 trailing: PulseButton(
                   label: 'Import',
                   icon: LucideIcons.upload,
@@ -1148,7 +1167,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 icon: LucideIcons.folder,
                 title: 'Export directory',
                 subtitle: settings.exportDirectory.isEmpty
-                    ? 'Default: Documents/Pulse'
+                    ? 'Default: Downloads/Pulse'
                     : settings.exportDirectory,
                 trailing: PulseButton(
                   label: settings.exportDirectory.isEmpty ? 'Set' : 'Clear',
@@ -1367,6 +1386,85 @@ class _AccentChip extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// GitHub edition: check for a newer release and open its page.
+class _UpdatesGroup extends StatelessWidget {
+  const _UpdatesGroup();
+
+  String _statusText(UpdateCheckController updates) {
+    final checked = updates.lastCheckedAt;
+    final when = checked == null
+        ? ''
+        : ' Last checked ${checked.toLocal().toString().substring(0, 16)}.';
+    return switch (updates.status) {
+      UpdateCheckStatus.idle =>
+        'Ask GitHub whether a newer Pulse is out. Nothing is downloaded or '
+            'installed, and nothing about this PC is sent.$when',
+      UpdateCheckStatus.checking => 'Checking GitHub…',
+      UpdateCheckStatus.upToDate =>
+        'You have the latest version ($kAppVersion).$when',
+      UpdateCheckStatus.available =>
+        'Pulse ${updates.latest!.version} is available (you have '
+            '$kAppVersion).',
+      UpdateCheckStatus.failed => updates.error ?? 'The check failed.',
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final updates = context.watch<UpdateCheckController>();
+    final settings = context.watch<SettingsController>();
+    final latest = updates.latest;
+    return _SettingsGroup(
+      title: 'Updates',
+      children: [
+        _SettingsRow(
+          icon: updates.status == UpdateCheckStatus.available
+              ? LucideIcons.circleArrowUp
+              : LucideIcons.refreshCw,
+          title: updates.status == UpdateCheckStatus.available
+              ? 'Update available'
+              : 'Check for updates',
+          subtitle: _statusText(updates),
+          trailing: updates.status == UpdateCheckStatus.available &&
+                  latest != null
+              ? PulseButton(
+                  label: 'Release notes',
+                  icon: LucideIcons.externalLink,
+                  onPressed: () {
+                    if (!openPulseGitHubPage(latest.pageUrl)) {
+                      PulseSnack.error(
+                        context,
+                        'Could not open the browser. The release is at '
+                        '${latest.pageUrl}',
+                      );
+                    }
+                  },
+                )
+              : PulseButton(
+                  label: 'Check',
+                  variant: PulseButtonVariant.secondary,
+                  loading: updates.status == UpdateCheckStatus.checking,
+                  onPressed: updates.check,
+                ),
+        ),
+        const SoftDivider(indent: 52),
+        _SettingsRow(
+          icon: LucideIcons.calendarClock,
+          title: 'Check automatically',
+          subtitle: 'Once a week, when Pulse starts. Off by default.',
+          trailing: Switch(
+            value: settings.checkUpdatesAutomatically,
+            onChanged: (value) async {
+              await settings.setCheckUpdatesAutomatically(value);
+              if (value) await updates.checkAutomaticallyIfDue();
+            },
+          ),
+        ),
+      ],
     );
   }
 }

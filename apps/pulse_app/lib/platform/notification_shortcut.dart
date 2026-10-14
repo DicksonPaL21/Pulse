@@ -11,6 +11,51 @@ import '../logging/app_logger.dart';
 /// (`%APPDATA%\Microsoft\Windows\Start Menu\Programs\<name>.lnk`).
 const String kNotificationAppName = 'Pulse Diagnostics';
 
+/// APPMODEL_ERROR_NO_APPLICATION: the process is not a packaged app.
+const int _kAppModelErrorNoApplication = 15703;
+
+typedef _GetAumidNative = Int32 Function(Pointer<Uint32>, Pointer<Utf16>);
+typedef _GetAumidDart = int Function(Pointer<Uint32>, Pointer<Utf16>);
+
+/// The Store (MSIX) package's AppUserModelID, e.g.
+/// `Regncreative.PulseDiagnostics_epm7qp6hnh3h0!pulse`, or null outside a
+/// package.
+///
+/// Toasts from a packaged app must use this id. With [kNotificationAppName]
+/// WinToast set the process id to "Pulse Diagnostics", Windows read it as
+/// `<package>!Pulse Diagnostics`, found no such app in the manifest and showed
+/// that raw string instead of the app name and icon.
+/// GetCurrentApplicationUserModelId is in kernel32 (appmodel.h, Windows 8+);
+/// package:win32 has no binding for it.
+String? packagedAppUserModelId() {
+  if (!Platform.isWindows) return null;
+  final _GetAumidDart getAumid;
+  try {
+    getAumid = DynamicLibrary.open('kernel32.dll')
+        .lookupFunction<_GetAumidNative, _GetAumidDart>(
+      'GetCurrentApplicationUserModelId',
+    );
+  } on ArgumentError {
+    return null;
+  }
+  final length = calloc<Uint32>();
+  try {
+    final probe = getAumid(length, nullptr);
+    if (probe == _kAppModelErrorNoApplication) return null;
+    if (probe != ERROR_INSUFFICIENT_BUFFER || length.value == 0) return null;
+    final buffer = calloc<Uint16>(length.value).cast<Utf16>();
+    try {
+      if (getAumid(length, buffer) != ERROR_SUCCESS) return null;
+      final id = buffer.toDartString();
+      return id.isEmpty ? null : id;
+    } finally {
+      calloc.free(buffer);
+    }
+  } finally {
+    calloc.free(length);
+  }
+}
+
 /// SLGP_UNCPRIORITY: return the target path in its standard form.
 const int _kSlgpUncPriority = 0x2;
 
