@@ -1,5 +1,13 @@
 # Upgrade notes
 
+## To 1.4.0
+
+- Installer: `Pulse-Setup-1.4.0-windows-x64.exe`
+- Product stamp is **`1.4.0`** (UI, PulseService)
+- Exports are written to **Downloads\Pulse** (earlier ones stay in Documents\Pulse)
+- *Mask personal details in exports* is on by default (Settings → Privacy)
+- Notification repeat interval default is 60 minutes; a value you set yourself is kept
+
 ## To 1.3.0
 
 - Installer: `Pulse-Setup-1.3.0-windows-x64.exe`

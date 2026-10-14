@@ -5,6 +5,31 @@ All notable changes to Pulse are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] — 2026-10-14
+
+### Added
+
+- **Blue screen and sudden restart explanations** from the event data: Kernel-Power 41 tells a blue screen (with stop code name), a forced power-off and a power loss apart; bug check 1001 shows the stop code, usual cause and dump path (works on any Windows language); WHEA-Logger fatal vs corrected hardware errors. Timeline groups Kernel-Power 41 with its bug check as one incident
+- **Open an .evtx from another PC** on the Timeline (`PulseService.exe --read-evtx`, run as the user; works while the service is offline) ([ADR-014](docs/architecture/decisions/ADR-014-open-exported-evtx.md))
+- **Mask personal details in exports** (Settings → Privacy, on by default): user and computer names, profile paths, account SIDs, e-mail, IP and MAC addresses, serial numbers
+- **Update notice** for the GitHub edition (Settings → Updates): manual check plus an optional weekly check, off by default; never downloads anything
+- Release workflow in GitHub Actions (draft release with SHA-256 checksums)
+
+### Changed
+
+- Product version stamped **1.4.0** across UI, PulseService, installer and MSIX
+- Exports go to **Downloads\Pulse** by default (Documents is blocked for unsigned apps by Controlled folder access)
+- Default notification repeat interval 15 → 60 minutes; one toast per alert kind on screen
+- README: privacy first, comparison with Event Viewer / Reliability Monitor, how Pulse is built; new security guide
+- Packaging finds Visual Studio and the MSVC runtime with vswhere
+
+### Fixed
+
+- Timeline order: days-old events could appear above recent ones (unstable sort past 32 events)
+- Exports failed with `PathNotFoundException` under Controlled folder access
+- Store edition notifications showed a raw package id instead of the app name
+- A stuck start-up step could skip the start-with-Windows setup on the first launch after Setup
+
 ## [1.3.0] — 2026-10-13
 
 ### Removed

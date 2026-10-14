@@ -507,9 +507,9 @@ Distinct from **Plugin SDK (R13)** (in-process/out-of-process *extensions inside
 
 **Temporary priority (2026-08-02):** MCP M2–M7 (R5–R6) is prioritized ahead of remaining Wave B/C items. **M2–M7 frozen** ([mcp-m2-validation.md](archives/mcp-m2-validation.md) … [mcp-m7-validation.md](archives/mcp-m7-validation.md)); M8 (HTTP) not started until explicit go-ahead. R4 shared report generators deferred — M6 TypeScript writers remain until consolidated.
 
-**Shipped (stable):** 1.0.0 (first stable), 1.1.0 (Assistant, Store MSIX), 1.2.0 (Midnight redesign), 1.3.0 (stability; PulseMCP removed).
+**Shipped (stable):** 1.0.0 (first stable), 1.1.0 (Assistant, Store MSIX), 1.2.0 (Midnight redesign), 1.3.0 (stability; PulseMCP removed), 1.4.0 (crash explainer, .evtx import, masked exports, update notice).
 
-**1.4.0 (in progress):** blue screen / sudden restart / WHEA explanations, open `.evtx` from another PC (ADR-014), masking personal details in exports, exports to Downloads until releases are signed, Store notification identity fix, GitHub update notice, release workflow in GitHub Actions.
+**1.4.0:** blue screen / sudden restart / WHEA explanations, open `.evtx` from another PC (ADR-014), masking personal details in exports, exports to Downloads until releases are signed, Store notification identity fix, GitHub update notice, release workflow in GitHub Actions.
 
 Historical beta plan (superseded):
 

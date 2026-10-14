@@ -51,7 +51,7 @@ class SettingsController extends ChangeNotifier {
   static const _kAssistantLocalAiProvider = 'assistant.local_ai.provider_id';
   static const _kAssistantLocalAiModel = 'assistant.local_ai.model_id';
 
-  static const String buildDate = '2026-08-02';
+  static const String buildDate = '2026-10-14';
   /// Default cooldown between repeat notifications for the same alert kind.
   /// One hour: memory hovering around the threshold produced a toast every
   /// 15 minutes, which piled up in notification history.
