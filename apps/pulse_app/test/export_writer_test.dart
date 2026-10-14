@@ -4,8 +4,20 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pulse/platform/export_writer.dart';
 
+class _MemoryBlockedStore implements DocumentsBlockedStore {
+  bool blocked = false;
+
+  @override
+  Future<bool> isBlocked() async => blocked;
+
+  @override
+  Future<void> markBlocked() async => blocked = true;
+}
+
 void main() {
   late Directory root;
+  late _MemoryBlockedStore store;
+  var documentsLookups = 0;
   late Directory documents;
   late Directory downloads;
 
@@ -13,6 +25,8 @@ void main() {
     root = await Directory.systemTemp.createTemp('pulse-export-test-');
     documents = await Directory('${root.path}/Documents').create();
     downloads = await Directory('${root.path}/Downloads').create();
+    store = _MemoryBlockedStore();
+    documentsLookups = 0;
   });
 
   tearDown(() async {
@@ -20,8 +34,12 @@ void main() {
   });
 
   ExportWriter writer({Directory? downloadsDir}) => ExportWriter(
-        documentsDirectory: () async => documents,
+        documentsDirectory: () async {
+          documentsLookups++;
+          return documents;
+        },
         downloadsDirectory: () async => downloadsDir,
+        blockedStore: store,
       );
 
   /// Simulates Controlled folder access: "Pulse" exists as a file, so the
@@ -52,6 +70,20 @@ void main() {
     expect(saved.path, startsWith(downloads.path));
     expect(await File(saved.path).exists(), isTrue);
     expect(saved.summary, contains('Controlled folder access'));
+    expect(store.blocked, isTrue);
+  });
+
+  test('once blocked, Documents is not tried again (no repeat alerts)',
+      () async {
+    store.blocked = true;
+    final saved = await writer(downloadsDir: downloads).write(
+      fileName: 'b.json',
+      bytes: utf8.encode('{}'),
+      defaultSubfolder: const ['Pulse', 'exports'],
+    );
+    expect(documentsLookups, 0);
+    expect(saved.fallback, ExportFallback.blockedEarlier);
+    expect(saved.path, startsWith(downloads.path));
   });
 
   test('a custom folder is never silently replaced', () async {
