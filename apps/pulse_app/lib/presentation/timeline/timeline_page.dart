@@ -1,11 +1,10 @@
 import 'dart:async';
-import 'dart:io';
+import 'dart:convert';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:pulse_protocol/pulse_wire.dart';
 
@@ -27,6 +26,7 @@ import '../../features/timeline/widgets/timeline_event_tile.dart';
 import '../../features/timeline/widgets/timeline_overview_header.dart';
 import '../../ipc/pulse_ipc_client.dart';
 import '../../platform/evtx_file_reader.dart';
+import '../../platform/export_writer.dart';
 import '../components/pulse_app_bar.dart';
 import '../components/pulse_badge.dart';
 import '../components/pulse_empty_state.dart';
@@ -380,29 +380,26 @@ class _TimelinePageState extends State<TimelinePage> {
               pinnedEventIds: library.pinnedEventIds,
               incidentByEventId: incidentMeta,
             );
-      final docs = await getApplicationDocumentsDirectory();
-      final dir = Directory('${docs.path}${Platform.pathSeparator}Pulse'
-          '${Platform.pathSeparator}exports');
-      if (!await dir.exists()) {
-        await dir.create(recursive: true);
-      }
       final stamp = DateTime.now()
           .toIso8601String()
           .replaceAll(':', '-')
           .replaceAll('.', '-');
       final ext = asCsv ? 'csv' : 'json';
-      final file = File(
-        '${dir.path}${Platform.pathSeparator}timeline_$stamp.$ext',
+      final saved = await ExportWriter().write(
+        fileName: 'timeline_$stamp.$ext',
+        bytes: utf8.encode(body),
+        defaultSubfolder: const ['Pulse', 'exports'],
       );
-      await file.writeAsString(body);
       await Clipboard.setData(ClipboardData(text: body));
       if (!mounted) return;
-      PulseSnack.success(
-        context,
-        selected != null
-            ? 'Exported selected event as $ext (also copied).'
-            : 'Exported ${toExport.length} events as $ext (also copied).',
-      );
+      final what = selected != null
+          ? 'Exported selected event as $ext (also copied).'
+          : 'Exported ${toExport.length} events as $ext (also copied).';
+      if (saved.usedFallback) {
+        PulseSnack.info(context, '$what ${saved.summary}');
+      } else {
+        PulseSnack.success(context, what);
+      }
     } catch (e) {
       if (!mounted) return;
       PulseSnack.error(context, PulseUserErrors.fromObject(e));

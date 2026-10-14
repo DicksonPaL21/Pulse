@@ -1,8 +1,10 @@
 import '../../ipc/pulse_ipc_client.dart';
+import '../../platform/export_writer.dart';
 
 /// Maps technical IPC / transport failures to calm, user-facing copy.
 abstract final class PulseUserErrors {
   static String fromObject(Object error) {
+    if (error is ExportWriteException) return error.message;
     final raw = error.toString();
     return fromMessage(raw);
   }

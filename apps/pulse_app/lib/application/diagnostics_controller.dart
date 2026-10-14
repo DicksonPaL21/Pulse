@@ -1,16 +1,15 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:archive/archive.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:pulse_protocol/pulse_constants.dart';
 import 'package:pulse_protocol/pulse_wire.dart';
 
 import '../ipc/pulse_ipc_client.dart';
 import '../logging/app_logger.dart';
+import '../platform/export_writer.dart';
 import '../presentation/utils/pulse_user_errors.dart';
 import 'client_frame_metrics.dart';
 import 'settings_controller.dart';
@@ -214,7 +213,7 @@ class DiagnosticsController extends ChangeNotifier {
     return buf.toString();
   }
 
-  Future<String> exportReport() => _guarded(() async {
+  Future<ExportResult> exportReport() => _guarded(() async {
         // Refresh service snapshot + hardware before packaging.
         if (connected) {
           try {
@@ -235,13 +234,6 @@ class DiagnosticsController extends ChangeNotifier {
           } catch (_) {}
         }
 
-        final dir = await getApplicationDocumentsDirectory();
-        final exportDir = Directory(
-          '${dir.path}${Platform.pathSeparator}Pulse${Platform.pathSeparator}exports',
-        );
-        if (!await exportDir.exists()) {
-          await exportDir.create(recursive: true);
-        }
         final stamp = DateTime.now()
             .toIso8601String()
             .replaceAll(':', '-')
@@ -406,30 +398,30 @@ class DiagnosticsController extends ChangeNotifier {
           ..addFile(
               ArchiveFile(jsonName, jsonText.length, utf8.encode(jsonText)));
         final zipBytes = ZipEncoder().encode(archive);
-        final zipPath = '${exportDir.path}${Platform.pathSeparator}$zipName';
-        await File(zipPath).writeAsBytes(zipBytes, flush: true);
-        logger.info('Diagnostics', 'Exported $zipPath');
+        final saved = await ExportWriter().write(
+          fileName: zipName,
+          bytes: zipBytes,
+          defaultSubfolder: const ['Pulse', 'exports'],
+        );
+        logger.info(
+          'Diagnostics',
+          'Exported diagnostics${saved.usedFallback ? ' to Downloads' : ''}',
+        );
         notifyListeners();
-        return zipPath;
+        return saved;
       });
 
-  Future<String> exportLogsOnly() => _guarded(() async {
-        final dir = await getApplicationDocumentsDirectory();
-        final exportDir = Directory(
-          '${dir.path}${Platform.pathSeparator}Pulse${Platform.pathSeparator}exports',
-        );
-        if (!await exportDir.exists()) {
-          await exportDir.create(recursive: true);
-        }
+  Future<ExportResult> exportLogsOnly() => _guarded(() async {
         final stamp = DateTime.now()
             .toIso8601String()
             .replaceAll(':', '-')
             .split('.')
             .first;
-        final path =
-            '${exportDir.path}${Platform.pathSeparator}pulse-logs-$stamp.txt';
-        await File(path).writeAsString(logger.lines.join('\n'), flush: true);
-        return path;
+        return ExportWriter().write(
+          fileName: 'pulse-logs-$stamp.txt',
+          bytes: utf8.encode(logger.lines.join('\n')),
+          defaultSubfolder: const ['Pulse', 'exports'],
+        );
       });
 
   void resetClientCounters() {

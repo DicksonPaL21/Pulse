@@ -896,8 +896,8 @@ class _SettingsPageState extends State<SettingsPage> {
                   variant: PulseButtonVariant.secondary,
                   onPressed: () async {
                     try {
-                      final path = await diag.exportLogsOnly();
-                      if (context.mounted) _snack(context, 'Saved: $path');
+                      final saved = await diag.exportLogsOnly();
+                      if (context.mounted) _snack(context, saved.summary);
                     } catch (e) {
                       if (context.mounted) {
                         _snack(context, 'Failed: $e', error: true);
@@ -1110,9 +1110,9 @@ class _SettingsPageState extends State<SettingsPage> {
                   variant: PulseButtonVariant.secondary,
                   onPressed: () async {
                     try {
-                      final path = await settings.exportSettingsJson();
+                      final saved = await settings.exportSettingsJson();
                       if (context.mounted) {
-                        _snack(context, 'Saved: $path');
+                        _snack(context, saved.summary);
                       }
                     } catch (e) {
                       if (context.mounted) {

@@ -1,8 +1,6 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pulse_protocol/pulse_constants.dart';
@@ -13,6 +11,7 @@ import '../../application/settings_controller.dart';
 import '../../features/timeline/timeline_display.dart';
 import '../../features/timeline/timeline_export.dart';
 import '../../ipc/pulse_ipc_client.dart';
+import '../../platform/export_writer.dart';
 import '../inventory/inventory_detail_model.dart';
 import 'report_models.dart';
 
@@ -71,40 +70,20 @@ class ReportExportInput {
 /// Builds report bytes/strings and writes under Documents/Pulse/Reports
 /// (or [SettingsController.exportDirectory] when set).
 class ReportExporter {
-  ReportExporter({this.settings});
+  ReportExporter({this.settings, ExportWriter? writer})
+      : _writer = writer ?? ExportWriter();
 
   final SettingsController? settings;
+  final ExportWriter _writer;
 
-  /// Resolves the export directory: custom path, else Documents/Pulse/Reports.
-  Future<Directory> resolveReportsDirectory() async {
-    final custom = settings?.exportDirectory.trim() ?? '';
-    if (custom.isNotEmpty) {
-      final dir = Directory(custom);
-      if (!await dir.exists()) {
-        await dir.create(recursive: true);
-      }
-      return dir;
-    }
-    final docs = await getApplicationDocumentsDirectory();
-    final dir = Directory(
-      '${docs.path}${Platform.pathSeparator}Pulse'
-      '${Platform.pathSeparator}Reports',
-    );
-    if (!await dir.exists()) {
-      await dir.create(recursive: true);
-    }
-    return dir;
-  }
-
-  /// Builds content and writes a file. Returns the absolute path.
-  Future<String> export(ReportExportInput input) async {
+  /// Builds content and writes a file (see [ExportWriter] for where).
+  Future<ExportResult> export(ReportExportInput input) async {
     if (input.format == ReportFormat.csv && !input.template.supportsCsv) {
       throw ArgumentError(
         'CSV is not supported for ${input.template.title} reports.',
       );
     }
 
-    final dir = await resolveReportsDirectory();
     final stamp = DateTime.now()
         .toIso8601String()
         .replaceAll(':', '-')
@@ -112,19 +91,18 @@ class ReportExporter {
         .first;
     final name =
         '${input.template.fileStem}-$stamp.${input.format.fileExtension}';
-    final path = '${dir.path}${Platform.pathSeparator}$name';
-
-    switch (input.format) {
-      case ReportFormat.json:
-        await File(path).writeAsString(buildJson(input), flush: true);
-      case ReportFormat.csv:
-        await File(path).writeAsString(buildCsv(input), flush: true);
-      case ReportFormat.html:
-        await File(path).writeAsString(buildHtml(input), flush: true);
-      case ReportFormat.pdf:
-        await File(path).writeAsBytes(await buildPdf(input), flush: true);
-    }
-    return path;
+    final List<int> bytes = switch (input.format) {
+      ReportFormat.json => utf8.encode(buildJson(input)),
+      ReportFormat.csv => utf8.encode(buildCsv(input)),
+      ReportFormat.html => utf8.encode(buildHtml(input)),
+      ReportFormat.pdf => await buildPdf(input),
+    };
+    return _writer.write(
+      fileName: name,
+      bytes: bytes,
+      defaultSubfolder: const ['Pulse', 'Reports'],
+      customDirectory: settings?.exportDirectory ?? '',
+    );
   }
 
   // ─── Pure builders (unit-tested for JSON / CSV) ─────────────────────────

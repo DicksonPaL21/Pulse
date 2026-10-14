@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../app/theme/pulse_theme.dart';
 import '../logging/app_logger.dart';
+import '../platform/export_writer.dart';
 
 /// Persisted user preferences (local-only).
 class SettingsController extends ChangeNotifier {
@@ -759,39 +760,34 @@ class SettingsController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Resolves the directory used for settings (and future) exports.
-  Future<Directory> resolveExportDirectory() async {
-    final custom = exportDirectory.trim();
-    if (custom.isNotEmpty) {
-      final dir = Directory(custom);
-      if (!await dir.exists()) {
-        await dir.create(recursive: true);
-      }
-      return dir;
-    }
-    final docs = await getApplicationDocumentsDirectory();
-    final dir = Directory(
-      '${docs.path}${Platform.pathSeparator}Pulse',
-    );
-    if (!await dir.exists()) {
-      await dir.create(recursive: true);
-    }
-    return dir;
-  }
-
+  /// Where [exportSettingsJson] writes by default (nothing is created).
   Future<String> defaultSettingsExportPath() async {
-    final dir = await resolveExportDirectory();
-    return '${dir.path}${Platform.pathSeparator}$defaultSettingsExportFileName';
+    final custom = exportDirectory.trim();
+    final dir = custom.isNotEmpty
+        ? custom
+        : '${(await getApplicationDocumentsDirectory()).path}'
+            '${Platform.pathSeparator}Pulse';
+    return '$dir${Platform.pathSeparator}$defaultSettingsExportFileName';
   }
 
-  /// Writes current settings JSON to the export path and returns that path.
-  Future<String> exportSettingsJson() async {
-    final path = await defaultSettingsExportPath();
-    final file = File(path);
+  /// Path of the last export this session (Downloads when Documents was
+  /// blocked), so "restore last export" finds it.
+  String? _lastSettingsExportPath;
+
+  Future<ExportResult> exportSettingsJson() async {
     const encoder = JsonEncoder.withIndent('  ');
-    await file.writeAsString(encoder.convert(toMap()));
-    logger.info('settings', 'Settings exported to $path');
-    return path;
+    final saved = await ExportWriter().write(
+      fileName: defaultSettingsExportFileName,
+      bytes: utf8.encode(encoder.convert(toMap())),
+      defaultSubfolder: const ['Pulse'],
+      customDirectory: exportDirectory,
+    );
+    _lastSettingsExportPath = saved.path;
+    logger.info(
+      'settings',
+      'Settings exported${saved.usedFallback ? ' to Downloads' : ''}',
+    );
+    return saved;
   }
 
   /// Reads settings JSON from [path] and applies it.
@@ -806,8 +802,22 @@ class SettingsController extends ChangeNotifier {
 
   /// Restores settings from the last export at the default path.
   Future<void> importSettingsFromLastExport() async {
-    final path = await defaultSettingsExportPath();
-    await importSettingsJson(path);
+    final defaultPath = await defaultSettingsExportPath();
+    final downloads = await getDownloadsDirectory();
+    final candidates = [
+      ?_lastSettingsExportPath,
+      defaultPath,
+      if (downloads != null)
+        [downloads.path, 'Pulse', defaultSettingsExportFileName]
+            .join(Platform.pathSeparator),
+    ];
+    for (final path in candidates) {
+      if (await File(path).exists()) {
+        await importSettingsJson(path);
+        return;
+      }
+    }
+    await importSettingsJson(defaultPath);
   }
 
   Future<void> importSettingsFromJsonString(String raw) async {
