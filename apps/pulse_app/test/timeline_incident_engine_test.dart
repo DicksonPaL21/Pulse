@@ -63,6 +63,57 @@ void main() {
       expect(items.whereType<TimelineLoneEventItem>(), hasLength(2));
     });
 
+    test('pairs Kernel-Power 41 with the bug check before 6008', () {
+      final events = [
+        _ev(
+          id: 'bugcheck',
+          provider: 'Microsoft-Windows-WER-SystemErrorReporting',
+          winEventId: 1001,
+          ts: 60_000,
+        ),
+        _ev(id: 'unclean', provider: 'EventLog', winEventId: 6008, ts: 20_000),
+        _ev(
+          id: 'restart',
+          provider: 'Microsoft-Windows-Kernel-Power',
+          winEventId: 41,
+          ts: 10_000,
+        ),
+      ];
+      final items = TimelineIncidentEngine().buildItems(events);
+      final incident = items.whereType<TimelineIncidentItem>().single.incident;
+      expect(incident.ruleId, 'blue-screen-restart');
+      expect(
+        incident.events.map((e) => e.eventId),
+        containsAll(['restart', 'bugcheck']),
+      );
+      expect(items.whereType<TimelineLoneEventItem>(), hasLength(1));
+    });
+
+    test(
+      'Kernel-Power 41 without a bug check stays an unexpected shutdown',
+      () {
+        final events = [
+          _ev(
+            id: 'unclean',
+            provider: 'EventLog',
+            winEventId: 6008,
+            ts: 20_000,
+          ),
+          _ev(
+            id: 'restart',
+            provider: 'Microsoft-Windows-Kernel-Power',
+            winEventId: 41,
+            ts: 10_000,
+          ),
+        ];
+        final incident =
+            (TimelineIncidentEngine().buildItems(events).single
+                    as TimelineIncidentItem)
+                .incident;
+        expect(incident.ruleId, 'unexpected-shutdown');
+      },
+    );
+
     test('display 4101 becomes singleton incident', () {
       final events = [
         _ev(

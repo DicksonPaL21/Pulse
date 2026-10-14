@@ -30,6 +30,21 @@
 | Citations | Microsoft Event ID documentation for Application Error 1000 and Windows Error Reporting 1001 |
 | FP notes | Unrelated 1000/1001 pairs can coincide on busy machines; window + newest-first pairing reduces FP. Same-process matching is best-effort from message text only when present. |
 
+### `blue-screen-restart`
+
+| Field | Value |
+|-------|--------|
+| Title | Blue screen and restart |
+| Members | `Microsoft-Windows-Kernel-Power` **41**, then `Microsoft-Windows-WER-SystemErrorReporting` **1001** |
+| Window | 10 minutes (both are written during the next boot) |
+| Possible cause | Windows stopped with a blue screen (bug check) and restarted; Kernel-Power 41 marks the unexpected restart and the bug check event records the stop code. |
+| Confidence | high |
+| Next step | Read the stop code explanation on the bug check event; check recently installed drivers or hardware. |
+| Citations | [Event ID 41](https://learn.microsoft.com/troubleshoot/windows-client/performance/event-id-41-restart); [Bug Check Code Reference](https://learn.microsoft.com/windows-hardware/drivers/debugger/bug-check-code-reference2) |
+| FP notes | A 41 from a power loss can sit near an older, unrelated bug check; the nearest 1001 within 10 minutes is used. Evaluated before `unexpected-shutdown`. |
+
+Per-event explanations (stop code name, power button, power loss, WHEA hardware errors) come from the service's crash explainer (`service/pulse_service/src/intelligence/crash_explainer.cpp`), not from this rule.
+
 ### `unexpected-shutdown`
 
 | Field | Value |

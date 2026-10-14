@@ -126,6 +126,30 @@ class TimelineIncidentEngine {
       falsePositiveNotes:
           'Unrelated 1000/1001 pairs can coincide on busy machines; nearest-pair within the window is used.',
     ),
+    // Before 'unexpected-shutdown' so a blue screen is not reported as a
+    // plain unclean shutdown. Both events are written during the next boot.
+    TimelineCorrelationRule(
+      id: 'blue-screen-restart',
+      title: 'Blue screen and restart',
+      windowMs: 10 * 60 * 1000,
+      steps: [
+        TimelineCorrelationStep(
+          providerContains: 'Kernel-Power',
+          winEventId: 41,
+        ),
+        TimelineCorrelationStep(
+          providerContains: 'WER-SystemErrorReporting',
+          winEventId: 1001,
+        ),
+      ],
+      possibleCause:
+          'Windows stopped with a blue screen (bug check) and restarted; Kernel-Power 41 marks the unexpected restart and the bug check event records the stop code.',
+      confidence: TimelineRcaConfidence.high,
+      nextStep:
+          'Read the stop code explanation on the bug check event; check recently installed drivers or hardware.',
+      falsePositiveNotes:
+          'A 41 from a power loss can sit near an older, unrelated bug check; the nearest 1001 within 10 minutes is used.',
+    ),
     TimelineCorrelationRule(
       id: 'unexpected-shutdown',
       title: 'Unexpected shutdown recorded',
