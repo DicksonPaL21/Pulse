@@ -242,15 +242,11 @@ class _TimelinePageState extends State<TimelinePage> {
   }
 
   List<TimelineEvent> _visible(List<TimelineEvent> events) {
-    final matched = [for (final e in events) if (_query.matches(e)) e];
     final library = context.read<TimelineLibraryController>();
-    matched.sort((a, b) {
-      final ap = library.isPinned(a.eventId) ? 0 : 1;
-      final bp = library.isPinned(b.eventId) ? 0 : 1;
-      if (ap != bp) return ap.compareTo(bp);
-      return 0;
-    });
-    return matched;
+    return pinnedFirst(
+      events.where(_query.matches),
+      (e) => library.isPinned(e.eventId),
+    );
   }
 
   TimelineEvent? _selectedEvent(List<TimelineEvent> events) {

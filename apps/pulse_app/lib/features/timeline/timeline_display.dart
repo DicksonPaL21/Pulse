@@ -80,6 +80,21 @@ String? latestEventIdOf(Iterable<TimelineEvent> events) {
   return latest?.eventId;
 }
 
+/// Pinned events first, everything else after, each group in its original
+/// (newest-first) order. List.sort is not stable, so a comparator that only
+/// ranks pinned vs not shuffled the rest once the list passed 32 events.
+List<TimelineEvent> pinnedFirst(
+  Iterable<TimelineEvent> events,
+  bool Function(TimelineEvent event) isPinned,
+) {
+  final pinned = <TimelineEvent>[];
+  final rest = <TimelineEvent>[];
+  for (final e in events) {
+    (isPinned(e) ? pinned : rest).add(e);
+  }
+  return pinned..addAll(rest);
+}
+
 String formatRelativeTime(int unixMs, String iso) {
   if (unixMs > 0) {
     final dt =
