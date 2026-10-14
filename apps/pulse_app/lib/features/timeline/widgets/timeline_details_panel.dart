@@ -8,6 +8,7 @@ import '../../../app/theme/pulse_theme.dart';
 import '../../../application/timeline_library_controller.dart';
 import '../../../ipc/pulse_ipc_client.dart';
 import '../../../presentation/components/pulse_badge.dart';
+import '../evtx_import.dart';
 import '../timeline_display.dart';
 import '../timeline_incident_engine.dart';
 import 'detail_section.dart';
@@ -69,6 +70,15 @@ class _TimelineDetailsPanelState extends State<TimelineDetailsPanel> {
 
   Future<void> _loadRawXml() async {
     if (_xmlRequested || _loadingXml) return;
+    // Imported events came with their XML; looking up their record id here
+    // would return an unrelated event from this PC's log.
+    if (isImportedEvent(event)) {
+      setState(() {
+        _xmlRequested = true;
+        _xmlError = 'The file did not include Event XML for this record.';
+      });
+      return;
+    }
     if (event.channel.isEmpty || event.recordId == 0) {
       setState(() {
         _xmlRequested = true;

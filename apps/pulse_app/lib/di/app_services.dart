@@ -7,6 +7,7 @@ import '../application/background_mode_controller.dart';
 import '../application/client_frame_metrics.dart';
 import '../application/connection_controller.dart';
 import '../application/diagnostics_controller.dart';
+import '../application/evtx_import_controller.dart';
 import '../application/health_navigation.dart';
 import '../application/legacy_mcp_cleanup.dart';
 import '../application/service_lifecycle_controller.dart';
@@ -26,6 +27,7 @@ class AppServices {
     required this.settingsController,
     required this.timelineSession,
     required this.timelineLibrary,
+    required this.evtxImport,
     required this.diagnosticsController,
     required this.serviceLifecycle,
     required this.clientFrameMetrics,
@@ -41,6 +43,7 @@ class AppServices {
   final SettingsController settingsController;
   final TimelineSessionController timelineSession;
   final TimelineLibraryController timelineLibrary;
+  final EvtxImportController evtxImport;
   final DiagnosticsController diagnosticsController;
   final ServiceLifecycleController serviceLifecycle;
   final ClientFrameMetrics clientFrameMetrics;
@@ -56,6 +59,7 @@ class AppServices {
     await settings.load();
     final timelineLibrary = TimelineLibraryController(logger: logger);
     await timelineLibrary.load();
+    final evtxImport = EvtxImportController(logger: logger);
 
     final ipc = PulseIpcClient();
     final frameMetrics = ClientFrameMetrics();
@@ -100,6 +104,7 @@ class AppServices {
       settingsController: settings,
       timelineSession: timeline,
       timelineLibrary: timelineLibrary,
+      evtxImport: evtxImport,
       diagnosticsController: diagnostics,
       serviceLifecycle: serviceLifecycle,
       clientFrameMetrics: frameMetrics,
