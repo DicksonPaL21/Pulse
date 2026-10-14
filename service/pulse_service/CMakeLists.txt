@@ -40,6 +40,8 @@ add_executable(PulseService WIN32
   src/ipc/ipc_server.cpp
   src/ipc/event_mapper.cpp
   src/intelligence/event_intelligence.cpp
+  src/intelligence/crash_explainer.cpp
+  src/intelligence/bugcheck_catalog.cpp
   src/humanization/event_humanizer.cpp
   src/collector/collector.cpp
   src/collectors/event_log_collector.cpp
@@ -132,6 +134,8 @@ add_test(NAME event_humanizer_tests COMMAND event_humanizer_tests)
 add_executable(event_intelligence_tests
   test/event_intelligence_test.cpp
   src/intelligence/event_intelligence.cpp
+  src/intelligence/crash_explainer.cpp
+  src/intelligence/bugcheck_catalog.cpp
 )
 target_include_directories(event_intelligence_tests PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/src"
@@ -140,6 +144,20 @@ target_include_directories(event_intelligence_tests PRIVATE
 )
 target_link_libraries(event_intelligence_tests PRIVATE pulse_wire)
 add_test(NAME event_intelligence_tests COMMAND event_intelligence_tests)
+
+add_executable(crash_explainer_tests
+  test/crash_explainer_test.cpp
+  src/intelligence/event_intelligence.cpp
+  src/intelligence/crash_explainer.cpp
+  src/intelligence/bugcheck_catalog.cpp
+)
+target_include_directories(crash_explainer_tests PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/src"
+  "${PULSE_ROOT}/shared/pulse_protocol/cpp"
+  "${PULSE_ROOT}/shared/pulse_common/include"
+)
+target_link_libraries(crash_explainer_tests PRIVATE pulse_wire)
+add_test(NAME crash_explainer_tests COMMAND crash_explainer_tests)
 
 add_executable(services_collector_tests
   test/services_collector_test.cpp
