@@ -70,7 +70,7 @@ class BackgroundModeController extends ChangeNotifier
 
     settings.addListener(_onSettingsChanged);
 
-    try {
+    await _startupStep('notifications', () async {
       // Store (MSIX): notify as the package's own app id, no shortcut.
       // Classic: WinToast needs a Start menu shortcut carrying its app id.
       final packagedId = Platform.isWindows &&
@@ -86,24 +86,53 @@ class BackgroundModeController extends ChangeNotifier
             ? ShortcutPolicy.requireCreate
             : ShortcutPolicy.ignore,
       );
-    } catch (e) {
-      logger.warn('BackgroundMode', 'local_notifier setup failed: $e');
-    }
-
-    await _ensureTray();
-    await _syncHealthMonitoring();
-    await configureLaunchAtStartup(
-      enabled: settings.startWithWindows,
-      logger: logger,
+    });
+    await _startupStep('tray', _ensureTray);
+    await _startupStep('health monitoring', _syncHealthMonitoring);
+    await _startupStep(
+      'start with Windows',
+      () => configureLaunchAtStartup(
+        enabled: settings.startWithWindows,
+        logger: logger,
+      ),
     );
     _healthSub = ipc.healthUpdates.listen(_onHealthUpdate);
     _liveSub = ipc.liveEvents.listen(_onLiveEvent);
 
     if (launchHidden && settings.backgroundMode) {
-      await hideToTray();
+      await _startupStep('hide to tray', hideToTray);
     }
 
     notifyListeners();
+  }
+
+  /// Longest one start-up step may take before the next one runs anyway.
+  static const _kStartupStepTimeout = Duration(seconds: 10);
+
+  /// Runs one start-up step with a log line and a time limit, so a stuck or
+  /// failing plugin call cannot skip the steps after it. Once, on the first
+  /// launch right after Setup, everything after the notification setup was
+  /// skipped and the start-with-Windows entry was never refreshed.
+  Future<void> _startupStep(
+    String name,
+    Future<void> Function() action,
+  ) async {
+    final watch = Stopwatch()..start();
+    try {
+      await action().timeout(_kStartupStepTimeout);
+      logger.info(
+        'BackgroundMode',
+        'start: $name ok (${watch.elapsedMilliseconds} ms)',
+      );
+    } on TimeoutException {
+      logger.warn(
+        'BackgroundMode',
+        'start: $name did not finish within '
+            '${_kStartupStepTimeout.inSeconds} s; continuing',
+      );
+    } catch (e) {
+      logger.warn('BackgroundMode', 'start: $name failed: $e');
+    }
   }
 
   Future<void> disposeAsync() async {
