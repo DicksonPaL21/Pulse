@@ -340,7 +340,7 @@ Pulse/
 - [ ] Blue screen and sudden-restart explainer (stop codes, hardware errors, power loss)
 - [ ] Open `.evtx` files exported from another PC
 - [ ] Mask user names and paths in exported reports
-- [ ] GitHub Releases update notice
+- [x] GitHub Releases update notice (v1.4)
 - [ ] Crash / WER timeline
 - [ ] ETW engine (future milestone)
 - [ ] Plugin system (future milestone)
@@ -355,6 +355,7 @@ Every feature should answer one question: **"What is Windows doing right now?"**
 - **No cloud, no login, no account**
 - **No telemetry, analytics, or tracking**
 - Data never leaves the machine unless **you** export a report or diagnostics zip
+- **Update check** (GitHub edition, optional): only when you click *Check* or turn on weekly checks, Pulse asks GitHub for the latest release. Nothing about your PC is sent, and nothing is downloaded or installed
 - Uses **official Windows APIs** only
 - Never injects into processes, never hooks, never bypasses security
 - Elevation only when **you** explicitly install the service

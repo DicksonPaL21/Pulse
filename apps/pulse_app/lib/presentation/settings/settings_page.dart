@@ -11,8 +11,11 @@ import '../../application/diagnostics_controller.dart';
 import '../../application/settings_controller.dart';
 import '../../application/shell_navigation.dart';
 import '../../application/timeline_session_controller.dart';
+import '../../application/update_check_controller.dart';
 import '../../app/theme/pulse_theme.dart';
 import '../../ipc/pulse_ipc_client.dart';
+import '../../platform/browser.dart';
+import '../../platform/pulse_deployment.dart';
 import '../components/pulse_app_bar.dart';
 import '../components/pulse_badge.dart';
 import '../components/pulse_button.dart';
@@ -1048,6 +1051,9 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ],
       SettingsCategoryId.updates => [
+          // The Store edition is updated by the Store.
+          if (!const WindowsPulseDeployment().isPackagedMsix)
+            const _UpdatesGroup(),
           _SettingsGroup(
             title: 'About',
             children: [
@@ -1380,6 +1386,85 @@ class _AccentChip extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// GitHub edition: check for a newer release and open its page.
+class _UpdatesGroup extends StatelessWidget {
+  const _UpdatesGroup();
+
+  String _statusText(UpdateCheckController updates) {
+    final checked = updates.lastCheckedAt;
+    final when = checked == null
+        ? ''
+        : ' Last checked ${checked.toLocal().toString().substring(0, 16)}.';
+    return switch (updates.status) {
+      UpdateCheckStatus.idle =>
+        'Ask GitHub whether a newer Pulse is out. Nothing is downloaded or '
+            'installed, and nothing about this PC is sent.$when',
+      UpdateCheckStatus.checking => 'Checking GitHub…',
+      UpdateCheckStatus.upToDate =>
+        'You have the latest version ($kAppVersion).$when',
+      UpdateCheckStatus.available =>
+        'Pulse ${updates.latest!.version} is available (you have '
+            '$kAppVersion).',
+      UpdateCheckStatus.failed => updates.error ?? 'The check failed.',
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final updates = context.watch<UpdateCheckController>();
+    final settings = context.watch<SettingsController>();
+    final latest = updates.latest;
+    return _SettingsGroup(
+      title: 'Updates',
+      children: [
+        _SettingsRow(
+          icon: updates.status == UpdateCheckStatus.available
+              ? LucideIcons.circleArrowUp
+              : LucideIcons.refreshCw,
+          title: updates.status == UpdateCheckStatus.available
+              ? 'Update available'
+              : 'Check for updates',
+          subtitle: _statusText(updates),
+          trailing: updates.status == UpdateCheckStatus.available &&
+                  latest != null
+              ? PulseButton(
+                  label: 'Release notes',
+                  icon: LucideIcons.externalLink,
+                  onPressed: () {
+                    if (!openPulseGitHubPage(latest.pageUrl)) {
+                      PulseSnack.error(
+                        context,
+                        'Could not open the browser. The release is at '
+                        '${latest.pageUrl}',
+                      );
+                    }
+                  },
+                )
+              : PulseButton(
+                  label: 'Check',
+                  variant: PulseButtonVariant.secondary,
+                  loading: updates.status == UpdateCheckStatus.checking,
+                  onPressed: updates.check,
+                ),
+        ),
+        const SoftDivider(indent: 52),
+        _SettingsRow(
+          icon: LucideIcons.calendarClock,
+          title: 'Check automatically',
+          subtitle: 'Once a week, when Pulse starts. Off by default.',
+          trailing: Switch(
+            value: settings.checkUpdatesAutomatically,
+            onChanged: (value) async {
+              await settings.setCheckUpdatesAutomatically(value);
+              if (value) await updates.checkAutomaticallyIfDue();
+            },
+          ),
+        ),
+      ],
     );
   }
 }

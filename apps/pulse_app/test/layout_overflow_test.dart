@@ -11,6 +11,7 @@ import 'package:pulse/application/service_lifecycle_controller.dart';
 import 'package:pulse/application/settings_controller.dart';
 import 'package:pulse/application/shell_navigation.dart';
 import 'package:pulse/application/timeline_session_controller.dart';
+import 'package:pulse/application/update_check_controller.dart';
 import 'package:pulse/ipc/pulse_ipc_client.dart';
 import 'package:pulse/logging/app_logger.dart';
 import 'package:pulse/platform/pulse_service_scm.dart';
@@ -66,6 +67,10 @@ Future<Widget> _harness(Widget page) async {
       ChangeNotifierProvider.value(value: diagnostics),
       ChangeNotifierProvider.value(value: frameMetrics),
       ChangeNotifierProvider.value(value: lifecycle),
+      ChangeNotifierProvider(
+        create: (_) =>
+            UpdateCheckController(settings: settings, logger: logger),
+      ),
       ChangeNotifierProvider(create: (_) => HealthNavigation()),
       ChangeNotifierProvider(create: (_) => ShellNavigation()),
     ],
