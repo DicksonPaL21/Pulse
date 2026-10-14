@@ -52,7 +52,9 @@ class SettingsController extends ChangeNotifier {
 
   static const String buildDate = '2026-08-02';
   /// Default cooldown between repeat notifications for the same alert kind.
-  static const int defaultNotificationCooldownMinutes = 15;
+  /// One hour: memory hovering around the threshold produced a toast every
+  /// 15 minutes, which piled up in notification history.
+  static const int defaultNotificationCooldownMinutes = 60;
   static const int defaultCustomAccentArgb = 0xFF60CDFF;
   static const String defaultSettingsExportFileName = 'settings-export.json';
   static const String releasesUrl =
