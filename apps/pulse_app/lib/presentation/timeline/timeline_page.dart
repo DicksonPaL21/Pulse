@@ -12,9 +12,11 @@ import '../../app/dev_flags.dart';
 import '../../app/theme/pulse_theme.dart';
 import '../../application/connection_controller.dart';
 import '../../application/evtx_import_controller.dart';
+import '../../application/settings_controller.dart';
 import '../../application/timeline_library_controller.dart';
 import '../../application/timeline_session_controller.dart';
 import '../../features/timeline/timeline_activity.dart';
+import '../../features/privacy/personal_data_redactor.dart';
 import '../../features/timeline/evtx_import.dart';
 import '../../features/timeline/timeline_display.dart';
 import '../../features/timeline/timeline_export.dart';
@@ -364,7 +366,7 @@ class _TimelinePageState extends State<TimelinePage> {
           : (_filtersActive ? 'filtered_visible' : 'visible_all');
       final library = context.read<TimelineLibraryController>();
       final incidentMeta = _incidentMetaFor(visible);
-      final body = asCsv
+      final raw = asCsv
           ? TimelineExport.encodeCsv(
               toExport,
               appliedFilters: _query,
@@ -380,6 +382,13 @@ class _TimelinePageState extends State<TimelinePage> {
               pinnedEventIds: library.pinnedEventIds,
               incidentByEventId: incidentMeta,
             );
+      // Settings → Privacy: mask user / computer names, SIDs and addresses
+      // (the clipboard copy is masked too).
+      final body = context.read<SettingsController>().maskPersonalDataInExports
+          ? PersonalDataRedactor.forThisPc(
+              extraComputerNames: toExport.map((e) => e.computerName),
+            ).redact(raw)
+          : raw;
       final stamp = DateTime.now()
           .toIso8601String()
           .replaceAll(':', '-')

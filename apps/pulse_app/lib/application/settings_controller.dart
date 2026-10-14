@@ -39,6 +39,7 @@ class SettingsController extends ChangeNotifier {
   static const _kDashboardDensity = 'health.dashboard.density';
   static const _kPerformanceMode = 'performance.mode';
   static const _kShowAdvancedDiagnostics = 'diagnostics.show_advanced';
+  static const _kMaskPersonalDataInExports = 'privacy.mask_exports';
   static const _kExportDirectory = 'exports.directory';
   static const _kBackgroundMode = 'background.mode';
   static const _kStartWithWindows = 'background.start_with_windows';
@@ -129,6 +130,10 @@ class SettingsController extends ChangeNotifier {
   String performanceMode = 'balanced';
 
   bool showAdvancedDiagnostics = false;
+
+  /// Mask user / computer names, SIDs, IP and MAC addresses and serial
+  /// numbers in exported files. On by default (privacy first).
+  bool maskPersonalDataInExports = true;
 
   /// Empty = Downloads/Pulse default. Absolute path when set.
   String exportDirectory = '';
@@ -233,6 +238,8 @@ class SettingsController extends ChangeNotifier {
     clock24h = p.getBool(_kClock24h) ?? true;
     performanceMode = _normalizePerformanceMode(p.getString(_kPerformanceMode));
     showAdvancedDiagnostics = p.getBool(_kShowAdvancedDiagnostics) ?? false;
+    maskPersonalDataInExports =
+        p.getBool(_kMaskPersonalDataInExports) ?? true;
     exportDirectory = p.getString(_kExportDirectory) ?? '';
     backgroundMode = p.getBool(_kBackgroundMode) ?? false;
     startWithWindows = p.getBool(_kStartWithWindows) ?? false;
@@ -393,6 +400,12 @@ class SettingsController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setMaskPersonalDataInExports(bool value) async {
+    maskPersonalDataInExports = value;
+    await _prefs?.setBool(_kMaskPersonalDataInExports, value);
+    notifyListeners();
+  }
+
   Future<void> setExportDirectory(String value) async {
     exportDirectory = value.trim();
     await _prefs?.setString(_kExportDirectory, exportDirectory);
@@ -516,6 +529,7 @@ class SettingsController extends ChangeNotifier {
     clock24h = true;
     performanceMode = 'balanced';
     showAdvancedDiagnostics = false;
+    maskPersonalDataInExports = true;
     exportDirectory = '';
     backgroundMode = false;
     startWithWindows = false;
@@ -585,6 +599,7 @@ class SettingsController extends ChangeNotifier {
         'clock_24h': clock24h,
         'performance_mode': performanceMode,
         'show_advanced_diagnostics': showAdvancedDiagnostics,
+        'mask_personal_data_in_exports': maskPersonalDataInExports,
         'export_directory': exportDirectory,
         'background_mode': backgroundMode,
         'start_with_windows': startWithWindows,
@@ -674,6 +689,9 @@ class SettingsController extends ChangeNotifier {
     if (map['show_advanced_diagnostics'] is bool) {
       showAdvancedDiagnostics = map['show_advanced_diagnostics'] as bool;
     }
+    if (map['mask_personal_data_in_exports'] is bool) {
+      maskPersonalDataInExports = map['mask_personal_data_in_exports'] as bool;
+    }
     if (map['export_directory'] is String) {
       exportDirectory = (map['export_directory'] as String).trim();
     }
@@ -737,6 +755,10 @@ class SettingsController extends ChangeNotifier {
       await p.setBool(_kClock24h, clock24h);
       await p.setString(_kPerformanceMode, performanceMode);
       await p.setBool(_kShowAdvancedDiagnostics, showAdvancedDiagnostics);
+      await p.setBool(
+        _kMaskPersonalDataInExports,
+        maskPersonalDataInExports,
+      );
       await p.setString(_kExportDirectory, exportDirectory);
       await p.setBool(_kBackgroundMode, backgroundMode);
       await p.setBool(_kStartWithWindows, startWithWindows);

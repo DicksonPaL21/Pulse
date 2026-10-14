@@ -994,6 +994,19 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               const SoftDivider(indent: 52),
               _SettingsRow(
+                icon: LucideIcons.userX,
+                title: 'Mask personal details in exports',
+                subtitle:
+                    'Hide user and computer names, account SIDs, IP and MAC '
+                    'addresses and serial numbers in reports and exports, so '
+                    'they are safe to share',
+                trailing: Switch(
+                  value: settings.maskPersonalDataInExports,
+                  onChanged: settings.setMaskPersonalDataInExports,
+                ),
+              ),
+              const SoftDivider(indent: 52),
+              _SettingsRow(
                 icon: LucideIcons.history,
                 title: 'Clear local history',
                 subtitle: 'Remove Timeline events from this session',
