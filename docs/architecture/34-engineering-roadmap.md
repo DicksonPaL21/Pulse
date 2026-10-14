@@ -6,6 +6,8 @@
 
 **Change control:** Future work follows this roadmap unless a new ADR explicitly revises direction. Do not reorder waves without an ADR amendment referencing this document.
 
+> **Revision 2026-10-14.** PulseMCP (AI Integration) was removed in 1.3 by [ADR-013](decisions/ADR-013-remove-pulsemcp.md). The MCP parts of this plan — Wave C (R5–R7), the MCP vision line and MCP-dependent items elsewhere — are **cancelled**; the local Assistant is Pulse's AI feature. Kernel-level analysis will use ETW, not drivers (ADR pending, superseding ADR-007 for the Timeline). Shipped releases and the v1.4 scope are listed in [§6](#6-release-plan-advisory).
+
 ---
 
 ## Vision
@@ -266,7 +268,9 @@ flowchart TD
 
 ---
 
-### Wave C — MCP core product
+### Wave C — MCP core product (cancelled, ADR-013)
+
+Kept for history only; none of R5–R7 will be built.
 
 #### R5 — MCP M2–M5 (L)
 
@@ -502,6 +506,12 @@ Distinct from **Plugin SDK (R13)** (in-process/out-of-process *extensions inside
 ## 6. Release plan (advisory)
 
 **Temporary priority (2026-08-02):** MCP M2–M7 (R5–R6) is prioritized ahead of remaining Wave B/C items. **M2–M7 frozen** ([mcp-m2-validation.md](archives/mcp-m2-validation.md) … [mcp-m7-validation.md](archives/mcp-m7-validation.md)); M8 (HTTP) not started until explicit go-ahead. R4 shared report generators deferred — M6 TypeScript writers remain until consolidated.
+
+**Shipped (stable):** 1.0.0 (first stable), 1.1.0 (Assistant, Store MSIX), 1.2.0 (Midnight redesign), 1.3.0 (stability; PulseMCP removed).
+
+**1.4.0 (in progress):** blue screen / sudden restart / WHEA explanations, open `.evtx` from another PC (ADR-014), masking personal details in exports, exports to Downloads until releases are signed, Store notification identity fix, GitHub update notice, release workflow in GitHub Actions.
+
+Historical beta plan (superseded):
 
 | Release | Content |
 |---------|---------|

@@ -42,9 +42,7 @@ Start-Sleep -Seconds $IdleSeconds
 
 $samples = @(
   (Get-ProcSample "Pulse"),
-  (Get-ProcSample "PulseService"),
-  (Get-ProcSample "PulseMCP"),
-  (Get-ProcSample "node") # PulseMCP may run as node during dev
+  (Get-ProcSample "PulseService")
 )
 
 $svc = Get-Service -Name "PulseService" -ErrorAction SilentlyContinue

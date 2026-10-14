@@ -1,11 +1,43 @@
-# Pulse MCP security
+# Pulse security and privacy
 
-- Default **disabled** until Settings opt-in
-- Observation tools only (no process kill / OS mutation in v1)
-- Policy hard-refuse when disabled (`POLICY_DISABLED`)
-- AI client config edits require explicit Register / Unregister
-- Config backups before write; JSON validated before replace
-- Uninstall removes only Pulse-owned registration markers
-- Cmdline redaction on process details; timeline raw XML opt-in
+What Pulse can and cannot do on your PC, and what leaves it.
 
-Pulse never sends telemetry. AI clients may upload tool results — disclose this in Settings.
+## Read-only by design
+
+- Pulse **reads** Windows Event Logs, performance counters, hardware and software inventory, and per-process network statistics (ETW). It never changes Windows settings, services, drivers or files outside its own folders.
+- No process injection, hooks, kernel drivers or patches.
+- Only official Windows APIs.
+
+## The PulseService background service
+
+- Runs as **NT AUTHORITY\LocalService**, a low-privilege account, not as SYSTEM or an administrator.
+- Talks to the Pulse app over a **local named pipe** (`\\.\pipe\PulseService`). The pipe accepts SYSTEM, LocalService, Administrators and local users on this PC; it is not reachable from the network. Pulse opens no network ports.
+- Starting, stopping or restarting the service uses the Windows service permissions: it needs an administrator, so Pulse asks through the normal **UAC** prompt. Pulse never elevates on its own.
+
+## What leaves your PC
+
+By default, **nothing**. No telemetry, analytics, crash reports, accounts or cloud.
+
+Only these features use the network, and only when you use them:
+
+| Feature | What is sent | Where |
+|---------|--------------|-------|
+| **Assistant** (optional) | Your question and the diagnostics it needs | A local AI runtime on `localhost` (Ollama / LM Studio). Pulse refuses non-local endpoints. |
+| **Check for updates** (GitHub edition, optional) | An ordinary HTTPS request with Pulse's version in the User-Agent | `api.github.com`, only when you click *Check* or turn on weekly checks |
+
+## Exports and shared reports
+
+- Reports, Timeline exports and diagnostics bundles are written to **Downloads\Pulse** (or a folder you choose). Nothing is uploaded.
+- **Settings → Privacy → Mask personal details in exports** (on by default) replaces user and computer names, profile paths, account SIDs, e-mail, IP and MAC addresses and hardware serial numbers with tokens such as `[user]` before the file is written.
+
+## Opening an .evtx from another PC
+
+The file is read by `PulseService.exe --read-evtx` running as **you** (not as the service), never modified, and not uploaded. See [ADR-014](../architecture/decisions/ADR-014-open-exported-evtx.md).
+
+## Code signing
+
+Releases are not code-signed yet (a SignPath Foundation application is in review), so Windows SmartScreen or antivirus tools may warn. Verify downloads against the SHA-256 checksums on the release page. The Microsoft Store edition is signed by Microsoft.
+
+## Reporting a vulnerability
+
+See [SECURITY.md](../../SECURITY.md). Please do not open a public issue for security problems.
