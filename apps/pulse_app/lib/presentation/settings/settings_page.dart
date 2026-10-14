@@ -889,7 +889,7 @@ class _SettingsPageState extends State<SettingsPage> {
               _SettingsRow(
                 icon: LucideIcons.fileText,
                 title: 'Export logs',
-                subtitle: 'Write recent app log lines to Documents',
+                subtitle: 'Write recent app log lines to Downloads/Pulse',
                 trailing: PulseButton(
                   label: 'Export',
                   icon: LucideIcons.download,
@@ -1103,7 +1103,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 icon: LucideIcons.upload,
                 title: 'Export settings',
                 subtitle:
-                    'Write JSON to Documents/Pulse/settings-export.json',
+                    'Write JSON to Downloads/Pulse/settings-export.json',
                 trailing: PulseButton(
                   label: 'Export',
                   icon: LucideIcons.download,
@@ -1126,7 +1126,7 @@ class _SettingsPageState extends State<SettingsPage> {
               _SettingsRow(
                 icon: LucideIcons.import,
                 title: 'Restore from last export',
-                subtitle: 'Import Documents/Pulse/settings-export.json',
+                subtitle: 'Import Downloads/Pulse/settings-export.json',
                 trailing: PulseButton(
                   label: 'Import',
                   icon: LucideIcons.upload,
@@ -1148,7 +1148,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 icon: LucideIcons.folder,
                 title: 'Export directory',
                 subtitle: settings.exportDirectory.isEmpty
-                    ? 'Default: Documents/Pulse'
+                    ? 'Default: Downloads/Pulse'
                     : settings.exportDirectory,
                 trailing: PulseButton(
                   label: settings.exportDirectory.isEmpty ? 'Set' : 'Clear',

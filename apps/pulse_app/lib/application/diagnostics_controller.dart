@@ -403,10 +403,7 @@ class DiagnosticsController extends ChangeNotifier {
           bytes: zipBytes,
           defaultSubfolder: const ['Pulse', 'exports'],
         );
-        logger.info(
-          'Diagnostics',
-          'Exported diagnostics${saved.usedFallback ? ' to Downloads' : ''}',
-        );
+        logger.info('Diagnostics', 'Exported diagnostics');
         notifyListeners();
         return saved;
       });

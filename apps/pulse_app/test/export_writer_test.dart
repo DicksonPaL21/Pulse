@@ -4,117 +4,76 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pulse/platform/export_writer.dart';
 
-class _MemoryBlockedStore implements DocumentsBlockedStore {
-  bool blocked = false;
-
-  @override
-  Future<bool> isBlocked() async => blocked;
-
-  @override
-  Future<void> markBlocked() async => blocked = true;
-}
-
 void main() {
   late Directory root;
-  late _MemoryBlockedStore store;
-  var documentsLookups = 0;
-  late Directory documents;
   late Directory downloads;
 
   setUp(() async {
     root = await Directory.systemTemp.createTemp('pulse-export-test-');
-    documents = await Directory('${root.path}/Documents').create();
     downloads = await Directory('${root.path}/Downloads').create();
-    store = _MemoryBlockedStore();
-    documentsLookups = 0;
   });
 
   tearDown(() async {
     await root.delete(recursive: true);
   });
 
-  ExportWriter writer({Directory? downloadsDir}) => ExportWriter(
-        documentsDirectory: () async {
-          documentsLookups++;
-          return documents;
-        },
-        downloadsDirectory: () async => downloadsDir,
-        blockedStore: store,
-      );
+  ExportWriter writer({Directory? downloadsDir}) =>
+      ExportWriter(downloadsDirectory: () async => downloadsDir);
 
-  /// Simulates Controlled folder access: "Pulse" exists as a file, so the
-  /// export folder cannot be created under Documents.
-  Future<void> blockDocuments() =>
-      File('${documents.path}/Pulse').writeAsString('blocked');
-
-  test('writes under Documents by default', () async {
+  test('writes under Downloads/Pulse by default (never Documents)', () async {
     final saved = await writer(downloadsDir: downloads).write(
       fileName: 'a.json',
       bytes: utf8.encode('{}'),
       defaultSubfolder: const ['Pulse', 'exports'],
     );
-    expect(saved.usedFallback, isFalse);
-    expect(saved.path, contains('Documents'));
+    expect(
+      saved.path,
+      [downloads.path, 'Pulse', 'exports', 'a.json']
+          .join(Platform.pathSeparator),
+    );
     expect(await File(saved.path).readAsString(), '{}');
     expect(saved.summary, 'Saved to ${saved.path}');
   });
 
-  test('falls back to Downloads when Documents is blocked', () async {
-    await blockDocuments();
+  test('uses the folder chosen in Settings', () async {
+    final custom = Directory('${root.path}/custom');
     final saved = await writer(downloadsDir: downloads).write(
       fileName: 'a.json',
       bytes: utf8.encode('{}'),
-      defaultSubfolder: const ['Pulse', 'exports'],
+      defaultSubfolder: const ['Pulse'],
+      customDirectory: custom.path,
     );
-    expect(saved.usedFallback, isTrue);
-    expect(saved.path, startsWith(downloads.path));
-    expect(await File(saved.path).exists(), isTrue);
-    expect(saved.summary, contains('Controlled folder access'));
-    expect(store.blocked, isTrue);
+    expect(saved.path, startsWith(custom.path));
   });
 
-  test('once blocked, Documents is not tried again (no repeat alerts)',
-      () async {
-    store.blocked = true;
-    final saved = await writer(downloadsDir: downloads).write(
-      fileName: 'b.json',
-      bytes: utf8.encode('{}'),
-      defaultSubfolder: const ['Pulse', 'exports'],
-    );
-    expect(documentsLookups, 0);
-    expect(saved.fallback, ExportFallback.blockedEarlier);
-    expect(saved.path, startsWith(downloads.path));
-  });
-
-  test('a custom folder is never silently replaced', () async {
+  test('a blocked custom folder is explained, not replaced', () async {
     final blockedCustom = File('${root.path}/custom');
     await blockedCustom.writeAsString('not a folder');
-    expect(
-      () => writer(downloadsDir: downloads).write(
+    await expectLater(
+      writer(downloadsDir: downloads).write(
         fileName: 'a.json',
         bytes: utf8.encode('{}'),
         defaultSubfolder: const ['Pulse'],
         customDirectory: blockedCustom.path,
       ),
-      throwsA(isA<ExportWriteException>()),
+      throwsA(
+        isA<ExportWriteException>().having(
+          (e) => e.message,
+          'message',
+          contains('Controlled folder access'),
+        ),
+      ),
     );
   });
 
-  test('explains when neither Documents nor Downloads can be used', () async {
-    await blockDocuments();
+  test('explains when Windows reports no Downloads folder', () async {
     await expectLater(
       writer(downloadsDir: null).write(
         fileName: 'a.json',
         bytes: utf8.encode('{}'),
         defaultSubfolder: const ['Pulse', 'exports'],
       ),
-      throwsA(
-        isA<ExportWriteException>().having(
-          (e) => e.message,
-          'message',
-          contains('Choose an export folder in Settings'),
-        ),
-      ),
+      throwsA(isA<ExportWriteException>()),
     );
   });
 }

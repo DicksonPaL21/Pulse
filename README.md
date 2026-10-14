@@ -95,7 +95,7 @@ Reliability Monitor is great for a quick look at what failed this week. Event Vi
 ### Reports
 - **Templates** — System Health, Timeline, Diagnostics, and inventory catalogs
 - **Formats** — JSON, CSV, HTML, PDF
-- **Local export** — writes under Documents / Pulse / exports by default
+- **Local export** — writes under Downloads / Pulse by default (or a folder you choose)
 
 ### Diagnostics
 - **Service snapshot** — SCM state, uptime, identity, binary path, connected clients

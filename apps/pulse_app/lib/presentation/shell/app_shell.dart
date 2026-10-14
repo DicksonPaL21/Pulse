@@ -216,11 +216,7 @@ class _AppShellState extends State<AppShell> {
       try {
         final saved = await settings.exportSettingsJson();
         if (!mounted) return;
-        if (saved.usedFallback) {
-          PulseSnack.info(context, saved.summary);
-        } else {
-          PulseSnack.success(context, saved.summary);
-        }
+        PulseSnack.success(context, saved.summary);
       } catch (e) {
         if (!mounted) return;
         PulseSnack.error(context, 'Failed: $e');

@@ -130,7 +130,7 @@ class SettingsController extends ChangeNotifier {
 
   bool showAdvancedDiagnostics = false;
 
-  /// Empty = Documents/Pulse default. Absolute path when set.
+  /// Empty = Downloads/Pulse default. Absolute path when set.
   String exportDirectory = '';
 
   /// Keep Pulse.exe alive in the system tray when the main window is closed.
@@ -765,15 +765,12 @@ class SettingsController extends ChangeNotifier {
     final custom = exportDirectory.trim();
     final dir = custom.isNotEmpty
         ? custom
-        : '${(await getApplicationDocumentsDirectory()).path}'
-            '${Platform.pathSeparator}Pulse';
+        : [(await ExportWriter().defaultRoot())?.path ?? '', 'Pulse']
+            .join(Platform.pathSeparator);
     return '$dir${Platform.pathSeparator}$defaultSettingsExportFileName';
   }
 
-  /// Path of the last export this session (Downloads when Documents was
-  /// blocked), so "restore last export" finds it.
-  String? _lastSettingsExportPath;
-
+  /// Writes current settings JSON (see [ExportWriter] for where).
   Future<ExportResult> exportSettingsJson() async {
     const encoder = JsonEncoder.withIndent('  ');
     final saved = await ExportWriter().write(
@@ -782,11 +779,7 @@ class SettingsController extends ChangeNotifier {
       defaultSubfolder: const ['Pulse'],
       customDirectory: exportDirectory,
     );
-    _lastSettingsExportPath = saved.path;
-    logger.info(
-      'settings',
-      'Settings exported${saved.usedFallback ? ' to Downloads' : ''}',
-    );
+    logger.info('settings', 'Settings exported');
     return saved;
   }
 
@@ -800,15 +793,15 @@ class SettingsController extends ChangeNotifier {
     await importSettingsFromJsonString(raw);
   }
 
-  /// Restores settings from the last export at the default path.
+  /// Restores settings from the last export. Exports made before 1.4 were
+  /// written to Documents/Pulse; reading them is not blocked by Windows.
   Future<void> importSettingsFromLastExport() async {
     final defaultPath = await defaultSettingsExportPath();
-    final downloads = await getDownloadsDirectory();
+    final documents = await getApplicationDocumentsDirectory();
     final candidates = [
-      ?_lastSettingsExportPath,
       defaultPath,
-      if (downloads != null)
-        [downloads.path, 'Pulse', defaultSettingsExportFileName]
+      if (exportDirectory.trim().isEmpty)
+        [documents.path, 'Pulse', defaultSettingsExportFileName]
             .join(Platform.pathSeparator),
     ];
     for (final path in candidates) {

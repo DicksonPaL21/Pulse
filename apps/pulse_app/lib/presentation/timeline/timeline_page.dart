@@ -392,14 +392,13 @@ class _TimelinePageState extends State<TimelinePage> {
       );
       await Clipboard.setData(ClipboardData(text: body));
       if (!mounted) return;
-      final what = selected != null
-          ? 'Exported selected event as $ext (also copied).'
-          : 'Exported ${toExport.length} events as $ext (also copied).';
-      if (saved.usedFallback) {
-        PulseSnack.info(context, '$what ${saved.summary}');
-      } else {
-        PulseSnack.success(context, what);
-      }
+      PulseSnack.success(
+        context,
+        selected != null
+            ? 'Exported selected event as $ext (also copied). ${saved.summary}'
+            : 'Exported ${toExport.length} events as $ext (also copied). '
+                '${saved.summary}',
+      );
     } catch (e) {
       if (!mounted) return;
       PulseSnack.error(context, PulseUserErrors.fromObject(e));

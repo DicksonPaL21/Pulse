@@ -67,7 +67,7 @@ class ReportExportInput {
   final bool darkHtml;
 }
 
-/// Builds report bytes/strings and writes under Documents/Pulse/Reports
+/// Builds report bytes/strings and writes under Downloads/Pulse/Reports
 /// (or [SettingsController.exportDirectory] when set).
 class ReportExporter {
   ReportExporter({this.settings, ExportWriter? writer})
