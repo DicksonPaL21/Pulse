@@ -42,6 +42,7 @@
 - [How it works](#how-it-works)
 - [Build from source](#build-from-source)
 - [Roadmap](#roadmap)
+- [In the press](#in-the-press)
 - [Documentation](#documentation)
 - [How Pulse is built](#how-pulse-is-built)
 - [Code signing policy](#code-signing-policy)
@@ -246,6 +247,12 @@ Releases are built by [`.github/workflows/release.yml`](.github/workflows/releas
 - [ ] Plugin system, session recording and timeline replay
 
 Every feature should answer one question: **"What is Windows doing right now?"**
+
+---
+
+## In the press
+
+- **IlSoftware.it** (Italy, 13 October 2026) — [*Visualizzatore eventi Windows 11 più comprensibile con un tool open source*](https://www.ilsoftware.it/focus/visualizzatore-eventi-windows-11-migliorato-pulse/) by Michele Nasi. The article covers Pulse 1.2; AI Integration (MCP) mentioned there was replaced by the local Assistant in 1.3.
 
 ---
 
