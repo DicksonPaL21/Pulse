@@ -1,5 +1,12 @@
 # Upgrade notes
 
+## To 1.4.1
+
+- Installer: `Pulse-Setup-1.4.1-windows-x64.exe`
+- Product stamp is **`1.4.1`** (UI, PulseService)
+- Assistant ports: defaults 11434 (Ollama) and 1234 (LM Studio); change them in Settings → Privacy → Assistant
+- Disk health is refreshed every 5 minutes, so it can take a moment to appear after the service starts
+
 ## To 1.4.0
 
 - Installer: `Pulse-Setup-1.4.0-windows-x64.exe`
