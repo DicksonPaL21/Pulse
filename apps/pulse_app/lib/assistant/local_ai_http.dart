@@ -7,6 +7,27 @@ import 'dart:io';
 /// Diagnostic data must never leave this PC, so the client connects only to
 /// literal loopback addresses, never follows redirects and never uses a proxy.
 /// There is no opt-out. Does not bind sockets or expose ports.
+/// Where local AI runtimes are reached: always 127.0.0.1, only the port can
+/// change. There is deliberately no way to enter another address.
+abstract final class LocalAiLoopback {
+  static const int ollamaDefaultPort = 11434;
+  static const int lmStudioDefaultPort = 1234;
+  static const int minPort = 1;
+  static const int maxPort = 65535;
+
+  static bool isValidPort(int port) => port >= minPort && port <= maxPort;
+
+  static Uri uri(int port) {
+    if (!isValidPort(port)) {
+      throw ArgumentError.value(port, 'port', 'Must be $minPort-$maxPort');
+    }
+    return Uri(scheme: 'http', host: '127.0.0.1', port: port);
+  }
+
+  /// `127.0.0.1:<port>` for messages shown to the user.
+  static String label(Uri baseUri) => '${baseUri.host}:${baseUri.port}';
+}
+
 class LocalAiHttpResponse {
   const LocalAiHttpResponse({
     required this.statusCode,
