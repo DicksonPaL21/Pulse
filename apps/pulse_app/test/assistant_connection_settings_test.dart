@@ -204,6 +204,33 @@ void main() {
       expect(runtime.authorizationHeaders.last, 'Bearer secret-key');
     });
 
+    test('a runtime that stops mid-session is re-checked after a send',
+        () async {
+      final runtime = await _FakeRuntime.start();
+      final settings = await _loadSettings();
+      await settings.setAssistantOllamaPort(runtime.port);
+      await settings.setAssistantLmStudioPort(runtime.port);
+      final controller = AssistantController(settings: settings);
+      await controller.load();
+      await controller.selectProvider('ollama');
+      await controller.selectModel('llama3.2:latest');
+      expect(controller.showChatUi, isTrue);
+
+      await runtime.close(); // the user quits Ollama
+      controller.setDraft('hello');
+      await controller.sendDraft();
+      // Windows retries a refused loopback connection for about two seconds,
+      // once for the failed send and once per runtime on the re-check.
+      final deadline = DateTime.now().add(const Duration(seconds: 20));
+      while (!controller.showNotFoundState &&
+          DateTime.now().isBefore(deadline)) {
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      }
+
+      expect(controller.showNotFoundState, isTrue);
+      expect(controller.messages.last.isError, isTrue);
+    });
+
     test('the empty state lists what each runtime reported', () async {
       final settings = await _loadSettings();
       final probe = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);

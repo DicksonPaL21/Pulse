@@ -362,6 +362,7 @@ class AssistantController extends ChangeNotifier {
       notifyListeners();
     }
 
+    var runtimeLost = false;
     try {
       final result = await _orchestrator.runTurn(
         provider: provider,
@@ -408,6 +409,7 @@ class AssistantController extends ChangeNotifier {
             errorCode: result.errorCode,
           ),
         );
+        runtimeLost = result.errorCode == _runtimeUnavailableCode;
         return;
       }
 
@@ -425,6 +427,9 @@ class AssistantController extends ChangeNotifier {
       _toolActivity = null;
       _activeCancel = null;
       notifyListeners();
+      // The runtime was closed while the panel showed it as connected:
+      // re-check so the panel says so instead of staying "Connected".
+      if (runtimeLost) unawaitedRefresh();
     }
   }
 
@@ -450,6 +455,9 @@ class AssistantController extends ChangeNotifier {
   }
 
   String _nextId() => 'm${++_idSeq}';
+
+  /// Error code providers use when the runtime stopped answering.
+  static const _runtimeUnavailableCode = 'PROVIDER_UNAVAILABLE';
 
   /// Points each runtime at the port saved in Settings (always on 127.0.0.1)
   /// and hands LM Studio the saved token, if any.
