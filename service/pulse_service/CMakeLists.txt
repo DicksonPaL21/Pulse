@@ -161,6 +161,20 @@ target_include_directories(crash_explainer_tests PRIVATE
 target_link_libraries(crash_explainer_tests PRIVATE pulse_wire)
 add_test(NAME crash_explainer_tests COMMAND crash_explainer_tests)
 
+add_executable(secure_boot_rules_tests
+  test/secure_boot_rules_test.cpp
+  src/intelligence/event_intelligence.cpp
+  src/intelligence/crash_explainer.cpp
+  src/intelligence/bugcheck_catalog.cpp
+)
+target_include_directories(secure_boot_rules_tests PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/src"
+  "${PULSE_ROOT}/shared/pulse_protocol/cpp"
+  "${PULSE_ROOT}/shared/pulse_common/include"
+)
+target_link_libraries(secure_boot_rules_tests PRIVATE pulse_wire)
+add_test(NAME secure_boot_rules_tests COMMAND secure_boot_rules_tests)
+
 add_executable(services_collector_tests
   test/services_collector_test.cpp
   src/inventory/services_collector.cpp
