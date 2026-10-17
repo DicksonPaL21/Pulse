@@ -1,6 +1,7 @@
 #include "intelligence/event_intelligence.hpp"
 
 #include "intelligence/crash_explainer.hpp"
+#include "intelligence/wake_explainer.hpp"
 #include "util/text_match.hpp"
 
 #include <string_view>
@@ -500,6 +501,10 @@ EventInsight EventIntelligence::Analyze(const ipc::TimelineEvent& event) const {
   // button); prefer that over the catalog's generic wording.
   if (auto crash = ExplainCrashEvent(event)) {
     return *std::move(crash);
+  }
+  // Likewise the wake source names what woke the PC.
+  if (auto wake = ExplainWakeEvent(event)) {
+    return *std::move(wake);
   }
 
   const IntelligenceRule* rule = MatchRule(event);
