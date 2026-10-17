@@ -320,7 +320,58 @@ class LmStudioProvider implements LocalAiProvider {
   ) async {
     final contentBuf = StringBuffer();
     final toolCallBuf = <int, _ToolCallAccum>{};
+    final lines = StreamedLines();
     String? finishReason;
+
+    // One server-sent event per line; a line split across network chunks is
+    // completed before it is parsed.
+    void handleLines(List<String> complete) {
+      for (final line in complete) {
+        final trimmed = line.trim();
+        if (trimmed.isEmpty || trimmed == 'data: [DONE]') continue;
+        final payload =
+            trimmed.startsWith('data:') ? trimmed.substring(5).trim() : trimmed;
+        if (payload.isEmpty || payload == '[DONE]') continue;
+        Map? decoded;
+        try {
+          final obj = jsonDecode(payload);
+          if (obj is Map) decoded = obj;
+        } catch (_) {
+          continue;
+        }
+        if (decoded == null) continue;
+        final choices = decoded['choices'];
+        if (choices is! List || choices.isEmpty) continue;
+        final choice = choices.first;
+        if (choice is! Map) continue;
+        finishReason = choice['finish_reason']?.toString() ?? finishReason;
+        final delta = choice['delta'];
+        if (delta is! Map) continue;
+        final text = delta['content']?.toString();
+        if (text != null && text.isNotEmpty) {
+          contentBuf.write(text);
+          request.onTextDelta?.call(text);
+        }
+        final calls = delta['tool_calls'];
+        if (calls is List) {
+          for (final c in calls) {
+            if (c is! Map) continue;
+            final index = (c['index'] is int)
+                ? c['index'] as int
+                : int.tryParse('${c['index']}') ?? toolCallBuf.length;
+            final acc = toolCallBuf.putIfAbsent(index, _ToolCallAccum.new);
+            if (c['id'] != null) acc.id = c['id'].toString();
+            final fn = c['function'];
+            if (fn is Map) {
+              if (fn['name'] != null) acc.name = fn['name'].toString();
+              if (fn['arguments'] != null) {
+                acc.argsJson.write(fn['arguments'].toString());
+              }
+            }
+          }
+        }
+      }
+    }
 
     final response = await _http.post(
       uri,
@@ -329,53 +380,10 @@ class LmStudioProvider implements LocalAiProvider {
       headers: _headers,
       onStreamChunk: (chunk) {
         request.cancelToken?.throwIfCancelled();
-        for (final line in chunk.split('\n')) {
-          final trimmed = line.trim();
-          if (trimmed.isEmpty || trimmed == 'data: [DONE]') continue;
-          final payload =
-              trimmed.startsWith('data:') ? trimmed.substring(5).trim() : trimmed;
-          if (payload.isEmpty || payload == '[DONE]') continue;
-          Map? decoded;
-          try {
-            final obj = jsonDecode(payload);
-            if (obj is Map) decoded = obj;
-          } catch (_) {
-            continue;
-          }
-          if (decoded == null) continue;
-          final choices = decoded['choices'];
-          if (choices is! List || choices.isEmpty) continue;
-          final choice = choices.first;
-          if (choice is! Map) continue;
-          finishReason = choice['finish_reason']?.toString() ?? finishReason;
-          final delta = choice['delta'];
-          if (delta is! Map) continue;
-          final text = delta['content']?.toString();
-          if (text != null && text.isNotEmpty) {
-            contentBuf.write(text);
-            request.onTextDelta?.call(text);
-          }
-          final calls = delta['tool_calls'];
-          if (calls is List) {
-            for (final c in calls) {
-              if (c is! Map) continue;
-              final index = (c['index'] is int)
-                  ? c['index'] as int
-                  : int.tryParse('${c['index']}') ?? toolCallBuf.length;
-              final acc = toolCallBuf.putIfAbsent(index, _ToolCallAccum.new);
-              if (c['id'] != null) acc.id = c['id'].toString();
-              final fn = c['function'];
-              if (fn is Map) {
-                if (fn['name'] != null) acc.name = fn['name'].toString();
-                if (fn['arguments'] != null) {
-                  acc.argsJson.write(fn['arguments'].toString());
-                }
-              }
-            }
-          }
-        }
+        handleLines(lines.add(chunk));
       },
     );
+    handleLines(lines.close());
 
     request.cancelToken?.throwIfCancelled();
     if (response.statusCode < 200 || response.statusCode >= 300) {

@@ -28,6 +28,34 @@ abstract final class LocalAiLoopback {
   static String label(Uri baseUri) => '${baseUri.host}:${baseUri.port}';
 }
 
+/// Turns a streamed body into complete lines, each returned exactly once.
+///
+/// Network chunks do not line up with lines: one chunk can hold several
+/// lines, and a line can be split across chunks. A partial last line is kept
+/// until the rest arrives.
+class StreamedLines {
+  final _pending = StringBuffer();
+
+  /// Complete lines finished by [chunk].
+  List<String> add(String chunk) {
+    _pending.write(chunk);
+    final text = _pending.toString();
+    final lastBreak = text.lastIndexOf('\n');
+    if (lastBreak < 0) return const [];
+    _pending
+      ..clear()
+      ..write(text.substring(lastBreak + 1));
+    return text.substring(0, lastBreak).split('\n');
+  }
+
+  /// The final line when the stream ends without a trailing newline.
+  List<String> close() {
+    final rest = _pending.toString();
+    _pending.clear();
+    return rest.trim().isEmpty ? const [] : [rest];
+  }
+}
+
 class LocalAiHttpResponse {
   const LocalAiHttpResponse({
     required this.statusCode,
