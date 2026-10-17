@@ -323,6 +323,34 @@ struct HealthVolume {
   bool included_in_summary = false;
 };
 
+/// Health of one physical disk (issue #12 / #20).
+struct HealthDiskHealth {
+  uint32_t index = 0;
+  std::string model;
+  std::string bus;
+  bool has_temp_c = false;
+  double temp_c = 0.0;
+  bool has_failure_predicted = false;
+  bool failure_predicted = false;
+  bool has_critical_warning = false;
+  uint32_t critical_warning = 0;
+  bool has_percentage_used = false;
+  uint32_t percentage_used = 0;
+  bool has_available_spare = false;
+  uint32_t available_spare = 0;
+  uint32_t available_spare_threshold = 0;
+  bool has_power_on_hours = false;
+  uint64_t power_on_hours = 0;
+  bool has_unsafe_shutdowns = false;
+  uint64_t unsafe_shutdowns = 0;
+  bool has_media_errors = false;
+  uint64_t media_errors = 0;
+  bool has_bytes_read = false;
+  uint64_t bytes_read = 0;
+  bool has_bytes_written = false;
+  uint64_t bytes_written = 0;
+};
+
 struct HealthPhysicalDisk {
   std::string id;
   std::string name;
@@ -450,6 +478,7 @@ struct HealthSample {
   uint64_t disk_total_bytes_read = 0;
   bool has_disk_smart_ok = false;
   bool disk_smart_ok = false;
+  std::vector<HealthDiskHealth> disk_health;
 };
 
 struct GetHealthSnapshot {};

@@ -52,6 +52,7 @@ add_executable(PulseService WIN32
   src/commands/read_evtx_command.cpp
   src/collectors/health_metrics_collector.cpp
   src/collectors/hardware_sensors_collector.cpp
+  src/collectors/disk_health.cpp
   src/collectors/network_etw_engine.cpp
   src/collectors/gpu_adapter_info.cpp
   src/collectors/system_overview_info.cpp
@@ -193,6 +194,18 @@ target_include_directories(secure_boot_rules_tests PRIVATE
 )
 target_link_libraries(secure_boot_rules_tests PRIVATE pulse_wire)
 add_test(NAME secure_boot_rules_tests COMMAND secure_boot_rules_tests)
+
+add_executable(disk_health_tests
+  test/disk_health_test.cpp
+  src/collectors/disk_health.cpp
+)
+target_include_directories(disk_health_tests PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/src"
+  "${PULSE_ROOT}/shared/pulse_protocol/cpp"
+  "${PULSE_ROOT}/shared/pulse_common/include"
+)
+target_link_libraries(disk_health_tests PRIVATE pulse_wire)
+add_test(NAME disk_health_tests COMMAND disk_health_tests)
 
 add_executable(services_collector_tests
   test/services_collector_test.cpp

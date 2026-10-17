@@ -362,6 +362,35 @@ message HealthPhysicalDisk {
   double write_bps = 6;
 }
 
+// Health of one physical disk from Storage IOCTLs (issue #12 / #20).
+// has_* false = the drive or driver does not report it.
+message HealthDiskHealth {
+  uint32 index = 1; // PhysicalDriveN number
+  string model = 2; // vendor + product id
+  string bus = 3; // "NVMe", "SATA", "USB", ...
+  bool has_temp_c = 4;
+  double temp_c = 5;
+  bool has_failure_predicted = 6;
+  bool failure_predicted = 7; // SMART predicts failure / NVMe critical warning set
+  bool has_critical_warning = 8;
+  uint32 critical_warning = 9; // NVMe CriticalWarning bits
+  bool has_percentage_used = 10;
+  uint32 percentage_used = 11; // NVMe wear estimate; can exceed 100
+  bool has_available_spare = 12;
+  uint32 available_spare = 13; // percent
+  uint32 available_spare_threshold = 14; // percent
+  bool has_power_on_hours = 15;
+  uint64 power_on_hours = 16;
+  bool has_unsafe_shutdowns = 17;
+  uint64 unsafe_shutdowns = 18;
+  bool has_media_errors = 19;
+  uint64 media_errors = 20;
+  bool has_bytes_read = 21;
+  uint64 bytes_read = 22;
+  bool has_bytes_written = 23;
+  uint64 bytes_written = 24;
+}
+
 // One real-time sample from the service (1 Hz).
 message HealthSample {
   int64 unix_ms = 1;
@@ -488,6 +517,7 @@ message HealthSample {
   uint64 disk_total_bytes_read = 114;
   bool has_disk_smart_ok = 115;
   bool disk_smart_ok = 116;  // true when SMART/critical warning reports healthy
+  repeated HealthDiskHealth disk_health = 117; // every physical disk
 }
 
 message GetHealthSnapshot {}
