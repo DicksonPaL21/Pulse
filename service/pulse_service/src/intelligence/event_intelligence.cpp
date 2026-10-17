@@ -370,6 +370,121 @@ constexpr IntelligenceRule kRules[] = {
     {6013, "EventLog", "System Uptime Reported",
      "Windows reported how long the system has been running.", "", false,
      Importance::Low, InsightCategory::Boot},
+
+    // --- Secure Boot updates (TPM-WMI, System log) ---
+    // Source: support.microsoft.com, "Secure Boot DB and DBX variable update
+    // events". Several are logged at Error level but describe a deliberate
+    // check or a retry, so their importance follows Microsoft's description,
+    // not the level. SBAT is not a separate event: it is one of the update
+    // types event 1796 can name.
+    {1034, "TPM-WMI", "Secure Boot Blocklist Updated",
+     "Windows added entries to the Secure Boot revocation list (DBX), which "
+     "stops known-vulnerable boot software from starting.",
+     "", false, Importance::Low, InsightCategory::Security},
+
+    {1036, "TPM-WMI", "Secure Boot Database Updated",
+     "Windows updated the Secure Boot signature database (DB).", "", false,
+     Importance::Low, InsightCategory::Security},
+
+    {1037, "TPM-WMI", "Old Microsoft Boot Certificate Revoked",
+     "Windows revoked the Microsoft Windows Production PCA 2011 certificate in "
+     "Secure Boot.",
+     "", false, Importance::Low, InsightCategory::Security},
+
+    {1042, "TPM-WMI", "Older Boot Managers Revoked",
+     "Windows revoked older versions of the Windows boot manager in Secure "
+     "Boot.",
+     "", false, Importance::Low, InsightCategory::Security},
+
+    {1043, "TPM-WMI", "Secure Boot Key Updated",
+     "Windows updated the Secure Boot Key Exchange Key with the Microsoft "
+     "Corporation KEK CA 2023 certificate. The 2011 certificates it replaces "
+     "expire in 2026.",
+     "", false, Importance::Low, InsightCategory::Security},
+
+    {1044, "TPM-WMI", "Secure Boot Certificate Added",
+     "Windows added the Microsoft Option ROM UEFI CA 2023 certificate to "
+     "Secure Boot. The 2011 certificates expire in 2026.",
+     "", false, Importance::Low, InsightCategory::Security},
+
+    {1045, "TPM-WMI", "Secure Boot Certificate Added",
+     "Windows added the Microsoft UEFI CA 2023 certificate to Secure Boot. "
+     "The 2011 certificates expire in 2026.",
+     "", false, Importance::Low, InsightCategory::Security},
+
+    {1799, "TPM-WMI", "New Boot Manager Installed",
+     "Windows installed a boot manager signed with the Windows UEFI CA 2023 "
+     "certificate.",
+     "", false, Importance::Low, InsightCategory::Security},
+
+    {1808, "TPM-WMI", "Secure Boot Certificates Up to Date",
+     "This PC has the 2023 Secure Boot certificates and boot manager. Nothing "
+     "else needs to be done.",
+     "", false, Importance::Low, InsightCategory::Security},
+
+    {1797, "TPM-WMI", "Secure Boot Update Held Back",
+     "Windows did not apply a revocation (DBX) update because the Windows UEFI "
+     "CA 2023 certificate is not in the Secure Boot database yet. This is a "
+     "deliberate check, not a fault.",
+     "", false, Importance::Low, InsightCategory::Security},
+
+    {1798, "TPM-WMI", "Secure Boot Update Held Back",
+     "Windows did not apply a revocation (DBX) update because the boot manager "
+     "is still signed with the 2011 certificate. This is a deliberate check, "
+     "not a fault.",
+     "", false, Importance::Low, InsightCategory::Security},
+
+    {1800, "TPM-WMI", "Secure Boot Update Needs a Restart",
+     "A Secure Boot update is waiting for the PC to restart.",
+     "Restart the PC to let the update continue.", true, Importance::Low,
+     InsightCategory::Security},
+
+    {1796, "TPM-WMI", "Secure Boot Update Failed",
+     "Windows could not apply a Secure Boot update (such as DB, DBX or SBAT) "
+     "because of an unexpected error. It tries again at the next restart.",
+     "A single failure is not a problem. If it appears after every restart, "
+     "the event details name the update type and the error code.",
+     false, Importance::Medium, InsightCategory::Security},
+
+    {1795, "TPM-WMI", "Firmware Rejected a Secure Boot Update",
+     "The PC's firmware returned an error while Windows updated Secure Boot "
+     "(DB, DBX or KEK). Windows tries again at the next restart.",
+     "If it keeps happening, check with the PC or motherboard maker for a "
+     "firmware (BIOS/UEFI) update.",
+     true, Importance::Medium, InsightCategory::Security},
+
+    {1801, "TPM-WMI", "Secure Boot Certificates Not Applied Yet",
+     "The updated Secure Boot certificates and boot manager have not been "
+     "applied to this PC's firmware yet.",
+     "Microsoft's guidance on the Secure Boot certificate update explains how "
+     "to complete it.",
+     true, Importance::Medium, InsightCategory::Security},
+
+    {1802, "TPM-WMI", "Secure Boot Update Blocked by Firmware",
+     "Windows did not apply a Secure Boot update because of a known firmware "
+     "issue on this PC.",
+     "Check with the PC or motherboard maker for a firmware (BIOS/UEFI) "
+     "update.",
+     true, Importance::Medium, InsightCategory::Security},
+
+    {1803, "TPM-WMI", "Secure Boot Key Missing in Firmware",
+     "The firmware has no Key Exchange Key signed by this PC's platform key, "
+     "so Windows cannot update the Secure Boot keys.",
+     "Ask the PC maker about Secure Boot key provisioning for this model.",
+     true, Importance::Medium, InsightCategory::Security},
+
+    {1032, "TPM-WMI", "Secure Boot Update Paused for BitLocker",
+     "Windows did not apply a Secure Boot update because it would have sent "
+     "the system drive into BitLocker recovery.",
+     "Microsoft's fix: suspend BitLocker for two restarts, restart twice, then "
+     "check that BitLocker protection is on again.",
+     true, Importance::High, InsightCategory::Security},
+
+    {1033, "TPM-WMI", "Vulnerable Boot Software Found",
+     "A revoked boot manager is on the EFI system partition, so Windows "
+     "postponed a revocation (DBX) update.",
+     "Contact the vendor of that boot software for an updated version.", true,
+     Importance::High, InsightCategory::Security},
 };
 
 const IntelligenceRule* MatchRule(const ipc::TimelineEvent& event) {
