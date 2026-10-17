@@ -1,6 +1,7 @@
 #include "collectors/event_log_collector.hpp"
 
 #include "intelligence/crash_explainer.hpp"
+#include "intelligence/wake_explainer.hpp"
 #include "logging/logger.hpp"
 #include "windows/wevt_helpers.hpp"
 
@@ -416,10 +417,12 @@ std::optional<EventRecord> EventLogCollector::ParseEvtHandle(
   try {
     EventRecord record = ParseSystemProperties(
         properties, property_count, static_cast<EVT_HANDLE>(event_handle));
-    // Crash events are explained from their EventData (stop code, power
-    // button). They are rare, so rendering their XML up front is cheap.
+    // Crash and wake events are explained from their EventData (stop code,
+    // power button, wake source). They are rare, so rendering their XML up
+    // front is cheap.
     if (record.event_id.has_value() &&
-        IsCrashDiagnosticEvent(record.provider_name, *record.event_id)) {
+        (IsCrashDiagnosticEvent(record.provider_name, *record.event_id) ||
+         IsWakeDiagnosticEvent(record.provider_name, *record.event_id))) {
       record.raw_xml =
           wevt::RenderEventXml(static_cast<EVT_HANDLE>(event_handle));
     }
