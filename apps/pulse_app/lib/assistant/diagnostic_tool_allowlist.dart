@@ -51,14 +51,17 @@ abstract final class AssistantToolAllowlist {
     AssistantToolDescriptor(
       name: 'process_list',
       description:
-          'List running processes with CPU/memory (top consumers). Read-only.',
+          'List running processes with CPU, memory and private bytes (top '
+          'consumers). sortBy "private" ranks by private bytes (commit '
+          'charge), which shows memory leaks better than the working set. '
+          'Read-only.',
       inputSchema: {
         'type': 'object',
         'properties': {
           'limit': {'type': 'integer', 'minimum': 1, 'maximum': 50},
           'sortBy': {
             'type': 'string',
-            'enum': ['cpu', 'memory', 'name'],
+            'enum': ['cpu', 'memory', 'private', 'name'],
           },
         },
       },
@@ -77,7 +80,10 @@ abstract final class AssistantToolAllowlist {
     ),
     AssistantToolDescriptor(
       name: 'process_details',
-      description: 'Details for a single process by PID. Read-only.',
+      description:
+          'Details for a single process by PID: path, command line, '
+          'publisher, user, elevation, architecture, start time and total '
+          'CPU time used since it started. Read-only.',
       inputSchema: {
         'type': 'object',
         'properties': {
@@ -112,6 +118,25 @@ abstract final class AssistantToolAllowlist {
       name: 'diagnostics_snapshot',
       description:
           'PulseService pipeline diagnostics snapshot (service health). Read-only.',
+    ),
+    AssistantToolDescriptor(
+      name: 'windows_services',
+      description:
+          'Windows services with their state (running, stopped, ...) and '
+          'start type. Filter by name or display name, for example "search" '
+          'for Windows Search (WSearch). Read-only; cannot start or stop '
+          'services.',
+      inputSchema: {
+        'type': 'object',
+        'properties': {
+          'query': {'type': 'string'},
+          'state': {
+            'type': 'string',
+            'enum': ['running', 'stopped'],
+          },
+          'limit': {'type': 'integer', 'minimum': 1, 'maximum': 50},
+        },
+      },
     ),
     AssistantToolDescriptor(
       name: 'service_status',
