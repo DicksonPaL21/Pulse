@@ -5,12 +5,22 @@ All notable changes to Pulse are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.4.1] — Unreleased
 
 ### Added
 
-- **Assistant ports and LM Studio API key** (Settings → Privacy → Assistant): change the Ollama or LM Studio port on this PC; the optional key is kept in Windows Credential Manager, never in settings, logs or exports
+- **Health for every disk** in System Health → Storage → SMART: model, bus, health and temperature for each disk; for NVMe drives also wear, spare capacity, power-on hours, unsafe shutdowns, media errors and data read / written. NVMe critical warnings are spelled out (#12, #20)
+- **What woke the PC**: the wake event names the device ("PC Woke Up: Intel(R) Ethernet Connection") or the scheduled task behind a wake timer, with how to stop it
+- **Secure Boot update events explained** (TPM-WMI): applied updates are marked as routine, and errors such as the SBAT update failure (1796) say that Windows retries at the next restart. Follows Microsoft's Secure Boot DB and DBX update events article (#25)
+- **Deeper Assistant diagnostics** (#17): process details include command line, elevation, architecture, start time and total CPU time; processes can be ranked by private bytes; new read-only `windows_services` tool (for example "is Windows Search running?")
+- **Assistant ports and LM Studio API key** (Settings → Privacy → Assistant): change the Ollama or LM Studio port on this PC; the optional key is kept in Windows Credential Manager, never in settings, logs or exports (#21)
 - "Local AI not found" now lists what Pulse checked, e.g. *LM Studio server is not running on 127.0.0.1:1234. Start it in LM Studio → Developer.*
+
+### Fixed
+
+- Disk temperature and SMART data were missing: the service opened disks with read access, which the LocalService account does not have. Disk health is now read without it and refreshed every 5 minutes
+- Assistant replies from Ollama repeated themselves ("HelloHello!Hello! I…"); LM Studio could drop text split across network packets
+- The Assistant kept showing "Connected" after Ollama or LM Studio was closed; a failed send now re-checks the runtime
 
 ### Security
 

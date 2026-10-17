@@ -54,7 +54,7 @@ class SettingsController extends ChangeNotifier {
   static const _kAssistantOllamaPort = 'assistant.ollama.port';
   static const _kAssistantLmStudioPort = 'assistant.lm_studio.port';
 
-  static const String buildDate = '2026-10-14';
+  static const String buildDate = '2026-10-18';
   /// Default cooldown between repeat notifications for the same alert kind.
   /// One hour: memory hovering around the threshold produced a toast every
   /// 15 minutes, which piled up in notification history.
