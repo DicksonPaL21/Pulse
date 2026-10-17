@@ -9,7 +9,7 @@ import '../local_ai_types.dart';
 ///
 /// Probes OpenAI-compatible `GET /v1/models` first (verified local path),
 /// then native `GET /api/v1/models`. Chat uses `POST /v1/chat/completions`.
-/// Default base: `http://127.0.0.1:1234`
+/// Default base: `http://127.0.0.1:1234`; only the port can be changed.
 class LmStudioProvider implements LocalAiProvider {
   LmStudioProvider({
     LocalAiHttpClient? http,
@@ -17,18 +17,34 @@ class LmStudioProvider implements LocalAiProvider {
     this.timeout = const Duration(seconds: 2),
     this.apiToken,
   })  : _http = http ?? const DartLocalAiHttpClient(),
-        baseUri = baseUri ?? Uri.parse('http://127.0.0.1:1234') {
-    DartLocalAiHttpClient.assertLocalhost(this.baseUri);
+        _baseUri = baseUri ??
+            LocalAiLoopback.uri(LocalAiLoopback.lmStudioDefaultPort) {
+    DartLocalAiHttpClient.assertLocalhost(_baseUri);
   }
 
   final LocalAiHttpClient _http;
   final Duration timeout;
 
-  /// Optional Bearer token when LM Studio auth is enabled.
-  final String? apiToken;
+  /// Optional Bearer token when "Require API key" is on in LM Studio.
+  /// Read from Windows Credential Manager; never logged or exported.
+  String? apiToken;
+
+  Uri _baseUri;
 
   @override
-  final Uri baseUri;
+  Uri get baseUri => _baseUri;
+
+  /// Reaches LM Studio on another port of this PC (Settings → Privacy).
+  void useLoopbackPort(int port) => _baseUri = LocalAiLoopback.uri(port);
+
+  String get _notRunningDetail =>
+      'LM Studio server is not running on ${LocalAiLoopback.label(baseUri)}. '
+      'Start it in LM Studio → Developer.';
+
+  String get _authRequiredDetail => apiToken == null
+      ? 'LM Studio requires an API key. Add it in Pulse Settings → Privacy, '
+          'or turn off "Require API key" in LM Studio.'
+      : 'LM Studio rejected the API key saved in Pulse Settings → Privacy.';
 
   @override
   String get id => 'lm_studio';
@@ -72,7 +88,7 @@ class LmStudioProvider implements LocalAiProvider {
     } catch (e) {
       if (isLocalAiConnectionFailure(e)) {
         return LocalAiProviderStatus.notFound(
-          detail: 'LM Studio local server is not running',
+          detail: _notRunningDetail,
         );
       }
       return LocalAiProviderStatus.error(
@@ -88,7 +104,7 @@ class LmStudioProvider implements LocalAiProvider {
     if (response.statusCode == 404) return null;
     if (response.statusCode == 401 || response.statusCode == 403) {
       return LocalAiProviderStatus.unavailable(
-        detail: 'LM Studio API requires authentication',
+        detail: _authRequiredDetail,
       );
     }
     if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -106,13 +122,13 @@ class LmStudioProvider implements LocalAiProvider {
     final response = await _http.get(uri, timeout: timeout, headers: _headers);
     if (response.statusCode == 401 || response.statusCode == 403) {
       return LocalAiProviderStatus.unavailable(
-        detail: 'LM Studio API requires authentication',
+        detail: _authRequiredDetail,
       );
     }
     if (response.statusCode < 200 || response.statusCode >= 300) {
       if (response.statusCode == 404) {
         return LocalAiProviderStatus.notFound(
-          detail: 'LM Studio local server is not running',
+          detail: _notRunningDetail,
         );
       }
       return LocalAiProviderStatus.error(
@@ -286,7 +302,7 @@ class LmStudioProvider implements LocalAiProvider {
     } catch (e) {
       if (isLocalAiConnectionFailure(e)) {
         throw LocalAiChatException(
-          'LM Studio is not available on localhost.',
+          'LM Studio is not available on ${LocalAiLoopback.label(baseUri)}.',
           code: 'PROVIDER_UNAVAILABLE',
         );
       }
@@ -304,7 +320,58 @@ class LmStudioProvider implements LocalAiProvider {
   ) async {
     final contentBuf = StringBuffer();
     final toolCallBuf = <int, _ToolCallAccum>{};
+    final lines = StreamedLines();
     String? finishReason;
+
+    // One server-sent event per line; a line split across network chunks is
+    // completed before it is parsed.
+    void handleLines(List<String> complete) {
+      for (final line in complete) {
+        final trimmed = line.trim();
+        if (trimmed.isEmpty || trimmed == 'data: [DONE]') continue;
+        final payload =
+            trimmed.startsWith('data:') ? trimmed.substring(5).trim() : trimmed;
+        if (payload.isEmpty || payload == '[DONE]') continue;
+        Map? decoded;
+        try {
+          final obj = jsonDecode(payload);
+          if (obj is Map) decoded = obj;
+        } catch (_) {
+          continue;
+        }
+        if (decoded == null) continue;
+        final choices = decoded['choices'];
+        if (choices is! List || choices.isEmpty) continue;
+        final choice = choices.first;
+        if (choice is! Map) continue;
+        finishReason = choice['finish_reason']?.toString() ?? finishReason;
+        final delta = choice['delta'];
+        if (delta is! Map) continue;
+        final text = delta['content']?.toString();
+        if (text != null && text.isNotEmpty) {
+          contentBuf.write(text);
+          request.onTextDelta?.call(text);
+        }
+        final calls = delta['tool_calls'];
+        if (calls is List) {
+          for (final c in calls) {
+            if (c is! Map) continue;
+            final index = (c['index'] is int)
+                ? c['index'] as int
+                : int.tryParse('${c['index']}') ?? toolCallBuf.length;
+            final acc = toolCallBuf.putIfAbsent(index, _ToolCallAccum.new);
+            if (c['id'] != null) acc.id = c['id'].toString();
+            final fn = c['function'];
+            if (fn is Map) {
+              if (fn['name'] != null) acc.name = fn['name'].toString();
+              if (fn['arguments'] != null) {
+                acc.argsJson.write(fn['arguments'].toString());
+              }
+            }
+          }
+        }
+      }
+    }
 
     final response = await _http.post(
       uri,
@@ -313,53 +380,10 @@ class LmStudioProvider implements LocalAiProvider {
       headers: _headers,
       onStreamChunk: (chunk) {
         request.cancelToken?.throwIfCancelled();
-        for (final line in chunk.split('\n')) {
-          final trimmed = line.trim();
-          if (trimmed.isEmpty || trimmed == 'data: [DONE]') continue;
-          final payload =
-              trimmed.startsWith('data:') ? trimmed.substring(5).trim() : trimmed;
-          if (payload.isEmpty || payload == '[DONE]') continue;
-          Map? decoded;
-          try {
-            final obj = jsonDecode(payload);
-            if (obj is Map) decoded = obj;
-          } catch (_) {
-            continue;
-          }
-          if (decoded == null) continue;
-          final choices = decoded['choices'];
-          if (choices is! List || choices.isEmpty) continue;
-          final choice = choices.first;
-          if (choice is! Map) continue;
-          finishReason = choice['finish_reason']?.toString() ?? finishReason;
-          final delta = choice['delta'];
-          if (delta is! Map) continue;
-          final text = delta['content']?.toString();
-          if (text != null && text.isNotEmpty) {
-            contentBuf.write(text);
-            request.onTextDelta?.call(text);
-          }
-          final calls = delta['tool_calls'];
-          if (calls is List) {
-            for (final c in calls) {
-              if (c is! Map) continue;
-              final index = (c['index'] is int)
-                  ? c['index'] as int
-                  : int.tryParse('${c['index']}') ?? toolCallBuf.length;
-              final acc = toolCallBuf.putIfAbsent(index, _ToolCallAccum.new);
-              if (c['id'] != null) acc.id = c['id'].toString();
-              final fn = c['function'];
-              if (fn is Map) {
-                if (fn['name'] != null) acc.name = fn['name'].toString();
-                if (fn['arguments'] != null) {
-                  acc.argsJson.write(fn['arguments'].toString());
-                }
-              }
-            }
-          }
-        }
+        handleLines(lines.add(chunk));
       },
     );
+    handleLines(lines.close());
 
     request.cancelToken?.throwIfCancelled();
     if (response.statusCode < 200 || response.statusCode >= 300) {
