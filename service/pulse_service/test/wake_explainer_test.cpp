@@ -71,6 +71,45 @@ void TestDeviceWake() {
   CHECK(!insight->action_required);
 }
 
+void TestRealDeviceWakeRecord() {
+  // Recorded on a Windows 11 PC (manifest version 3) after waking from S3
+  // with the keyboard; the computer name is replaced. Empty timer fields are
+  // rendered as <Data ...></Data>, not left out.
+  const std::string xml =
+      "<Event xmlns='http://schemas.microsoft.com/win/2004/08/events/event'>"
+      "<System><Provider Name='Microsoft-Windows-Power-Troubleshooter' "
+      "Guid='{cdc05e28-c449-49c6-b9d2-88cf761644df}'/><EventID>1</EventID>"
+      "<Version>3</Version><Level>4</Level><Task>0</Task><Opcode>0</Opcode>"
+      "<Keywords>0x8000000000000000</Keywords>"
+      "<TimeCreated SystemTime='2026-10-17T20:28:13.9651718Z'/>"
+      "<EventRecordID>5678</EventRecordID><Channel>System</Channel>"
+      "<Computer>PC</Computer><Security UserID='S-1-5-19'/></System>"
+      "<EventData><Data Name='SleepTime'>2026-10-17T20:27:48.2983274Z</Data>"
+      "<Data Name='WakeTime'>2026-10-17T20:28:12.9906303Z</Data>"
+      "<Data Name='SleepDuration'>225</Data>"
+      "<Data Name='WakeDuration'>1489</Data>"
+      "<Data Name='DriverInitDuration'>1340</Data>"
+      "<Data Name='BiosInitDuration'>1951</Data>"
+      "<Data Name='HiberWriteDuration'>0</Data>"
+      "<Data Name='HiberReadDuration'>0</Data>"
+      "<Data Name='HiberPagesWritten'>0</Data>"
+      "<Data Name='Attributes'>1912624128</Data>"
+      "<Data Name='TargetState'>4</Data><Data Name='EffectiveState'>4</Data>"
+      "<Data Name='WakeSourceType'>5</Data>"
+      "<Data Name='WakeSourceTextLength'>21</Data>"
+      "<Data Name='WakeSourceText'>PCI Express Root Port</Data>"
+      "<Data Name='WakeTimerOwnerLength'>0</Data>"
+      "<Data Name='WakeTimerContextLength'>0</Data>"
+      "<Data Name='NoMultiStageResumeReason'>0</Data>"
+      "<Data Name='WakeTimerOwner'></Data>"
+      "<Data Name='WakeTimerContext'></Data>"
+      "<Data Name='CheckpointDuration'>20</Data></EventData></Event>";
+  const auto insight = ExplainWakeEvent(WakeEvent(xml));
+  CHECK(insight.has_value());
+  CHECK(insight->title == "PC Woke Up: PCI Express Root Port");
+  CHECK(Contains(insight->summary, "PCI Express Root Port."));
+}
+
 void TestTimerWake() {
   const auto insight = ExplainWakeEvent(WakeEvent(WakeXml(
       "", "\\Device\\HarddiskVolume3\\Windows\\System32\\svchost.exe",
@@ -140,6 +179,7 @@ void TestOnlyPowerTroubleshooterEvent1() {
 
 int main() {
   TestDeviceWake();
+  TestRealDeviceWakeRecord();
   TestTimerWake();
   TestTimerWinsOverSourceText();
   TestLongSourceIsShortenedOnlyInTitle();
