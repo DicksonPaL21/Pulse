@@ -41,6 +41,7 @@ add_executable(PulseService WIN32
   src/ipc/event_mapper.cpp
   src/intelligence/event_intelligence.cpp
   src/intelligence/crash_explainer.cpp
+  src/intelligence/wake_explainer.cpp
   src/intelligence/bugcheck_catalog.cpp
   src/humanization/event_humanizer.cpp
   src/collector/collector.cpp
@@ -51,6 +52,7 @@ add_executable(PulseService WIN32
   src/commands/read_evtx_command.cpp
   src/collectors/health_metrics_collector.cpp
   src/collectors/hardware_sensors_collector.cpp
+  src/collectors/disk_health.cpp
   src/collectors/network_etw_engine.cpp
   src/collectors/gpu_adapter_info.cpp
   src/collectors/system_overview_info.cpp
@@ -137,6 +139,7 @@ add_executable(event_intelligence_tests
   test/event_intelligence_test.cpp
   src/intelligence/event_intelligence.cpp
   src/intelligence/crash_explainer.cpp
+  src/intelligence/wake_explainer.cpp
   src/intelligence/bugcheck_catalog.cpp
 )
 target_include_directories(event_intelligence_tests PRIVATE
@@ -151,6 +154,7 @@ add_executable(crash_explainer_tests
   test/crash_explainer_test.cpp
   src/intelligence/event_intelligence.cpp
   src/intelligence/crash_explainer.cpp
+  src/intelligence/wake_explainer.cpp
   src/intelligence/bugcheck_catalog.cpp
 )
 target_include_directories(crash_explainer_tests PRIVATE
@@ -160,6 +164,48 @@ target_include_directories(crash_explainer_tests PRIVATE
 )
 target_link_libraries(crash_explainer_tests PRIVATE pulse_wire)
 add_test(NAME crash_explainer_tests COMMAND crash_explainer_tests)
+
+add_executable(wake_explainer_tests
+  test/wake_explainer_test.cpp
+  src/intelligence/event_intelligence.cpp
+  src/intelligence/crash_explainer.cpp
+  src/intelligence/wake_explainer.cpp
+  src/intelligence/bugcheck_catalog.cpp
+)
+target_include_directories(wake_explainer_tests PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/src"
+  "${PULSE_ROOT}/shared/pulse_protocol/cpp"
+  "${PULSE_ROOT}/shared/pulse_common/include"
+)
+target_link_libraries(wake_explainer_tests PRIVATE pulse_wire)
+add_test(NAME wake_explainer_tests COMMAND wake_explainer_tests)
+
+add_executable(secure_boot_rules_tests
+  test/secure_boot_rules_test.cpp
+  src/intelligence/event_intelligence.cpp
+  src/intelligence/crash_explainer.cpp
+  src/intelligence/wake_explainer.cpp
+  src/intelligence/bugcheck_catalog.cpp
+)
+target_include_directories(secure_boot_rules_tests PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/src"
+  "${PULSE_ROOT}/shared/pulse_protocol/cpp"
+  "${PULSE_ROOT}/shared/pulse_common/include"
+)
+target_link_libraries(secure_boot_rules_tests PRIVATE pulse_wire)
+add_test(NAME secure_boot_rules_tests COMMAND secure_boot_rules_tests)
+
+add_executable(disk_health_tests
+  test/disk_health_test.cpp
+  src/collectors/disk_health.cpp
+)
+target_include_directories(disk_health_tests PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/src"
+  "${PULSE_ROOT}/shared/pulse_protocol/cpp"
+  "${PULSE_ROOT}/shared/pulse_common/include"
+)
+target_link_libraries(disk_health_tests PRIVATE pulse_wire)
+add_test(NAME disk_health_tests COMMAND disk_health_tests)
 
 add_executable(services_collector_tests
   test/services_collector_test.cpp

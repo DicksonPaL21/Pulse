@@ -92,6 +92,8 @@ void main() {
         hasArchitecture: true,
         productName: 'Notepad',
         hasProductName: true,
+        cpuTimeMs: 123456789012,
+        hasCpuTime: true,
       ),
     );
     final decoded = decodeEnvelope(encodeEnvelope(env));
@@ -106,6 +108,8 @@ void main() {
     expect(d.architecture, 'x64');
     expect(d.productName, 'Notepad');
     expect(d.elevated, isTrue);
+    expect(d.hasCpuTime, isTrue);
+    expect(d.cpuTimeMs, 123456789012);
   });
 
   test('GetProcessDetails request roundtrip', () {

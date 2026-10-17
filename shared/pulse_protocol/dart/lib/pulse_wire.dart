@@ -1051,6 +1051,8 @@ class ProcessDetails {
     this.hasArchitecture = false,
     this.productName = '',
     this.hasProductName = false,
+    this.cpuTimeMs = 0,
+    this.hasCpuTime = false,
   });
   int pid;
   String name;
@@ -1078,6 +1080,10 @@ class ProcessDetails {
   bool hasArchitecture;
   String productName;
   bool hasProductName;
+
+  /// User + kernel CPU time since the process started (GetProcessTimes).
+  int cpuTimeMs;
+  bool hasCpuTime;
 }
 
 enum HealthDriveKind {
@@ -1121,6 +1127,59 @@ class HealthVolume {
   bool includedInSummary;
 }
 
+/// Health of one physical disk (issue #12 / #20).
+class HealthDiskHealth {
+  HealthDiskHealth({
+    this.index = 0,
+    this.model = '',
+    this.bus = '',
+    this.hasTempC = false,
+    this.tempC = 0.0,
+    this.hasFailurePredicted = false,
+    this.failurePredicted = false,
+    this.hasCriticalWarning = false,
+    this.criticalWarning = 0,
+    this.hasPercentageUsed = false,
+    this.percentageUsed = 0,
+    this.hasAvailableSpare = false,
+    this.availableSpare = 0,
+    this.availableSpareThreshold = 0,
+    this.hasPowerOnHours = false,
+    this.powerOnHours = 0,
+    this.hasUnsafeShutdowns = false,
+    this.unsafeShutdowns = 0,
+    this.hasMediaErrors = false,
+    this.mediaErrors = 0,
+    this.hasBytesRead = false,
+    this.bytesRead = 0,
+    this.hasBytesWritten = false,
+    this.bytesWritten = 0,
+  });
+  int index;
+  String model;
+  String bus;
+  bool hasTempC;
+  double tempC;
+  bool hasFailurePredicted;
+  bool failurePredicted;
+  bool hasCriticalWarning;
+  int criticalWarning;
+  bool hasPercentageUsed;
+  int percentageUsed;
+  bool hasAvailableSpare;
+  int availableSpare;
+  int availableSpareThreshold;
+  bool hasPowerOnHours;
+  int powerOnHours;
+  bool hasUnsafeShutdowns;
+  int unsafeShutdowns;
+  bool hasMediaErrors;
+  int mediaErrors;
+  bool hasBytesRead;
+  int bytesRead;
+  bool hasBytesWritten;
+  int bytesWritten;
+}
 class HealthPhysicalDisk {
   HealthPhysicalDisk({
     this.id = '',
@@ -1185,6 +1244,7 @@ class HealthSample {
     List<double>? cpuCorePercent,
     List<HealthVolume>? volumes,
     List<HealthPhysicalDisk>? disks,
+    List<HealthDiskHealth>? diskHealth,
     this.hasMemoryCompressed = false,
     this.memoryCompressedBytes = 0,
     this.hasMemoryHardwareReserved = false,
@@ -1264,7 +1324,8 @@ class HealthSample {
         topNetwork = topNetwork ?? <HealthProcessEntry>[],
         cpuCorePercent = cpuCorePercent ?? <double>[],
         volumes = volumes ?? <HealthVolume>[],
-        disks = disks ?? <HealthPhysicalDisk>[];
+        disks = disks ?? <HealthPhysicalDisk>[],
+        diskHealth = diskHealth ?? <HealthDiskHealth>[];
   int unixMs;
   bool hasCpuPercent;
   double cpuPercent;
@@ -1381,6 +1442,8 @@ class HealthSample {
   int diskTotalBytesRead;
   bool hasDiskSmartOk;
   bool diskSmartOk;
+  /// Every physical disk (issue #12 / #20).
+  List<HealthDiskHealth> diskHealth;
 }
 
 class GetHealthSnapshot {
@@ -2138,6 +2201,8 @@ Uint8List _encodeProcessDetails(ProcessDetails m) {
   _writeBool(24, m.hasArchitecture, out);
   _writeString(25, m.productName, out);
   _writeBool(26, m.hasProductName, out);
+  _writeU64(27, m.cpuTimeMs, out);
+  _writeBool(28, m.hasCpuTime, out);
   return out.toBytes();
 }
 
@@ -2155,6 +2220,34 @@ Uint8List _encodeHealthVolume(HealthVolume m) {
   return out.toBytes();
 }
 
+Uint8List _encodeHealthDiskHealth(HealthDiskHealth m) {
+  final out = BytesBuilder();
+  _writeU64(1, m.index, out);
+  _writeString(2, m.model, out);
+  _writeString(3, m.bus, out);
+  _writeBool(4, m.hasTempC, out);
+  _writeDouble(5, m.tempC, out);
+  _writeBool(6, m.hasFailurePredicted, out);
+  _writeBool(7, m.failurePredicted, out);
+  _writeBool(8, m.hasCriticalWarning, out);
+  _writeU64(9, m.criticalWarning, out);
+  _writeBool(10, m.hasPercentageUsed, out);
+  _writeU64(11, m.percentageUsed, out);
+  _writeBool(12, m.hasAvailableSpare, out);
+  _writeU64(13, m.availableSpare, out);
+  _writeU64(14, m.availableSpareThreshold, out);
+  _writeBool(15, m.hasPowerOnHours, out);
+  _writeU64(16, m.powerOnHours, out);
+  _writeBool(17, m.hasUnsafeShutdowns, out);
+  _writeU64(18, m.unsafeShutdowns, out);
+  _writeBool(19, m.hasMediaErrors, out);
+  _writeU64(20, m.mediaErrors, out);
+  _writeBool(21, m.hasBytesRead, out);
+  _writeU64(22, m.bytesRead, out);
+  _writeBool(23, m.hasBytesWritten, out);
+  _writeU64(24, m.bytesWritten, out);
+  return out.toBytes();
+}
 Uint8List _encodeHealthPhysicalDisk(HealthPhysicalDisk m) {
   final out = BytesBuilder();
   _writeString(1, m.id, out);
@@ -2393,6 +2486,9 @@ Uint8List _encodeHealthSample(HealthSample m) {
   _writeU64(114, m.diskTotalBytesRead, out);
   _writeBool(115, m.hasDiskSmartOk, out);
   _writeBool(116, m.diskSmartOk, out);
+  for (final d in m.diskHealth) {
+    _writeBytesField(117, _encodeHealthDiskHealth(d), out);
+  }
   return out.toBytes();
 }
 
@@ -3796,6 +3892,10 @@ ProcessDetails _decodeProcessDetails(Uint8List data) {
       m.productName = r.readString();
     } else if (field == 26 && wire == 0) {
       m.hasProductName = r.readVarint() != 0;
+    } else if (field == 27 && wire == 0) {
+      m.cpuTimeMs = r.readVarint();
+    } else if (field == 28 && wire == 0) {
+      m.hasCpuTime = r.readVarint() != 0;
     } else {
       r.skip(wire);
     }
@@ -3835,6 +3935,67 @@ HealthVolume _decodeHealthVolume(Uint8List data) {
   return m;
 }
 
+HealthDiskHealth _decodeHealthDiskHealth(Uint8List data) {
+  final r = _Reader(data);
+  final m = HealthDiskHealth();
+  while (r.hasMore) {
+    final tag = r.readVarint();
+    final field = tag >> 3;
+    final wire = tag & 7;
+    if (field == 1 && wire == 0) {
+      m.index = r.readVarint();
+    } else if (field == 2 && wire == 2) {
+      m.model = r.readString();
+    } else if (field == 3 && wire == 2) {
+      m.bus = r.readString();
+    } else if (field == 4 && wire == 0) {
+      m.hasTempC = r.readVarint() != 0;
+    } else if (field == 5 && wire == 1) {
+      m.tempC = r.readDouble();
+    } else if (field == 6 && wire == 0) {
+      m.hasFailurePredicted = r.readVarint() != 0;
+    } else if (field == 7 && wire == 0) {
+      m.failurePredicted = r.readVarint() != 0;
+    } else if (field == 8 && wire == 0) {
+      m.hasCriticalWarning = r.readVarint() != 0;
+    } else if (field == 9 && wire == 0) {
+      m.criticalWarning = r.readVarint();
+    } else if (field == 10 && wire == 0) {
+      m.hasPercentageUsed = r.readVarint() != 0;
+    } else if (field == 11 && wire == 0) {
+      m.percentageUsed = r.readVarint();
+    } else if (field == 12 && wire == 0) {
+      m.hasAvailableSpare = r.readVarint() != 0;
+    } else if (field == 13 && wire == 0) {
+      m.availableSpare = r.readVarint();
+    } else if (field == 14 && wire == 0) {
+      m.availableSpareThreshold = r.readVarint();
+    } else if (field == 15 && wire == 0) {
+      m.hasPowerOnHours = r.readVarint() != 0;
+    } else if (field == 16 && wire == 0) {
+      m.powerOnHours = r.readVarint();
+    } else if (field == 17 && wire == 0) {
+      m.hasUnsafeShutdowns = r.readVarint() != 0;
+    } else if (field == 18 && wire == 0) {
+      m.unsafeShutdowns = r.readVarint();
+    } else if (field == 19 && wire == 0) {
+      m.hasMediaErrors = r.readVarint() != 0;
+    } else if (field == 20 && wire == 0) {
+      m.mediaErrors = r.readVarint();
+    } else if (field == 21 && wire == 0) {
+      m.hasBytesRead = r.readVarint() != 0;
+    } else if (field == 22 && wire == 0) {
+      m.bytesRead = r.readVarint();
+    } else if (field == 23 && wire == 0) {
+      m.hasBytesWritten = r.readVarint() != 0;
+    } else if (field == 24 && wire == 0) {
+      m.bytesWritten = r.readVarint();
+    } else {
+      r.skip(wire);
+    }
+  }
+  return m;
+}
 HealthPhysicalDisk _decodeHealthPhysicalDisk(Uint8List data) {
   final r = _Reader(data);
   final m = HealthPhysicalDisk();
@@ -4290,6 +4451,8 @@ HealthSample _decodeHealthSample(Uint8List data) {
       m.hasDiskSmartOk = r.readVarint() != 0;
     } else if (field == 116 && wire == 0) {
       m.diskSmartOk = r.readVarint() != 0;
+    } else if (field == 117 && wire == 2) {
+      m.diskHealth.add(_decodeHealthDiskHealth(r.readBytes()));
     } else {
       r.skip(wire);
     }

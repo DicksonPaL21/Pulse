@@ -7,7 +7,7 @@ import '../local_ai_types.dart';
 
 /// Ollama localhost API — tags + `/api/chat` with tools.
 ///
-/// Default base: `http://127.0.0.1:11434`
+/// Default base: `http://127.0.0.1:11434`; only the port can be changed.
 /// Does not start Ollama, pull models, or run installers.
 class OllamaProvider implements LocalAiProvider {
   OllamaProvider({
@@ -16,16 +16,22 @@ class OllamaProvider implements LocalAiProvider {
     this.timeout = const Duration(seconds: 2),
     this.chatTimeout = const Duration(seconds: 120),
   })  : _http = http ?? const DartLocalAiHttpClient(),
-        baseUri = baseUri ?? Uri.parse('http://127.0.0.1:11434') {
-    DartLocalAiHttpClient.assertLocalhost(this.baseUri);
+        _baseUri = baseUri ??
+            LocalAiLoopback.uri(LocalAiLoopback.ollamaDefaultPort) {
+    DartLocalAiHttpClient.assertLocalhost(_baseUri);
   }
 
   final LocalAiHttpClient _http;
   final Duration timeout;
   final Duration chatTimeout;
 
+  Uri _baseUri;
+
   @override
-  final Uri baseUri;
+  Uri get baseUri => _baseUri;
+
+  /// Reaches Ollama on another port of this PC (Settings → Privacy).
+  void useLoopbackPort(int port) => _baseUri = LocalAiLoopback.uri(port);
 
   @override
   String get id => 'ollama';
@@ -110,7 +116,8 @@ class OllamaProvider implements LocalAiProvider {
     } catch (e) {
       if (isLocalAiConnectionFailure(e)) {
         return LocalAiProviderStatus.notFound(
-          detail: 'Ollama is not running on localhost',
+          detail: 'Ollama is not running on '
+              '${LocalAiLoopback.label(baseUri)}',
         );
       }
       return LocalAiProviderStatus.error(
@@ -162,7 +169,7 @@ class OllamaProvider implements LocalAiProvider {
     } catch (e) {
       if (isLocalAiConnectionFailure(e)) {
         throw LocalAiChatException(
-          'Ollama is not available on localhost.',
+          'Ollama is not available on ${LocalAiLoopback.label(baseUri)}.',
           code: 'PROVIDER_UNAVAILABLE',
         );
       }
@@ -178,10 +185,43 @@ class OllamaProvider implements LocalAiProvider {
     Map<String, Object?> body,
     LocalAiChatRequest request,
   ) async {
-    final buffer = StringBuffer();
+    final lines = StreamedLines();
     String? content;
     List<LocalAiToolCall> toolCalls = const [];
     String? finishReason;
+
+    // One NDJSON object per line; each line is handled exactly once.
+    void handleLine(String line) {
+      final trimmed = line.trim();
+      if (trimmed.isEmpty) return;
+      Map<String, dynamic>? obj;
+      try {
+        final decoded = jsonDecode(trimmed);
+        if (decoded is Map<String, dynamic>) {
+          obj = decoded;
+        } else if (decoded is Map) {
+          obj = Map<String, dynamic>.from(decoded);
+        }
+      } catch (_) {
+        return;
+      }
+      if (obj == null) return;
+      final message = obj['message'];
+      if (message is Map) {
+        final delta = message['content']?.toString();
+        if (delta != null && delta.isNotEmpty) {
+          content = (content ?? '') + delta;
+          request.onTextDelta?.call(delta);
+        }
+        final calls = message['tool_calls'];
+        if (calls is List && calls.isNotEmpty) {
+          toolCalls = _parseToolCalls(calls);
+        }
+      }
+      if (obj['done'] == true) {
+        finishReason = obj['done_reason']?.toString();
+      }
+    }
 
     final response = await _http.post(
       uri,
@@ -189,44 +229,10 @@ class OllamaProvider implements LocalAiProvider {
       timeout: request.timeout,
       onStreamChunk: (chunk) {
         request.cancelToken?.throwIfCancelled();
-        buffer.write(chunk);
-        // Parse complete NDJSON lines as they arrive.
-        final text = buffer.toString();
-        final lines = text.split('\n');
-        // Keep incomplete last line in buffer conceptually via re-parse of full.
-        for (final line in lines) {
-          final trimmed = line.trim();
-          if (trimmed.isEmpty) continue;
-          Map<String, dynamic>? obj;
-          try {
-            final decoded = jsonDecode(trimmed);
-            if (decoded is Map<String, dynamic>) {
-              obj = decoded;
-            } else if (decoded is Map) {
-              obj = Map<String, dynamic>.from(decoded);
-            }
-          } catch (_) {
-            continue;
-          }
-          if (obj == null) continue;
-          final message = obj['message'];
-          if (message is Map) {
-            final delta = message['content']?.toString();
-            if (delta != null && delta.isNotEmpty) {
-              content = (content ?? '') + delta;
-              request.onTextDelta?.call(delta);
-            }
-            final calls = message['tool_calls'];
-            if (calls is List && calls.isNotEmpty) {
-              toolCalls = _parseToolCalls(calls);
-            }
-          }
-          if (obj['done'] == true) {
-            finishReason = obj['done_reason']?.toString();
-          }
-        }
+        lines.add(chunk).forEach(handleLine);
       },
     );
+    lines.close().forEach(handleLine);
 
     request.cancelToken?.throwIfCancelled();
     if (response.statusCode < 200 || response.statusCode >= 300) {

@@ -1140,6 +1140,7 @@ class _DiskPanelBody extends StatelessWidget {
     final i = view.info;
     final volumes = s?.volumes ?? const <HealthVolume>[];
     final disks = s?.disks ?? const <HealthPhysicalDisk>[];
+    final diskHealth = s?.diskHealth ?? const <HealthDiskHealth>[];
     final total = s?.diskTotalBytes ?? i?.primaryStorageBytes ?? 0;
     final used = s?.diskUsedBytes ?? 0;
     final free = total > used ? total - used : 0;
@@ -1299,7 +1300,25 @@ class _DiskPanelBody extends StatelessWidget {
                 kind: 'disk',
                 sectionId: 'smart',
                 title: 'SMART',
-                builder: (context) => HealthSpecSection(compact: true, rows: smartRows),
+                builder: (context) => diskHealth.isEmpty
+                    ? HealthSpecSection(compact: true, rows: smartRows)
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          for (final (index, disk) in diskHealth.indexed) ...[
+                            if (index > 0) const SizedBox(height: 12),
+                            HealthSpecSection(
+                              title: diskHealthTitle(disk),
+                              compact: true,
+                              rows: [
+                                for (final (label, value)
+                                    in diskHealthRows(disk))
+                                  HealthSpecRow(label: label, value: value),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
               ),
               _healthPulseSection(
                 context: context,

@@ -2125,6 +2125,14 @@ ipc::ProcessDetails HealthMetricsCollector::QueryProcessDetails(uint32_t pid) {
       d.has_create_time = true;
       d.create_time_unix_ms =
           FileTimeToUnixMs(static_cast<int64_t>(u.QuadPart));
+      // Kernel and user times are amounts of 100-ns intervals.
+      constexpr uint64_t k100NsPerMs = 10000;
+      const auto to_100ns = [](const FILETIME& t) {
+        return (static_cast<uint64_t>(t.dwHighDateTime) << 32) |
+               t.dwLowDateTime;
+      };
+      d.cpu_time_ms = (to_100ns(kernel) + to_100ns(user)) / k100NsPerMs;
+      d.has_cpu_time = true;
     }
     CloseHandle(h);
   }

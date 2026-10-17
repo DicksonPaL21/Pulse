@@ -262,6 +262,68 @@ String formatSmartHealth(bool has, bool ok) {
   return ok ? 'OK' : 'Warning';
 }
 
+/// NVMe Critical Warning bits (NVMe base specification, SMART / Health
+/// Information log; NVME_CRITICAL_WARNING in nvme.h), in plain language.
+const _nvmeCriticalWarnings = <int, String>{
+  0x01: 'spare capacity is below its threshold',
+  0x02: 'temperature is outside the safe range',
+  0x04: 'reliability is degraded by media or internal errors',
+  0x08: 'the drive has switched to read-only',
+  0x10: 'the backup for its volatile memory failed',
+};
+
+List<String> nvmeCriticalWarnings(int bits) => [
+      for (final entry in _nvmeCriticalWarnings.entries)
+        if (bits & entry.key != 0) entry.value,
+    ];
+
+/// "OK", "Warning: …" or "Not supported" for one physical disk.
+String formatDiskHealthStatus(HealthDiskHealth disk) {
+  if (!disk.hasFailurePredicted) return kNotSupported;
+  if (!disk.failurePredicted) return 'OK';
+  final reasons = disk.hasCriticalWarning
+      ? nvmeCriticalWarnings(disk.criticalWarning)
+      : const <String>[];
+  if (reasons.isEmpty) return 'Warning: the drive predicts a failure';
+  return 'Warning: ${reasons.join('; ')}';
+}
+
+/// Section title for one physical disk, e.g. "Disk 2 · Samsung SSD 980 · NVMe".
+String diskHealthTitle(HealthDiskHealth disk) => [
+      'Disk ${disk.index}',
+      if (disk.model.trim().isNotEmpty) disk.model.trim(),
+      if (disk.bus.trim().isNotEmpty) disk.bus.trim(),
+    ].join(' · ');
+
+/// Rows for one physical disk. Values a drive does not report are left out,
+/// except health and temperature, which say "Not supported".
+List<HealthSpecRowData> diskHealthRows(HealthDiskHealth disk) => [
+      ('Health', formatDiskHealthStatus(disk)),
+      ('Temperature', formatTempC(disk.hasTempC, disk.tempC)),
+      if (disk.hasPercentageUsed) ('Wear', '${disk.percentageUsed}% used'),
+      if (disk.hasAvailableSpare)
+        (
+          'Spare capacity',
+          '${disk.availableSpare}% (warns below '
+              '${disk.availableSpareThreshold}%)',
+        ),
+      if (disk.hasPowerOnHours)
+        (
+          'Power-On Hours',
+          formatPowerOnHours(true, disk.powerOnHours),
+        ),
+      if (disk.hasUnsafeShutdowns)
+        ('Unsafe shutdowns', '${disk.unsafeShutdowns}'),
+      if (disk.hasMediaErrors) ('Media errors', '${disk.mediaErrors}'),
+      if (disk.hasBytesRead)
+        ('Total Data Read', formatBytesBinary(disk.bytesRead)),
+      if (disk.hasBytesWritten)
+        ('Total Data Written', formatBytesBinary(disk.bytesWritten)),
+    ];
+
+/// (label, value) pair for [diskHealthRows].
+typedef HealthSpecRowData = (String, String);
+
 /// Boolean configuration flag — "Not supported" when the capability was never
 /// reported (e.g. Resizable BAR without a clean public query path).
 String formatBoolOrNotSupported(bool has, bool value,

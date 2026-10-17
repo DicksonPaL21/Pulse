@@ -20,6 +20,7 @@ String assistantToolActivityLabel(String toolName) {
     'process_list' || 'process_search' || 'process_details' =>
       'Checking running processes...',
     'timeline_list' || 'timeline_search' => 'Checking recent events...',
+    'windows_services' => 'Checking Windows services...',
     'diagnostics_snapshot' => 'Checking Pulse diagnostics...',
     'service_status' => 'Checking PulseService status...',
     _ => 'Checking diagnostics...',
@@ -110,6 +111,8 @@ class IpcAssistantToolLayer implements AssistantToolLayer {
         return _timelineList(args);
       case 'timeline_search':
         return _timelineSearch(args);
+      case 'windows_services':
+        return _windowsServices(args);
       case 'diagnostics_snapshot':
         return _diagnosticsSnapshot();
       case 'service_status':
@@ -298,11 +301,62 @@ class IpcAssistantToolLayer implements AssistantToolLayer {
         'name': details.name,
         if (details.hasPath) 'path': details.path,
         if (details.hasCompany) 'company': details.company,
+        if (details.hasProductName) 'productName': details.productName,
+        // Tells a Chrome tab from an extension or GPU process. Goes only to
+        // the local model on 127.0.0.1.
+        if (details.hasCommandLine) 'commandLine': details.commandLine,
         'threadCount': details.threadCount,
         'handleCount': details.handleCount,
         if (details.hasParentPid) 'parentPid': details.parentPid,
         if (details.hasParentName) 'parentName': details.parentName,
         if (details.hasUser) 'user': details.user,
+        if (details.hasIntegrityLevel)
+          'integrityLevel': details.integrityLevel,
+        if (details.hasElevated) 'elevated': details.elevated,
+        if (details.hasArchitecture) 'architecture': details.architecture,
+        if (details.hasCreateTime)
+          'startedAt': DateTime.fromMillisecondsSinceEpoch(
+            details.createTimeUnixMs,
+            isUtc: true,
+          ).toIso8601String(),
+        if (details.hasCpuTime)
+          'cpuTimeSeconds': details.cpuTimeMs / Duration.millisecondsPerSecond,
+      },
+    );
+  }
+
+  Future<AssistantToolResult> _windowsServices(
+    Map<String, Object?> args,
+  ) async {
+    final limit = _clampInt(args['limit'], fallback: 20, min: 1, max: 50);
+    final query = args['query']?.toString().trim().toLowerCase() ?? '';
+    final state = args['state']?.toString().trim().toLowerCase() ?? '';
+    final snap = await _ipc.getInventoryDomain(
+      domain: InventoryDomainId.services,
+    );
+    final matches = snap.services.where((s) {
+      if (state.isNotEmpty && s.state.toLowerCase() != state) return false;
+      if (query.isEmpty) return true;
+      return s.id.toLowerCase().contains(query) ||
+          s.displayName.toLowerCase().contains(query);
+    }).toList();
+    return AssistantToolResult(
+      ok: true,
+      data: {
+        if (query.isNotEmpty) 'query': query,
+        if (state.isNotEmpty) 'state': state,
+        'count': matches.length,
+        'services': matches
+            .take(limit)
+            .map(
+              (s) => {
+                'name': s.id,
+                'displayName': s.displayName,
+                'state': s.state,
+                'startType': s.startType,
+              },
+            )
+            .toList(),
       },
     );
   }
@@ -441,6 +495,8 @@ class IpcAssistantToolLayer implements AssistantToolLayer {
         list.sort(
           (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
         );
+      case 'private':
+        list.sort((a, b) => b.commitBytes.compareTo(a.commitBytes));
       default:
         list.sort((a, b) {
           final am = a.hasWorkingSetBytes ? a.workingSetBytes : a.memoryBytes;
@@ -456,6 +512,9 @@ class IpcAssistantToolLayer implements AssistantToolLayer {
     if (p.hasCpuPercent) 'cpuPercent': p.cpuPercent,
     if (p.hasMemoryBytes) 'memoryBytes': p.memoryBytes,
     if (p.hasWorkingSetBytes) 'workingSetBytes': p.workingSetBytes,
+    // Commit charge: private memory the process holds, including what is
+    // paged out. Keeps growing when a process leaks.
+    if (p.hasCommitBytes) 'privateBytes': p.commitBytes,
     if (p.path.isNotEmpty) 'path': p.path,
   };
 
