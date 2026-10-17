@@ -6,8 +6,10 @@ namespace pulse {
 
 /// Phase 3 hardware sensors (read-only, documented Win32 Storage IOCTLs).
 ///
-/// Populates HealthSample SSD/NVMe temperature and optional SMART-ish fields
-/// when the corresponding IOCTL succeeds. Leaves has_* false otherwise.
+/// Populates HealthSample::disk_health with every physical disk (see
+/// disk_health.hpp; refreshed every few minutes) and the older single-disk
+/// temperature / SMART fields from it. Leaves has_* false when a drive does
+/// not report a value.
 ///
 /// Does **not** sample GPU telemetry — that remains in SampleGpuD3dkmtTelemetry.
 /// Does **not** invent CPU package temperature — no reliable public userspace

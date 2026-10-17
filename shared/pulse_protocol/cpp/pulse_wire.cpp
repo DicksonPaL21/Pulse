@@ -667,6 +667,35 @@ std::vector<uint8_t> EncodeHealthVolume(const HealthVolume& m) {
   return out;
 }
 
+std::vector<uint8_t> EncodeHealthDiskHealth(const HealthDiskHealth& m) {
+  std::vector<uint8_t> out;
+  WriteU32(1, m.index, &out);
+  WriteString(2, m.model, &out);
+  WriteString(3, m.bus, &out);
+  WriteBool(4, m.has_temp_c, &out);
+  WriteDouble(5, m.temp_c, &out);
+  WriteBool(6, m.has_failure_predicted, &out);
+  WriteBool(7, m.failure_predicted, &out);
+  WriteBool(8, m.has_critical_warning, &out);
+  WriteU32(9, m.critical_warning, &out);
+  WriteBool(10, m.has_percentage_used, &out);
+  WriteU32(11, m.percentage_used, &out);
+  WriteBool(12, m.has_available_spare, &out);
+  WriteU32(13, m.available_spare, &out);
+  WriteU32(14, m.available_spare_threshold, &out);
+  WriteBool(15, m.has_power_on_hours, &out);
+  WriteU64(16, m.power_on_hours, &out);
+  WriteBool(17, m.has_unsafe_shutdowns, &out);
+  WriteU64(18, m.unsafe_shutdowns, &out);
+  WriteBool(19, m.has_media_errors, &out);
+  WriteU64(20, m.media_errors, &out);
+  WriteBool(21, m.has_bytes_read, &out);
+  WriteU64(22, m.bytes_read, &out);
+  WriteBool(23, m.has_bytes_written, &out);
+  WriteU64(24, m.bytes_written, &out);
+  return out;
+}
+
 std::vector<uint8_t> EncodeHealthPhysicalDisk(const HealthPhysicalDisk& m) {
   std::vector<uint8_t> out;
   WriteString(1, m.id, &out);
@@ -905,6 +934,9 @@ std::vector<uint8_t> EncodeHealthSample(const HealthSample& m) {
   WriteU64(114, m.disk_total_bytes_read, &out);
   WriteBool(115, m.has_disk_smart_ok, &out);
   WriteBool(116, m.disk_smart_ok, &out);
+  for (const auto& d : m.disk_health) {
+    WriteBytesField(117, EncodeHealthDiskHealth(d), &out);
+  }
   return out;
 }
 
@@ -2801,6 +2833,112 @@ bool DecodeHealthVolume(const uint8_t* data, size_t len, HealthVolume* m) {
   return true;
 }
 
+bool DecodeHealthDiskHealth(const uint8_t* data, size_t len,
+                            HealthDiskHealth* m) {
+  const uint8_t* p = data;
+  const uint8_t* end = data + len;
+  while (p < end) {
+    uint64_t tag = 0;
+    if (!ReadVarint(p, end, &tag)) return false;
+    const uint32_t field = static_cast<uint32_t>(tag >> 3);
+    const uint32_t wire = static_cast<uint32_t>(tag & 7);
+    if (field == 1 && wire == 0) {
+      uint64_t v = 0;
+      if (!ReadVarint(p, end, &v)) return false;
+      m->index = static_cast<uint32_t>(v);
+    } else if (field == 2 && wire == 2) {
+      if (!DecodeString(p, end, &m->model)) return false;
+    } else if (field == 3 && wire == 2) {
+      if (!DecodeString(p, end, &m->bus)) return false;
+    } else if (field == 4 && wire == 0) {
+      uint64_t v = 0;
+      if (!ReadVarint(p, end, &v)) return false;
+      m->has_temp_c = v != 0;
+    } else if (field == 5 && wire == 1) {
+      if (!ReadDouble(p, end, &m->temp_c)) return false;
+    } else if (field == 6 && wire == 0) {
+      uint64_t v = 0;
+      if (!ReadVarint(p, end, &v)) return false;
+      m->has_failure_predicted = v != 0;
+    } else if (field == 7 && wire == 0) {
+      uint64_t v = 0;
+      if (!ReadVarint(p, end, &v)) return false;
+      m->failure_predicted = v != 0;
+    } else if (field == 8 && wire == 0) {
+      uint64_t v = 0;
+      if (!ReadVarint(p, end, &v)) return false;
+      m->has_critical_warning = v != 0;
+    } else if (field == 9 && wire == 0) {
+      uint64_t v = 0;
+      if (!ReadVarint(p, end, &v)) return false;
+      m->critical_warning = static_cast<uint32_t>(v);
+    } else if (field == 10 && wire == 0) {
+      uint64_t v = 0;
+      if (!ReadVarint(p, end, &v)) return false;
+      m->has_percentage_used = v != 0;
+    } else if (field == 11 && wire == 0) {
+      uint64_t v = 0;
+      if (!ReadVarint(p, end, &v)) return false;
+      m->percentage_used = static_cast<uint32_t>(v);
+    } else if (field == 12 && wire == 0) {
+      uint64_t v = 0;
+      if (!ReadVarint(p, end, &v)) return false;
+      m->has_available_spare = v != 0;
+    } else if (field == 13 && wire == 0) {
+      uint64_t v = 0;
+      if (!ReadVarint(p, end, &v)) return false;
+      m->available_spare = static_cast<uint32_t>(v);
+    } else if (field == 14 && wire == 0) {
+      uint64_t v = 0;
+      if (!ReadVarint(p, end, &v)) return false;
+      m->available_spare_threshold = static_cast<uint32_t>(v);
+    } else if (field == 15 && wire == 0) {
+      uint64_t v = 0;
+      if (!ReadVarint(p, end, &v)) return false;
+      m->has_power_on_hours = v != 0;
+    } else if (field == 16 && wire == 0) {
+      uint64_t v = 0;
+      if (!ReadVarint(p, end, &v)) return false;
+      m->power_on_hours = v;
+    } else if (field == 17 && wire == 0) {
+      uint64_t v = 0;
+      if (!ReadVarint(p, end, &v)) return false;
+      m->has_unsafe_shutdowns = v != 0;
+    } else if (field == 18 && wire == 0) {
+      uint64_t v = 0;
+      if (!ReadVarint(p, end, &v)) return false;
+      m->unsafe_shutdowns = v;
+    } else if (field == 19 && wire == 0) {
+      uint64_t v = 0;
+      if (!ReadVarint(p, end, &v)) return false;
+      m->has_media_errors = v != 0;
+    } else if (field == 20 && wire == 0) {
+      uint64_t v = 0;
+      if (!ReadVarint(p, end, &v)) return false;
+      m->media_errors = v;
+    } else if (field == 21 && wire == 0) {
+      uint64_t v = 0;
+      if (!ReadVarint(p, end, &v)) return false;
+      m->has_bytes_read = v != 0;
+    } else if (field == 22 && wire == 0) {
+      uint64_t v = 0;
+      if (!ReadVarint(p, end, &v)) return false;
+      m->bytes_read = v;
+    } else if (field == 23 && wire == 0) {
+      uint64_t v = 0;
+      if (!ReadVarint(p, end, &v)) return false;
+      m->has_bytes_written = v != 0;
+    } else if (field == 24 && wire == 0) {
+      uint64_t v = 0;
+      if (!ReadVarint(p, end, &v)) return false;
+      m->bytes_written = v;
+    } else if (!SkipField(wire, p, end)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 bool DecodeHealthPhysicalDisk(const uint8_t* data, size_t len,
                               HealthPhysicalDisk* m) {
   const uint8_t* p = data;
@@ -3572,6 +3710,16 @@ bool DecodeHealthSample(const uint8_t* data, size_t len, HealthSample* m) {
       uint64_t v = 0;
       if (!ReadVarint(p, end, &v)) return false;
       m->disk_smart_ok = v != 0;
+    } else if (field == 117 && wire == 2) {
+      uint64_t blen = 0;
+      if (!ReadVarint(p, end, &blen)) return false;
+      if (p + blen > end) return false;
+      HealthDiskHealth disk;
+      if (!DecodeHealthDiskHealth(p, static_cast<size_t>(blen), &disk)) {
+        return false;
+      }
+      m->disk_health.push_back(std::move(disk));
+      p += blen;
     } else if (!SkipField(wire, p, end)) {
       return false;
     }
