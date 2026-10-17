@@ -1051,6 +1051,8 @@ class ProcessDetails {
     this.hasArchitecture = false,
     this.productName = '',
     this.hasProductName = false,
+    this.cpuTimeMs = 0,
+    this.hasCpuTime = false,
   });
   int pid;
   String name;
@@ -1078,6 +1080,10 @@ class ProcessDetails {
   bool hasArchitecture;
   String productName;
   bool hasProductName;
+
+  /// User + kernel CPU time since the process started (GetProcessTimes).
+  int cpuTimeMs;
+  bool hasCpuTime;
 }
 
 enum HealthDriveKind {
@@ -2138,6 +2144,8 @@ Uint8List _encodeProcessDetails(ProcessDetails m) {
   _writeBool(24, m.hasArchitecture, out);
   _writeString(25, m.productName, out);
   _writeBool(26, m.hasProductName, out);
+  _writeU64(27, m.cpuTimeMs, out);
+  _writeBool(28, m.hasCpuTime, out);
   return out.toBytes();
 }
 
@@ -3796,6 +3804,10 @@ ProcessDetails _decodeProcessDetails(Uint8List data) {
       m.productName = r.readString();
     } else if (field == 26 && wire == 0) {
       m.hasProductName = r.readVarint() != 0;
+    } else if (field == 27 && wire == 0) {
+      m.cpuTimeMs = r.readVarint();
+    } else if (field == 28 && wire == 0) {
+      m.hasCpuTime = r.readVarint() != 0;
     } else {
       r.skip(wire);
     }

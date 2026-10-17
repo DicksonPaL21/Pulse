@@ -405,6 +405,8 @@ int main() {
   details.has_architecture = true;
   details.product_name = "Pulse";
   details.has_product_name = true;
+  details.cpu_time_ms = 123456789012ULL;
+  details.has_cpu_time = true;
   Envelope det_env;
   det_env.request_id = 12;
   det_env.body = details;
@@ -422,7 +424,8 @@ int main() {
   const auto& det = std::get<ProcessDetails>(det_decoded.body);
   if (det.pid != 55 || det.company != "Pulse" || !det.has_command_line ||
       det.thread_count != 12 || det.parent_pid != 4 ||
-      det.architecture != "x64" || det.product_name != "Pulse") {
+      det.architecture != "x64" || det.product_name != "Pulse" ||
+      !det.has_cpu_time || det.cpu_time_ms != 123456789012ULL) {
     std::cerr << "ProcessDetails fields mismatch\n";
     return 10;
   }

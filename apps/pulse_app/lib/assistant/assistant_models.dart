@@ -94,6 +94,7 @@ String assistantToolConsultedLabel(String toolName) {
     'timeline_list' => 'Timeline',
     'timeline_search' => 'Timeline search',
     'diagnostics_snapshot' => 'Diagnostics',
+    'windows_services' => 'Windows services',
     'service_status' => 'PulseService',
     _ => toolName,
   };

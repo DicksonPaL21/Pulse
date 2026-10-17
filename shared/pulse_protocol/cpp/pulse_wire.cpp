@@ -650,6 +650,8 @@ std::vector<uint8_t> EncodeProcessDetails(const ProcessDetails& m) {
   WriteBool(24, m.has_architecture, &out);
   WriteString(25, m.product_name, &out);
   WriteBool(26, m.has_product_name, &out);
+  WriteU64(27, m.cpu_time_ms, &out);
+  WriteBool(28, m.has_cpu_time, &out);
   return out;
 }
 
@@ -2751,6 +2753,14 @@ bool DecodeProcessDetails(const uint8_t* data, size_t len, ProcessDetails* m) {
       uint64_t v = 0;
       if (!ReadVarint(p, end, &v)) return false;
       m->has_product_name = v != 0;
+    } else if (field == 27 && wire == 0) {
+      uint64_t v = 0;
+      if (!ReadVarint(p, end, &v)) return false;
+      m->cpu_time_ms = v;
+    } else if (field == 28 && wire == 0) {
+      uint64_t v = 0;
+      if (!ReadVarint(p, end, &v)) return false;
+      m->has_cpu_time = v != 0;
     } else if (!SkipField(wire, p, end)) {
       return false;
     }
