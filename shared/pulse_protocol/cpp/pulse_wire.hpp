@@ -296,6 +296,9 @@ struct ProcessDetails {
   bool has_architecture = false;
   std::string product_name;
   bool has_product_name = false;
+  /// User + kernel CPU time since the process started (GetProcessTimes).
+  uint64_t cpu_time_ms = 0;
+  bool has_cpu_time = false;
 };
 
 enum class HealthDriveKind : uint32_t {
