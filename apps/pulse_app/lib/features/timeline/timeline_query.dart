@@ -28,6 +28,10 @@ enum TimelineDateRangeFilter {
   lastHour,
   last24Hours,
   last7Days,
+
+  /// From / to chosen by the user ([TimelineQuery.customFromUnixMs],
+  /// [TimelineQuery.customToUnixMs]).
+  custom,
 }
 
 /// Client-side Timeline filter + search criteria.
@@ -46,6 +50,8 @@ class TimelineQuery {
     this.processContains = '',
     this.computerContains = '',
     this.nowUnixMs,
+    this.customFromUnixMs,
+    this.customToUnixMs,
   });
 
   final TimelineSeverityFilter severity;
@@ -72,6 +78,11 @@ class TimelineQuery {
   /// Clock for date-range filters (injectable for tests). Defaults to wall clock.
   final int? nowUnixMs;
 
+  /// Inclusive bounds (UTC milliseconds) for [TimelineDateRangeFilter.custom].
+  /// A missing bound leaves that side open.
+  final int? customFromUnixMs;
+  final int? customToUnixMs;
+
   bool get isActive =>
       severity != TimelineSeverityFilter.all ||
       source != TimelineSourceFilter.all ||
@@ -95,6 +106,8 @@ class TimelineQuery {
     String? computerContains,
     int? nowUnixMs,
     bool clearNowUnixMs = false,
+    int? customFromUnixMs,
+    int? customToUnixMs,
   }) {
     return TimelineQuery(
       severity: severity ?? this.severity,
@@ -107,6 +120,8 @@ class TimelineQuery {
       processContains: processContains ?? this.processContains,
       computerContains: computerContains ?? this.computerContains,
       nowUnixMs: clearNowUnixMs ? null : (nowUnixMs ?? this.nowUnixMs),
+      customFromUnixMs: customFromUnixMs ?? this.customFromUnixMs,
+      customToUnixMs: customToUnixMs ?? this.customToUnixMs,
     );
   }
 
@@ -168,6 +183,12 @@ class TimelineQuery {
   bool _matchesDateRange(TimelineEvent e) {
     if (dateRange == TimelineDateRangeFilter.all) return true;
     if (e.timestampUnixMs <= 0) return false;
+    if (dateRange == TimelineDateRangeFilter.custom) {
+      final from = customFromUnixMs;
+      final to = customToUnixMs;
+      return (from == null || e.timestampUnixMs >= from) &&
+          (to == null || e.timestampUnixMs <= to);
+    }
     final now = nowUnixMs ?? DateTime.now().toUtc().millisecondsSinceEpoch;
     final windowMs = switch (dateRange) {
       TimelineDateRangeFilter.all => 0,
@@ -175,6 +196,7 @@ class TimelineQuery {
       TimelineDateRangeFilter.lastHour => 60 * 60 * 1000,
       TimelineDateRangeFilter.last24Hours => 24 * 60 * 60 * 1000,
       TimelineDateRangeFilter.last7Days => 7 * 24 * 60 * 60 * 1000,
+      TimelineDateRangeFilter.custom => 0,
     };
     return e.timestampUnixMs >= now - windowMs;
   }
