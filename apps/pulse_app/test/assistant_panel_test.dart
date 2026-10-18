@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:pulse/app/theme/pulse_theme.dart';
@@ -250,6 +251,53 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
     expect(find.text('world'), findsOneWidget);
+  });
+
+  testWidgets('Enter sends; Shift+Enter adds a line', (tester) async {
+    final gate = Completer<LocalAiChatTurn>();
+    final provider = _BlockingChatProvider(
+      status: LocalAiProviderStatus.ready(
+        models: const [LocalAiModel(id: 'm', displayName: 'Model')],
+      ),
+      nextTurn: gate.future,
+    );
+    final assistant = await _controller(
+      providers: [provider],
+      preferredProviderId: 'ollama',
+      preferredModelId: 'm',
+    );
+    await assistant.load();
+    await tester.pumpWidget(
+      _wrapAssistantPage(assistant: assistant, shellNav: ShellNavigation()),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byType(TextField));
+    await tester.enterText(find.byType(TextField), 'first line');
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pump();
+    // The new line itself comes from the platform text input, which widget
+    // tests do not simulate; what matters here is that nothing was sent.
+    expect(assistant.awaitingReply, isFalse, reason: 'Shift+Enter must not send');
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller?.text,
+      'first line',
+    );
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+    await tester.pump();
+    expect(assistant.awaitingReply, isTrue, reason: 'Enter sends');
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller?.text,
+      isEmpty,
+    );
+
+    gate.complete(const LocalAiChatTurn(content: 'ok'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
   });
 
   testWidgets('persisted model can be changed from chat header', (tester) async {
