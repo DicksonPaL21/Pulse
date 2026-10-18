@@ -128,9 +128,13 @@ class HealthDetailsPanel extends StatelessWidget {
           ? formatMemorySize(i!.installedRamBytes)
           : null,
       HealthPanelKind.gpu => _orNull(i?.gpuModel),
-      HealthPanelKind.disk => (i?.primaryStorageBytes ?? 0) > 0
-          ? formatBytesBinary(i!.primaryStorageBytes, fractionDigits: 0)
-          : null,
+      HealthPanelKind.disk => switch (localStorageTotals(view.sample)) {
+          final totals? =>
+            formatBytesBinary(totals.totalBytes, fractionDigits: 0),
+          null => (i?.primaryStorageBytes ?? 0) > 0
+              ? formatBytesBinary(i!.primaryStorageBytes, fractionDigits: 0)
+              : null,
+        },
       HealthPanelKind.network => _orNull(i?.activeNetworkAdapter),
       HealthPanelKind.hardware => 'Sensors',
     };
@@ -1141,8 +1145,12 @@ class _DiskPanelBody extends StatelessWidget {
     final volumes = s?.volumes ?? const <HealthVolume>[];
     final disks = s?.disks ?? const <HealthPhysicalDisk>[];
     final diskHealth = s?.diskHealth ?? const <HealthDiskHealth>[];
-    final total = s?.diskTotalBytes ?? i?.primaryStorageBytes ?? 0;
-    final used = s?.diskUsedBytes ?? 0;
+    // Every local drive together; the system drive alone when volumes are
+    // not reported.
+    final totals = localStorageTotals(s);
+    final total =
+        totals?.totalBytes ?? s?.diskTotalBytes ?? i?.primaryStorageBytes ?? 0;
+    final used = totals?.usedBytes ?? s?.diskUsedBytes ?? 0;
     final free = total > used ? total - used : 0;
     final usagePct = total > 0 ? used * 100.0 / total : null;
     final capacity = total > 0
@@ -1150,6 +1158,9 @@ class _DiskPanelBody extends StatelessWidget {
         : kUnavailableDash;
     final freeLabel =
         total > 0 ? formatBytesBinary(free) : kUnavailableDash;
+    final capacityLabel = (totals?.driveCount ?? 1) > 1
+        ? 'Total (${totals!.driveCount} drives)'
+        : 'Primary';
     final read = s?.hasDiskReadBps == true
         ? formatDiskRate(s!.diskReadBps)
         : kNotSupported;
@@ -1272,7 +1283,7 @@ class _DiskPanelBody extends StatelessWidget {
                           child: _SpecList(
                             compact: true,
                             rows: [
-                              ('Primary', capacity),
+                              (capacityLabel, capacity),
                               ('Free', freeLabel),
                             ],
                           ),
