@@ -31,14 +31,31 @@ void main() {
       matches(RegExp(r'^pulse-app-\d{4}-\d{2}-\d{2}\.jsonl$')),
     );
 
-    final entries = files.single
-        .readAsLinesSync()
+    // One UTF-8 byte order mark at the start, none before later lines.
+    final bytes = files.single.readAsBytesSync();
+    expect(bytes.take(3), [0xEF, 0xBB, 0xBF]);
+    final entries = const LineSplitter()
+        .convert(utf8.decode(bytes.sublist(3)))
         .map((l) => jsonDecode(l) as Map<String, dynamic>)
         .toList();
     expect(entries.map((e) => e['level']), ['info', 'error']);
     expect(entries.last['component'], 'Test');
     expect(entries.last['message'], 'second "quoted"');
     expect(DateTime.tryParse(entries.first['timestamp'] as String), isNotNull);
+  });
+
+  test('localized text is stored as UTF-8 after the byte order mark', () {
+    final file = AppLogFile(dir);
+    AppLogger(file: file).warn('Test', 'Odmowa dostępu — Erişim engellendi');
+    file.close();
+
+    final text = utf8.decode(
+      dir.listSync().whereType<File>().single.readAsBytesSync().sublist(3),
+    );
+    expect(
+      (jsonDecode(text.trim()) as Map<String, dynamic>)['message'],
+      'Odmowa dostępu — Erişim engellendi',
+    );
   });
 
   test('pruneOldFiles removes only expired daily files', () {

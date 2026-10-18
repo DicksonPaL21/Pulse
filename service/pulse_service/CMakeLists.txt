@@ -165,6 +165,13 @@ target_include_directories(crash_explainer_tests PRIVATE
 target_link_libraries(crash_explainer_tests PRIVATE pulse_wire)
 add_test(NAME crash_explainer_tests COMMAND crash_explainer_tests)
 
+add_executable(logger_tests
+  test/logger_test.cpp
+  src/logging/logger.cpp
+)
+target_include_directories(logger_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+add_test(NAME logger_tests COMMAND logger_tests)
+
 add_executable(wake_explainer_tests
   test/wake_explainer_test.cpp
   src/intelligence/event_intelligence.cpp
