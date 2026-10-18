@@ -1292,6 +1292,7 @@ class _DiskPanelBody extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     HealthSpecSection(
+                      title: 'System disk',
                       compact: true,
                       rows: driveIdentityRows,
                     ),
