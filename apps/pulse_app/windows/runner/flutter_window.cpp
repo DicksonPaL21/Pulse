@@ -7,7 +7,16 @@
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
     : project_(project) {}
 
-FlutterWindow::~FlutterWindow() {}
+FlutterWindow::~FlutterWindow() {
+  // window_manager's destroy() only posts WM_QUIT, so the window can still
+  // exist when this object goes away. Deleting the controller destroys the
+  // Flutter view, whose window sends WM_PARENTNOTIFY to this window. The
+  // unique_ptr destructor deletes without clearing the pointer, so
+  // MessageHandler forwarded that message to a half-destroyed controller and
+  // crashed (issue #32). reset() clears the pointer first, so the message is
+  // no longer forwarded.
+  flutter_controller_.reset();
+}
 
 bool FlutterWindow::OnCreate() {
   if (!Win32Window::OnCreate()) {
