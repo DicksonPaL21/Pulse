@@ -11,7 +11,7 @@ jobs:
     # Microsoft Visual Studio\18\...). Visual Studio 17 2022 is no longer installed.
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v3
       - name: Configure
@@ -24,7 +24,7 @@ jobs:
   flutter:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
@@ -41,7 +41,7 @@ jobs:
   store_msix:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: microsoft/setup-msbuild@v3
       - uses: subosito/flutter-action@v2
         with:
@@ -50,7 +50,7 @@ jobs:
         run: powershell -ExecutionPolicy Bypass -File .\tools\scripts\package_msix_store.ps1
       - name: Upload Store package artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: pulse-store-msix
           path: |
