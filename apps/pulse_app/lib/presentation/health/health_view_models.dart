@@ -350,7 +350,7 @@ List<HealthSpecRowData> diskHealthRows(HealthDiskHealth disk) => [
         ),
       if (disk.hasPowerOnHours)
         (
-          'Power-On Hours',
+          'Power-on time',
           formatPowerOnHours(true, disk.powerOnHours),
         ),
       if (disk.hasUnsafeShutdowns)

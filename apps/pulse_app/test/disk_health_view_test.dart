@@ -51,7 +51,7 @@ void main() {
     expect(rows['Spare capacity'], '100% (warns below 10%)');
     expect(rows['Unsafe shutdowns'], '133');
     expect(rows['Media errors'], '0');
-    expect(rows['Power-On Hours'], '235 d 7 h');
+    expect(rows['Power-on time'], '235 d 7 h');
     expect(rows.containsKey('Total Data Written'), isTrue);
     expect(rows.containsKey('Total Data Read'), isFalse);
   });

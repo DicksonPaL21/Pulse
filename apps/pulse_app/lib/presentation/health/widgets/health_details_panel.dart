@@ -1237,7 +1237,7 @@ class _DiskPanelBody extends StatelessWidget {
         ),
       ),
       HealthSpecRow(
-        label: 'Power-On Hours',
+        label: 'Power-on time',
         value: formatPowerOnHours(
           s?.hasDiskPowerOnHours ?? false,
           s?.diskPowerOnHours ?? 0,
@@ -1471,7 +1471,7 @@ class _HardwarePanelBody extends StatelessWidget {
                       ),
                     ),
                     HealthSpecRow(
-                      label: 'Power-On Hours',
+                      label: 'Power-on time',
                       value: formatPowerOnHours(
                         s?.hasDiskPowerOnHours ?? false,
                         s?.diskPowerOnHours ?? 0,
