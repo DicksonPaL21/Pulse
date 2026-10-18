@@ -9,6 +9,7 @@ import '../../assistant/local_ai_types.dart';
 import '../components/pulse_button.dart';
 import '../components/pulse_section_header.dart';
 import '../design_system/pulse_dialog.dart';
+import 'assistant_markdown.dart';
 
 /// In-page Assistant workspace (sidebar destination content).
 class AssistantView extends StatelessWidget {
@@ -988,7 +989,15 @@ class _ChatBubble extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                 ],
-                if (message.text.isNotEmpty)
+                if (message.text.isNotEmpty && !isUser && !message.isError)
+                  // Replies use Markdown (**bold**, lists, `code`).
+                  AssistantMarkdown(
+                    text: message.text,
+                    style: (Theme.of(context).textTheme.bodyMedium ??
+                            const TextStyle())
+                        .copyWith(color: fg, height: 1.5, fontSize: 14.5),
+                  )
+                else if (message.text.isNotEmpty)
                   Text(
                     message.text,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
