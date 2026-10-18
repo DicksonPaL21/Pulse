@@ -90,7 +90,7 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "Regn Creative" "\0"
-            VALUE "FileDescription", "Windows Diagnostics" "\0"
+            VALUE "FileDescription", "Pulse" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "Pulse" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 Regn Creative. All rights reserved." "\0"
