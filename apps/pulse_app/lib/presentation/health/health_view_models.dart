@@ -365,13 +365,17 @@ List<HealthSpecRowData> diskHealthRows(HealthDiskHealth disk) => [
 /// (label, value) pair for [diskHealthRows].
 typedef HealthSpecRowData = (String, String);
 
-/// Boolean configuration flag — "Not supported" when the capability was never
-/// reported (e.g. Resizable BAR without a clean public query path).
-String formatBoolOrNotSupported(bool has, bool value,
-    {String yes = 'Yes', String no = 'No'}) {
-  if (!has) return kNotSupported;
-  return value ? yes : no;
+/// Resizable BAR: Windows has no documented query for it, so the service
+/// never reports it. "Unknown", not "Not supported", so it is not read as
+/// "this GPU lacks Resizable BAR" (issue #31).
+String formatResizableBar(bool has, bool enabled) {
+  if (!has) return 'Unknown';
+  return enabled ? 'Enabled' : 'Disabled';
 }
+
+const String kResizableBarHint =
+    'Windows has no documented way to read this. The GPU maker’s control '
+    'panel shows it (NVIDIA Control Panel → System Information).';
 
 /// Boolean configuration flag (Yes/No style) — dash when not queried.
 String formatBoolOrDash(bool has, bool value, {String yes = 'Yes', String no = 'No'}) {

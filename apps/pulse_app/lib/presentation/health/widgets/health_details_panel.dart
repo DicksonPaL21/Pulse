@@ -848,10 +848,13 @@ class _GpuPanelBody extends StatelessWidget {
                     ),
                     HealthSpecRow(
                       label: 'Resizable BAR',
-                      value: formatBoolOrNotSupported(
+                      value: formatResizableBar(
                         i?.hasGpuResizableBar ?? false,
                         i?.gpuResizableBar ?? false,
                       ),
+                      description: (i?.hasGpuResizableBar ?? false)
+                          ? null
+                          : kResizableBarHint,
                     ),
                     HealthSpecRow(
                       label: 'PCIe Speed',
