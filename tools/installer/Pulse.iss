@@ -188,7 +188,9 @@ begin
       Log('Closing Pulse.exe (PID ' +
           IntToStr(Process.Properties_.Item('ProcessId').Value) +
           ') before uninstall');
-      Process.ExecMethod_('Terminate');
+      { Late-bound like VBScript; ExecMethod_ without input parameters
+        fails here with "Invalid parameter". 0 is the exit code. }
+      Process.Terminate(0);
     end;
     if Processes.Count > 0 then
       Sleep(1000);  { Let Windows release the closed process's files. }
