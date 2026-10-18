@@ -162,3 +162,43 @@ begin
 
   WizardForm.StatusLabel.Caption := 'PulseService is running.';
 end;
+
+{ Uninstall: close Pulse.exe from this install folder first. CloseApplications
+  only applies to Setup, so a Pulse running in the tray kept running after
+  the uninstall (its files were left for the next restart). AppMutex would
+  only ask the user to close it, and would also block upgrades. Only this
+  folder's Pulse.exe is closed; copies elsewhere are left alone. }
+procedure ClosePulseFromInstallFolder;
+var
+  Locator, Service, Processes, Process: Variant;
+  AppExe, Query: String;
+  I: Integer;
+begin
+  AppExe := ExpandConstant('{app}\{#MyAppExeName}');
+  { WQL string literals need doubled backslashes. }
+  StringChangeEx(AppExe, '\', '\\', True);
+  Query := 'SELECT ProcessId FROM Win32_Process WHERE ExecutablePath = ''' + AppExe + '''';
+  try
+    Locator := CreateOleObject('WbemScripting.SWbemLocator');
+    Service := Locator.ConnectServer('.', 'root\CIMV2');
+    Processes := Service.ExecQuery(Query);
+    for I := 0 to Processes.Count - 1 do
+    begin
+      Process := Processes.ItemIndex(I);
+      Log('Closing Pulse.exe (PID ' +
+          IntToStr(Process.Properties_.Item('ProcessId').Value) +
+          ') before uninstall');
+      Process.ExecMethod_('Terminate');
+    end;
+    if Processes.Count > 0 then
+      Sleep(1000);  { Let Windows release the closed process's files. }
+  except
+    Log('Could not close Pulse.exe before uninstall: ' + GetExceptionMessage);
+  end;
+end;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+begin
+  if CurUninstallStep = usUninstall then
+    ClosePulseFromInstallFolder;
+end;
