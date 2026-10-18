@@ -288,6 +288,47 @@ String formatDiskHealthStatus(HealthDiskHealth disk) {
   return 'Warning: ${reasons.join('; ')}';
 }
 
+/// Capacity of all local fixed drives together (issue #29).
+///
+/// The service's diskTotalBytes / diskUsedBytes describe only the system
+/// drive; that stays right for "is the system drive full?", but the Disk
+/// panel shows every local drive.
+class LocalStorageTotals {
+  const LocalStorageTotals({
+    required this.totalBytes,
+    required this.usedBytes,
+    required this.driveCount,
+  });
+
+  final int totalBytes;
+  final int usedBytes;
+  final int driveCount;
+
+  int get freeBytes => totalBytes > usedBytes ? totalBytes - usedBytes : 0;
+  double get usedPercent => usedBytes * 100.0 / totalBytes;
+}
+
+/// Sums the fixed volumes the service marks for the summary. Null when none
+/// report a capacity.
+LocalStorageTotals? localStorageTotals(HealthSample? sample) {
+  var total = 0;
+  var used = 0;
+  var count = 0;
+  for (final volume in sample?.volumes ?? const <HealthVolume>[]) {
+    if (!volume.includedInSummary || !volume.hasCapacity) continue;
+    if (volume.totalBytes <= 0) continue;
+    total += volume.totalBytes;
+    used += volume.usedBytes;
+    count++;
+  }
+  if (count == 0) return null;
+  return LocalStorageTotals(
+    totalBytes: total,
+    usedBytes: used,
+    driveCount: count,
+  );
+}
+
 /// Section title for one physical disk, e.g. "Disk 2 · Samsung SSD 980 · NVMe".
 String diskHealthTitle(HealthDiskHealth disk) => [
       'Disk ${disk.index}',

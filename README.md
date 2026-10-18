@@ -80,6 +80,8 @@ Windows ships two tools for this. Pulse does not replace them; it sits between t
 
 ## What's new in 1.4
 
+**1.4.2**: the Disk panel totals every drive and shows the system disk's details again.
+
 **1.4.1**
 
 - **Health for every disk**: temperature and SMART for each disk, and for NVMe drives wear, spare capacity, power-on time, unsafe shutdowns and media errors.
@@ -94,7 +96,7 @@ Windows ships two tools for this. Pulse does not replace them; it sits between t
 - **Reports you can share.** Exports mask user and computer names, profile paths, account SIDs, IP and MAC addresses and serial numbers by default.
 - **Update notice** for the GitHub edition (manual or weekly, off by default).
 
-Full notes: [v1.4.1](docs/releases/v1.4.1.md) · [v1.4.0](docs/releases/v1.4.0.md) · [CHANGELOG](CHANGELOG.md)
+Full notes: [v1.4.2](docs/releases/v1.4.2.md) · [v1.4.1](docs/releases/v1.4.1.md) · [v1.4.0](docs/releases/v1.4.0.md) · [CHANGELOG](CHANGELOG.md)
 
 ---
 
@@ -161,7 +163,7 @@ The release also has a payload ZIP. It still needs PulseService and is not a por
 Each release lists SHA-256 checksums in `SHA256SUMS.txt`:
 
 ```powershell
-Get-FileHash .\Pulse-Setup-1.4.1-windows-x64.exe -Algorithm SHA256
+Get-FileHash .\Pulse-Setup-1.4.2-windows-x64.exe -Algorithm SHA256
 ```
 
 Releases are not code-signed yet (see [Code signing policy](#code-signing-policy)), so SmartScreen or some antivirus tools may warn about a new file. More help: [installation guide](docs/guides/installation.md) · [troubleshooting](docs/guides/troubleshooting.md) · [upgrade notes](docs/guides/upgrade-notes.md)
@@ -272,7 +274,7 @@ Every feature should answer one question: **"What is Windows doing right now?"**
 | [AGENTS.md](AGENTS.md) | Product principles and development rules |
 | [docs/architecture](docs/architecture/README.md) | Architecture package and ADRs |
 | [docs/guides](docs/guides/installation.md) | Installation, troubleshooting, upgrade notes, security |
-| [docs/releases](docs/releases/v1.4.1.md) | Release notes |
+| [docs/releases](docs/releases/v1.4.2.md) | Release notes |
 | [CHANGELOG.md](CHANGELOG.md) | Version history |
 | [BUILD.md](BUILD.md) · [DEVELOPMENT.md](DEVELOPMENT.md) | Building and local workflow |
 | [CONTRIBUTING.md](CONTRIBUTING.md) · [SECURITY.md](SECURITY.md) | Contributing and vulnerability reports |

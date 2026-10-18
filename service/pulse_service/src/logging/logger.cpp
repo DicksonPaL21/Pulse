@@ -14,6 +14,9 @@
 namespace pulse {
 namespace {
 
+/// UTF-8 byte order mark (EF BB BF) written at the start of each log file.
+constexpr const char* kUtf8ByteOrderMark = "\xEF\xBB\xBF";
+
 const char* LevelName(LogLevel level) {
   switch (level) {
     case LogLevel::Debug:
@@ -112,8 +115,17 @@ void Logger::Log(LogLevel level, const std::string& component,
       std::ostringstream name;
       name << "pulse-service-" << std::put_time(&tm, "%Y-%m-%d") << ".jsonl";
       const auto path = std::filesystem::path(log_dir_) / name.str();
+      std::error_code ec;
+      const bool new_file = !std::filesystem::exists(path, ec) ||
+                            std::filesystem::file_size(path, ec) == 0;
       std::ofstream f(path, std::ios::app | std::ios::binary);
       if (f) {
+        if (new_file) {
+          // Lines are UTF-8. The byte order mark lets Notepad, PowerShell 5
+          // and other Windows tools read localized messages correctly
+          // instead of assuming the ANSI code page (issue #29).
+          f << kUtf8ByteOrderMark;
+        }
         f << text << '\n';
       }
     }

@@ -4,6 +4,9 @@ import 'dart:io';
 /// Days of daily app log files kept under the log folder.
 const int kAppLogRetentionDays = 14;
 
+/// UTF-8 byte order mark written at the start of each new log file.
+const List<int> _utf8ByteOrderMark = [0xEF, 0xBB, 0xBF];
+
 /// Daily JSON-lines log file for Pulse.exe, in the same shape as the
 /// PulseService log (`timestamp`, `level`, `component`, `message`).
 ///
@@ -41,6 +44,11 @@ class AppLogFile {
             '${directory.path}${Platform.pathSeparator}pulse-app-$day.jsonl';
         _file = File(path).openSync(mode: FileMode.append);
         _openDay = day;
+        if (_file!.lengthSync() == 0) {
+          // Lines are UTF-8; the byte order mark lets Notepad and
+          // PowerShell 5 show localized text instead of assuming ANSI.
+          _file!.writeFromSync(_utf8ByteOrderMark);
+        }
       }
       final line = jsonEncode({
         'timestamp': utc.toIso8601String(),

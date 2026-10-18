@@ -13,7 +13,8 @@ void EnrichCpuOverview(ipc::HealthStaticInfo* info);
 /// SMBIOS Type 17 memory modules — unset when unavailable.
 void EnrichMemoryModules(ipc::HealthStaticInfo* info);
 
-/// Primary physical disk identity via Storage IOCTLs — unset when unavailable.
+/// Identity of the physical disk holding Windows, via Storage IOCTLs — unset
+/// when unavailable.
 void EnrichPrimaryDiskIdentity(ipc::HealthStaticInfo* info);
 
 /// Rich network adapter static + sample fields for the active adapter.

@@ -424,6 +424,41 @@ void SampleWifiInfo(ipc::HealthSample* out) {
   WlanCloseHandle(client, nullptr);
 }
 
+/// Physical disk number holding the Windows volume (the first extent when
+/// the volume spans disks), or 0 when it cannot be read.
+DWORD SystemDiskNumber() {
+  wchar_t windows_dir[MAX_PATH] = {};
+  if (GetSystemWindowsDirectoryW(windows_dir, MAX_PATH) == 0 ||
+      windows_dir[0] == L'\0') {
+    return 0;
+  }
+  wchar_t volume[] = L"\\\\.\\?:";
+  volume[4] = windows_dir[0];
+  // Desired access 0 is enough for IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS.
+  HANDLE handle = CreateFileW(volume, 0, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                              nullptr, OPEN_EXISTING, 0, nullptr);
+  if (handle == INVALID_HANDLE_VALUE) {
+    return 0;
+  }
+  constexpr DWORD kMaxExtents = 8;
+  std::vector<uint8_t> buffer(sizeof(VOLUME_DISK_EXTENTS) +
+                              kMaxExtents * sizeof(DISK_EXTENT));
+  DWORD returned = 0;
+  DWORD disk_number = 0;
+  if (DeviceIoControl(handle, IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS, nullptr, 0,
+                      buffer.data(), static_cast<DWORD>(buffer.size()),
+                      &returned, nullptr) &&
+      returned >= sizeof(VOLUME_DISK_EXTENTS)) {
+    const auto* extents =
+        reinterpret_cast<const VOLUME_DISK_EXTENTS*>(buffer.data());
+    if (extents->NumberOfDiskExtents > 0) {
+      disk_number = extents->Extents[0].DiskNumber;
+    }
+  }
+  CloseHandle(handle);
+  return disk_number;
+}
+
 }  // namespace
 
 void EnrichCpuOverview(ipc::HealthStaticInfo* info) {
@@ -652,8 +687,14 @@ void EnrichMemoryModules(ipc::HealthStaticInfo* info) {
 void EnrichPrimaryDiskIdentity(ipc::HealthStaticInfo* info) {
   if (info == nullptr) return;
 
+  // Desired access 0: the property, geometry and layout queries below work
+  // on such a handle, while GENERIC_READ needs administrator rights and fails
+  // for the LocalService account (issue #29).
+  // The disk holding Windows, not simply PhysicalDrive0 (issue #29).
+  wchar_t disk_path[64];
+  swprintf_s(disk_path, L"\\\\.\\PhysicalDrive%lu", SystemDiskNumber());
   HANDLE disk = CreateFileW(
-      L"\\\\.\\PhysicalDrive0", GENERIC_READ,
+      disk_path, 0,
       FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, 0, nullptr);
   if (disk == INVALID_HANDLE_VALUE) return;
 

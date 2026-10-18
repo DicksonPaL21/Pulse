@@ -121,4 +121,31 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.textContaining('read-only'), findsOneWidget);
   });
+
+  test('the Disk panel totals every local fixed drive (issue #29)', () {
+    HealthVolume volume(String id, int total, int used, {bool fixed = true}) =>
+        HealthVolume(
+          id: id,
+          totalBytes: total,
+          usedBytes: used,
+          hasCapacity: true,
+          includedInSummary: fixed,
+        );
+    const tib = 1 << 40;
+    final totals = localStorageTotals(
+      HealthSample(
+        volumes: [
+          volume('C:', 2 * tib, tib ~/ 10),
+          volume('D:', 2 * tib, tib ~/ 2),
+          volume('E:', 64 << 30, 1 << 30, fixed: false), // USB stick
+        ],
+      ),
+    )!;
+    expect(totals.driveCount, 2);
+    expect(totals.totalBytes, 4 * tib);
+    expect(totals.usedBytes, tib ~/ 10 + tib ~/ 2);
+    expect(totals.freeBytes, 4 * tib - (tib ~/ 10 + tib ~/ 2));
+
+    expect(localStorageTotals(HealthSample()), isNull);
+  });
 }

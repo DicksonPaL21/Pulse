@@ -11,15 +11,15 @@
   GitHub / Inno Setup packaging is unchanged (package_beta.ps1 + Pulse.iss).
 
   Outputs under dist/msix/:
-    PulseDiagnostics-1.4.1-Store.msix
-    PulseDiagnostics-1.4.1-Store.msixupload
+    PulseDiagnostics-1.4.2-Store.msix
+    PulseDiagnostics-1.4.2-Store.msixupload
     AppxManifest.identity.txt
     store-validation-report.txt
 #>
 $ErrorActionPreference = "Stop"
 
-$Version = "1.4.1"
-$MsixVersion = "1.4.1.0"
+$Version = "1.4.2"
+$MsixVersion = "1.4.2.0"
 $ExpectedIdentity = "Regncreative.PulseDiagnostics"
 $ExpectedPublisher = "CN=72B69D57-C9E8-4280-AF56-B142286B0D20"
 $ExpectedDisplayName = "Pulse Diagnostics"
