@@ -5,6 +5,22 @@ All notable changes to Pulse are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.3] — 2026-10-18
+
+### Added
+
+- Timeline date filter: *Custom…* picks a from / to date and time; kept in saved searches (#15)
+- Assistant replies render Markdown: bold, italic, inline code, headings, lists and code blocks (links are not clickable)
+
+### Fixed
+
+- Pulse could crash in flutter_windows.dll when it closed (#32)
+- Resizable BAR showed "Not supported" although Windows offers no way to read it; it now shows *Unknown* (#31)
+- Assistant: Enter now sends the message; Shift+Enter adds a line
+- Uninstalling left a running Pulse in the tray and its files behind; the uninstaller now closes it first
+- Task Manager listed Pulse as "Windows Diagnostics"; it now shows *Pulse*
+- Disk health: "Power-On Hours" is now labelled *Power-on time*, matching its days-and-hours value
+
 ## [1.4.2] — 2026-10-18
 
 ### Fixed

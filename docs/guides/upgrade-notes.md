@@ -1,5 +1,11 @@
 # Upgrade notes
 
+## To 1.4.3
+
+- Installer: `Pulse-Setup-1.4.3-windows-x64.exe`
+- Product stamp is **`1.4.3`** (UI, PulseService)
+- The uninstaller now closes a running Pulse from the install folder before removing it
+
 ## To 1.4.2
 
 - Installer: `Pulse-Setup-1.4.2-windows-x64.exe`
