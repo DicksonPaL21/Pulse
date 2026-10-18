@@ -1,5 +1,11 @@
 # Upgrade notes
 
+## To 1.4.2
+
+- Installer: `Pulse-Setup-1.4.2-windows-x64.exe`
+- Product stamp is **`1.4.2`** (UI, PulseService)
+- New log files start with a UTF-8 byte order mark; today's existing file is unchanged
+
 ## To 1.4.1
 
 - Installer: `Pulse-Setup-1.4.1-windows-x64.exe`

@@ -5,6 +5,15 @@ All notable changes to Pulse are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.2] — 2026-10-18
+
+### Fixed
+
+- Disk panel header and overview showed only the system drive's capacity; they now total every local drive (#29)
+- Disk identity (interface, model, serial, firmware, partition style, sector size, TRIM) was blank because the disk was opened with read access; it is now read without it (#29)
+- Disk identity now describes the disk holding Windows instead of PhysicalDrive0, titled *System disk* (#29)
+- Logs showed localized text as mojibake in Notepad and PowerShell 5; new service and app log files start with a UTF-8 byte order mark (#29)
+
 ## [1.4.1] — 2026-10-18
 
 ### Added
