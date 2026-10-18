@@ -10,7 +10,7 @@ struct VersionInfo {
   // constants.hpp kServiceVersion.
   int major = 1;
   int minor = 4;
-  int patch = 2;
+  int patch = 3;
   /// Optional prerelease / channel label (empty for stable).
   const char* label = "";
 

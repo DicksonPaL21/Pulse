@@ -13,7 +13,7 @@
   PulseService (--install-start), and launches Pulse — no PowerShell.
 #>
 $ErrorActionPreference = "Stop"
-$Version = "1.4.2"
+$Version = "1.4.3"
 $root = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $dist = Join-Path $root "dist\Pulse"
 $flutterBin = @(
