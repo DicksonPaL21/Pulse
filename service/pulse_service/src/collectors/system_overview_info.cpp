@@ -652,8 +652,11 @@ void EnrichMemoryModules(ipc::HealthStaticInfo* info) {
 void EnrichPrimaryDiskIdentity(ipc::HealthStaticInfo* info) {
   if (info == nullptr) return;
 
+  // Desired access 0: the property, geometry and layout queries below work
+  // on such a handle, while GENERIC_READ needs administrator rights and fails
+  // for the LocalService account (issue #29).
   HANDLE disk = CreateFileW(
-      L"\\\\.\\PhysicalDrive0", GENERIC_READ,
+      L"\\\\.\\PhysicalDrive0", 0,
       FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, 0, nullptr);
   if (disk == INVALID_HANDLE_VALUE) return;
 
