@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
@@ -9,6 +12,7 @@ import '../../assistant/local_ai_types.dart';
 import '../components/pulse_button.dart';
 import '../components/pulse_section_header.dart';
 import '../design_system/pulse_dialog.dart';
+import 'assistant_markdown.dart';
 
 /// In-page Assistant workspace (sidebar destination content).
 class AssistantView extends StatelessWidget {
@@ -666,12 +670,30 @@ class _ChatReadyStateState extends State<_ChatReadyState> {
 
   final _scroll = ScrollController();
   final _composer = TextEditingController();
+  late final _composerFocus = FocusNode(onKeyEvent: _onComposerKey);
 
   @override
   void dispose() {
     _scroll.dispose();
     _composer.dispose();
+    _composerFocus.dispose();
     super.dispose();
+  }
+
+  /// Enter sends, Shift+Enter adds a line. A multi-line TextField would
+  /// otherwise treat Enter as a new line and never call onSubmitted. While an
+  /// input method is composing text, Enter confirms it instead.
+  KeyEventResult _onComposerKey(FocusNode node, KeyEvent event) {
+    final isEnter = event.logicalKey == LogicalKeyboardKey.enter ||
+        event.logicalKey == LogicalKeyboardKey.numpadEnter;
+    if (event is! KeyDownEvent ||
+        !isEnter ||
+        HardwareKeyboard.instance.isShiftPressed ||
+        _composer.value.composing.isValid) {
+      return KeyEventResult.ignored;
+    }
+    unawaited(_submit());
+    return KeyEventResult.handled;
   }
 
   void _scrollToLatest() {
@@ -795,6 +817,7 @@ class _ChatReadyStateState extends State<_ChatReadyState> {
               Expanded(
                 child: TextField(
                   controller: _composer,
+                  focusNode: _composerFocus,
                   enabled: !assistant.awaitingReply,
                   minLines: 1,
                   maxLines: 4,
@@ -988,7 +1011,15 @@ class _ChatBubble extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                 ],
-                if (message.text.isNotEmpty)
+                if (message.text.isNotEmpty && !isUser && !message.isError)
+                  // Replies use Markdown (**bold**, lists, `code`).
+                  AssistantMarkdown(
+                    text: message.text,
+                    style: (Theme.of(context).textTheme.bodyMedium ??
+                            const TextStyle())
+                        .copyWith(color: fg, height: 1.5, fontSize: 14.5),
+                  )
+                else if (message.text.isNotEmpty)
                   Text(
                     message.text,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(

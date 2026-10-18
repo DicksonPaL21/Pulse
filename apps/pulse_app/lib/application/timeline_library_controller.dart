@@ -168,6 +168,8 @@ Map<String, dynamic> timelineQueryToJson(TimelineQuery q) {
     'source': q.source.name,
     'category': q.category.name,
     'date_range': q.dateRange.name,
+    if (q.customFromUnixMs != null) 'custom_from_unix_ms': q.customFromUnixMs,
+    if (q.customToUnixMs != null) 'custom_to_unix_ms': q.customToUnixMs,
     'search_query': q.searchQuery,
     'provider_contains': q.providerContains,
     'event_id_equals': q.eventIdEquals,
@@ -198,6 +200,8 @@ TimelineQuery timelineQueryFromJson(Map<String, dynamic> json) {
     source: source,
     category: category,
     dateRange: dateRange,
+    customFromUnixMs: _optionalInt(json['custom_from_unix_ms']),
+    customToUnixMs: _optionalInt(json['custom_to_unix_ms']),
     searchQuery: json['search_query']?.toString() ?? '',
     providerContains: json['provider_contains']?.toString() ?? '',
     eventIdEquals: json['event_id_equals']?.toString() ?? '',
@@ -205,3 +209,6 @@ TimelineQuery timelineQueryFromJson(Map<String, dynamic> json) {
     computerContains: json['computer_contains']?.toString() ?? '',
   );
 }
+
+int? _optionalInt(Object? value) =>
+    value is int ? value : (value is num ? value.toInt() : null);

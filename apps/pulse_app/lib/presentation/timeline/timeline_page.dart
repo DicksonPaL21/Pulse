@@ -37,6 +37,7 @@ import '../components/safe_hover.dart';
 import '../components/service_lifecycle_controls.dart';
 import '../utils/pulse_snack.dart';
 import '../utils/pulse_user_errors.dart';
+import 'timeline_date_range_dialog.dart';
 
 class TimelinePage extends StatefulWidget {
   const TimelinePage({super.key, required this.title});
@@ -185,9 +186,41 @@ class _TimelinePageState extends State<TimelinePage> {
   }
 
   void _onDateRange(TimelineDateRangeFilter f) {
+    if (f == TimelineDateRangeFilter.custom) {
+      unawaited(_pickCustomDateRange());
+      return;
+    }
     final events = context.read<TimelineSessionController>().events;
     setState(() {
       _query = _query.copyWith(dateRange: f);
+      _pruneSelection(events);
+    });
+  }
+
+  /// Opens the from / to picker; keeps the current filter when cancelled.
+  Future<void> _pickCustomDateRange() async {
+    final now = DateTime.now();
+    final from = _query.customFromUnixMs;
+    final to = _query.customToUnixMs;
+    final picked = await showTimelineDateRangeDialog(
+      context,
+      initialFrom: from != null
+          ? DateTime.fromMillisecondsSinceEpoch(from)
+          : now.subtract(const Duration(hours: 1)),
+      initialTo: to != null ? DateTime.fromMillisecondsSinceEpoch(to) : now,
+    );
+    if (picked == null || !mounted) return;
+    final events = context.read<TimelineSessionController>().events;
+    setState(() {
+      _query = _query.copyWith(
+        dateRange: TimelineDateRangeFilter.custom,
+        customFromUnixMs: picked.from.millisecondsSinceEpoch,
+        // The picker works in minutes; include the whole "to" minute.
+        customToUnixMs: picked.to
+                .add(const Duration(minutes: 1))
+                .millisecondsSinceEpoch -
+            1,
+      );
       _pruneSelection(events);
     });
   }
@@ -1115,7 +1148,23 @@ class _CompactFilterToolbar extends StatelessWidget {
         TimelineDateRangeFilter.lastHour => '1 hour',
         TimelineDateRangeFilter.last24Hours => '24 hours',
         TimelineDateRangeFilter.last7Days => '7 days',
+        TimelineDateRangeFilter.custom => 'Custom…',
       };
+
+  /// Button and chip text: the picked range when a custom range is set.
+  String _dateRangeLabel() {
+    final from = query.customFromUnixMs;
+    final to = query.customToUnixMs;
+    if (query.dateRange != TimelineDateRangeFilter.custom ||
+        from == null ||
+        to == null) {
+      return _dateLabel(query.dateRange);
+    }
+    return formatTimelineCustomRange(
+      DateTime.fromMillisecondsSinceEpoch(from),
+      DateTime.fromMillisecondsSinceEpoch(to),
+    );
+  }
 
   List<_ActiveFilterChip> _activeChips() {
     final chips = <_ActiveFilterChip>[];
@@ -1139,7 +1188,7 @@ class _CompactFilterToolbar extends StatelessWidget {
     }
     if (query.dateRange != TimelineDateRangeFilter.all) {
       chips.add(_ActiveFilterChip(
-        label: _dateLabel(query.dateRange),
+        label: _dateRangeLabel(),
         onRemove: () => onDateRange(TimelineDateRangeFilter.all),
       ));
     }
@@ -1218,7 +1267,7 @@ class _CompactFilterToolbar extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     _FilterDropdown<TimelineDateRangeFilter>(
-                      label: _dateLabel(query.dateRange),
+                      label: _dateRangeLabel(),
                       value: query.dateRange,
                       items: TimelineDateRangeFilter.values,
                       itemLabel: _dateLabel,

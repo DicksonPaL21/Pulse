@@ -24,7 +24,7 @@ jobs:
   package:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: subosito/flutter-action@v2
         with:
@@ -75,7 +75,7 @@ jobs:
           Get-Content dist/SHA256SUMS.txt
 
       - name: Upload packages
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: pulse-${{ steps.version.outputs.version }}-windows
           path: |

@@ -43,7 +43,7 @@ flutter run -d windows
 .\tools\scripts\package_beta.ps1
 ```
 
-Produces `dist\Pulse-Setup-1.4.2-windows-x64.exe`, `dist\Pulse\`, and `dist\Pulse-1.4.2-windows-x64.zip`. See [docs/architecture/25-beta-release.md](docs/architecture/25-beta-release.md) and [docs/releases/v1.4.2.md](docs/releases/v1.4.2.md).
+Produces `dist\Pulse-Setup-1.4.3-windows-x64.exe`, `dist\Pulse\`, and `dist\Pulse-1.4.3-windows-x64.zip`. See [docs/architecture/25-beta-release.md](docs/architecture/25-beta-release.md) and [docs/releases/v1.4.3.md](docs/releases/v1.4.3.md).
 
 ## Package Microsoft Store (MSIX)
 
@@ -51,7 +51,7 @@ Produces `dist\Pulse-Setup-1.4.2-windows-x64.exe`, `dist\Pulse\`, and `dist\Puls
 .\tools\scripts\package_msix_store.ps1
 ```
 
-Produces Store-ready `dist\msix\PulseDiagnostics-1.4.2-Store.msixupload` (unsigned; Partner Center re-signs). Identity must match Partner Center — see [docs/guides/microsoft-store.md](docs/guides/microsoft-store.md).
+Produces Store-ready `dist\msix\PulseDiagnostics-1.4.3-Store.msixupload` (unsigned; Partner Center re-signs). Identity must match Partner Center — see [docs/guides/microsoft-store.md](docs/guides/microsoft-store.md).
 
 ## Install service (optional)
 
