@@ -391,6 +391,25 @@ message HealthDiskHealth {
   uint64 bytes_written = 24;
 }
 
+// One GPU adapter (issue #9). Software adapters (Microsoft Basic Render
+// Driver) are left out. Utilization follows Task Manager: an engine's load is
+// the sum over its processes, the adapter's is its busiest engine.
+message HealthGpuAdapter {
+  int32 luid_high = 1;
+  uint32 luid_low = 2;
+  string name = 3;
+  string vendor = 4;
+  bool is_primary = 5; // the adapter the gpu_* fields describe
+  uint64 dedicated_total_bytes = 6;
+  uint64 shared_total_bytes = 7;
+  bool has_percent = 8;
+  double percent = 9;
+  bool has_dedicated_used = 10;
+  uint64 dedicated_used_bytes = 11;
+  bool has_shared_used = 12;
+  uint64 shared_used_bytes = 13;
+}
+
 // One real-time sample from the service (1 Hz).
 message HealthSample {
   int64 unix_ms = 1;
@@ -518,6 +537,7 @@ message HealthSample {
   bool has_disk_smart_ok = 115;
   bool disk_smart_ok = 116;  // true when SMART/critical warning reports healthy
   repeated HealthDiskHealth disk_health = 117; // every physical disk
+  repeated HealthGpuAdapter gpus = 118; // every hardware GPU (issue #9)
 }
 
 message GetHealthSnapshot {}

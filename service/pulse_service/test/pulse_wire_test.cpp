@@ -242,6 +242,26 @@ int main() {
   proc.has_cpu_percent = true;
   proc.cpu_percent = 12.25;
   sample.top_cpu.push_back(proc);
+  // Two GPUs (issue #9); a negative LUID high part must survive the trip.
+  HealthGpuAdapter dedicated_gpu;
+  dedicated_gpu.luid_high = -2;
+  dedicated_gpu.luid_low = 0xF21B;
+  dedicated_gpu.name = "NVIDIA GeForce RTX 3060";
+  dedicated_gpu.vendor = "NVIDIA";
+  dedicated_gpu.is_primary = true;
+  dedicated_gpu.dedicated_total_bytes = 12ull * 1024 * 1024 * 1024;
+  dedicated_gpu.has_percent = true;
+  dedicated_gpu.percent = 37.5;
+  dedicated_gpu.has_dedicated_used = true;
+  dedicated_gpu.dedicated_used_bytes = 3ull * 1024 * 1024 * 1024;
+  HealthGpuAdapter integrated_gpu;
+  integrated_gpu.luid_low = 0xA001;
+  integrated_gpu.name = "Intel(R) UHD Graphics 770";
+  integrated_gpu.shared_total_bytes = 16ull * 1024 * 1024 * 1024;
+  integrated_gpu.has_shared_used = true;
+  integrated_gpu.shared_used_bytes = 0;
+  sample.gpus.push_back(dedicated_gpu);
+  sample.gpus.push_back(integrated_gpu);
 
   HealthStaticInfo info;
   info.windows_edition = "Windows 11 Pro";
@@ -298,6 +318,26 @@ int main() {
   assert(hs.sample.top_cpu[0].pid == 4242);
   assert(hs.sample.top_cpu[0].name == "chrome.exe");
   assert(hs.sample.top_cpu[0].cpu_percent == 12.25);
+  {
+    const auto& gpus = hs.sample.gpus;
+    const bool gpus_ok =
+        gpus.size() == 2 && gpus[0].luid_high == -2 &&
+        gpus[0].luid_low == 0xF21B &&
+        gpus[0].name == "NVIDIA GeForce RTX 3060" &&
+        gpus[0].vendor == "NVIDIA" && gpus[0].is_primary &&
+        gpus[0].dedicated_total_bytes == 12ull * 1024 * 1024 * 1024 &&
+        gpus[0].has_percent && gpus[0].percent == 37.5 &&
+        gpus[0].has_dedicated_used &&
+        gpus[0].dedicated_used_bytes == 3ull * 1024 * 1024 * 1024 &&
+        !gpus[0].has_shared_used && gpus[1].luid_low == 0xA001 &&
+        !gpus[1].is_primary && !gpus[1].has_percent &&
+        gpus[1].shared_total_bytes == 16ull * 1024 * 1024 * 1024 &&
+        gpus[1].has_shared_used && gpus[1].shared_used_bytes == 0;
+    if (!gpus_ok) {
+      std::cerr << "health gpus roundtrip failed\n";
+      return 9;
+    }
+  }
   // Release builds strip assert(); keep explicit checks for multi-volume fields.
   if (hs.sample.volumes.size() != 3 || hs.sample.volumes[0].id != "C:" ||
       hs.sample.volumes[0].kind != HealthDriveKind::Fixed ||

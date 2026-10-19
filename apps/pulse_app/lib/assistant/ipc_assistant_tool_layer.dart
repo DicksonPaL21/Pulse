@@ -198,7 +198,22 @@ class IpcAssistantToolLayer implements AssistantToolLayer {
         return {
           if (sample.hasGpuPercent) 'gpuPercent': sample.gpuPercent,
           if (sample.hasGpuTempC) 'gpuTempC': sample.gpuTempC,
+          // gpuPercent, gpuTempC and topGpu describe the primary GPU.
           'topGpu': sample.topGpu.take(8).map(_processBrief).toList(),
+          if (sample.gpus.isNotEmpty)
+            'gpus': [
+              for (final gpu in sample.gpus)
+                {
+                  'name': gpu.name,
+                  if (gpu.isPrimary) 'primary': true,
+                  if (gpu.hasPercent) 'percent': gpu.percent,
+                  if (gpu.hasDedicatedUsed)
+                    'dedicatedUsedBytes': gpu.dedicatedUsedBytes,
+                  if (gpu.dedicatedTotalBytes > 0)
+                    'dedicatedTotalBytes': gpu.dedicatedTotalBytes,
+                  if (gpu.hasSharedUsed) 'sharedUsedBytes': gpu.sharedUsedBytes,
+                },
+            ],
         };
       case 'storage':
         return {

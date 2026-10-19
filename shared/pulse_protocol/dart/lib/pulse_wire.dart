@@ -1180,6 +1180,41 @@ class HealthDiskHealth {
   bool hasBytesWritten;
   int bytesWritten;
 }
+
+/// One hardware GPU adapter (issue #9). Utilization is the busiest engine,
+/// each engine summed over its processes, as in Task Manager.
+class HealthGpuAdapter {
+  HealthGpuAdapter({
+    this.luidHigh = 0,
+    this.luidLow = 0,
+    this.name = '',
+    this.vendor = '',
+    this.isPrimary = false,
+    this.dedicatedTotalBytes = 0,
+    this.sharedTotalBytes = 0,
+    this.hasPercent = false,
+    this.percent = 0.0,
+    this.hasDedicatedUsed = false,
+    this.dedicatedUsedBytes = 0,
+    this.hasSharedUsed = false,
+    this.sharedUsedBytes = 0,
+  });
+  int luidHigh;
+  int luidLow;
+  String name;
+  String vendor;
+  /// The adapter the gpu* fields of [HealthSample] describe.
+  bool isPrimary;
+  int dedicatedTotalBytes;
+  int sharedTotalBytes;
+  bool hasPercent;
+  double percent;
+  bool hasDedicatedUsed;
+  int dedicatedUsedBytes;
+  bool hasSharedUsed;
+  int sharedUsedBytes;
+}
+
 class HealthPhysicalDisk {
   HealthPhysicalDisk({
     this.id = '',
@@ -1245,6 +1280,7 @@ class HealthSample {
     List<HealthVolume>? volumes,
     List<HealthPhysicalDisk>? disks,
     List<HealthDiskHealth>? diskHealth,
+    List<HealthGpuAdapter>? gpus,
     this.hasMemoryCompressed = false,
     this.memoryCompressedBytes = 0,
     this.hasMemoryHardwareReserved = false,
@@ -1325,7 +1361,8 @@ class HealthSample {
         cpuCorePercent = cpuCorePercent ?? <double>[],
         volumes = volumes ?? <HealthVolume>[],
         disks = disks ?? <HealthPhysicalDisk>[],
-        diskHealth = diskHealth ?? <HealthDiskHealth>[];
+        diskHealth = diskHealth ?? <HealthDiskHealth>[],
+        gpus = gpus ?? <HealthGpuAdapter>[];
   int unixMs;
   bool hasCpuPercent;
   double cpuPercent;
@@ -1444,6 +1481,8 @@ class HealthSample {
   bool diskSmartOk;
   /// Every physical disk (issue #12 / #20).
   List<HealthDiskHealth> diskHealth;
+  /// Every hardware GPU (issue #9); empty from services before 1.5.
+  List<HealthGpuAdapter> gpus;
 }
 
 class GetHealthSnapshot {
@@ -2248,6 +2287,24 @@ Uint8List _encodeHealthDiskHealth(HealthDiskHealth m) {
   _writeU64(24, m.bytesWritten, out);
   return out.toBytes();
 }
+Uint8List _encodeHealthGpuAdapter(HealthGpuAdapter m) {
+  final out = BytesBuilder();
+  _writeU64(1, m.luidHigh, out);
+  _writeU64(2, m.luidLow, out);
+  _writeString(3, m.name, out);
+  _writeString(4, m.vendor, out);
+  _writeBool(5, m.isPrimary, out);
+  _writeU64(6, m.dedicatedTotalBytes, out);
+  _writeU64(7, m.sharedTotalBytes, out);
+  _writeBool(8, m.hasPercent, out);
+  _writeDouble(9, m.percent, out);
+  _writeBool(10, m.hasDedicatedUsed, out);
+  _writeU64(11, m.dedicatedUsedBytes, out);
+  _writeBool(12, m.hasSharedUsed, out);
+  _writeU64(13, m.sharedUsedBytes, out);
+  return out.toBytes();
+}
+
 Uint8List _encodeHealthPhysicalDisk(HealthPhysicalDisk m) {
   final out = BytesBuilder();
   _writeString(1, m.id, out);
@@ -2488,6 +2545,9 @@ Uint8List _encodeHealthSample(HealthSample m) {
   _writeBool(116, m.diskSmartOk, out);
   for (final d in m.diskHealth) {
     _writeBytesField(117, _encodeHealthDiskHealth(d), out);
+  }
+  for (final g in m.gpus) {
+    _writeBytesField(118, _encodeHealthGpuAdapter(g), out);
   }
   return out.toBytes();
 }
@@ -3996,6 +4056,46 @@ HealthDiskHealth _decodeHealthDiskHealth(Uint8List data) {
   }
   return m;
 }
+HealthGpuAdapter _decodeHealthGpuAdapter(Uint8List data) {
+  final r = _Reader(data);
+  final m = HealthGpuAdapter();
+  while (r.hasMore) {
+    final tag = r.readVarint();
+    final field = tag >> 3;
+    final wire = tag & 7;
+    if (field == 1 && wire == 0) {
+      m.luidHigh = r.readVarint().toSigned(32);
+    } else if (field == 2 && wire == 0) {
+      m.luidLow = r.readVarint();
+    } else if (field == 3 && wire == 2) {
+      m.name = r.readString();
+    } else if (field == 4 && wire == 2) {
+      m.vendor = r.readString();
+    } else if (field == 5 && wire == 0) {
+      m.isPrimary = r.readVarint() != 0;
+    } else if (field == 6 && wire == 0) {
+      m.dedicatedTotalBytes = r.readVarint();
+    } else if (field == 7 && wire == 0) {
+      m.sharedTotalBytes = r.readVarint();
+    } else if (field == 8 && wire == 0) {
+      m.hasPercent = r.readVarint() != 0;
+    } else if (field == 9 && wire == 1) {
+      m.percent = r.readDouble();
+    } else if (field == 10 && wire == 0) {
+      m.hasDedicatedUsed = r.readVarint() != 0;
+    } else if (field == 11 && wire == 0) {
+      m.dedicatedUsedBytes = r.readVarint();
+    } else if (field == 12 && wire == 0) {
+      m.hasSharedUsed = r.readVarint() != 0;
+    } else if (field == 13 && wire == 0) {
+      m.sharedUsedBytes = r.readVarint();
+    } else {
+      r.skip(wire);
+    }
+  }
+  return m;
+}
+
 HealthPhysicalDisk _decodeHealthPhysicalDisk(Uint8List data) {
   final r = _Reader(data);
   final m = HealthPhysicalDisk();
@@ -4453,6 +4553,8 @@ HealthSample _decodeHealthSample(Uint8List data) {
       m.diskSmartOk = r.readVarint() != 0;
     } else if (field == 117 && wire == 2) {
       m.diskHealth.add(_decodeHealthDiskHealth(r.readBytes()));
+    } else if (field == 118 && wire == 2) {
+      m.gpus.add(_decodeHealthGpuAdapter(r.readBytes()));
     } else {
       r.skip(wire);
     }
