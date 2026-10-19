@@ -1,8 +1,11 @@
 #include "flutter_window.h"
 
+#include <flutter/standard_method_codec.h>
+
 #include <optional>
 
 #include "flutter/generated_plugin_registrant.h"
+#include "single_instance.h"
 
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
     : project_(project) {}
@@ -15,6 +18,7 @@ FlutterWindow::~FlutterWindow() {
   // MessageHandler forwarded that message to a half-destroyed controller and
   // crashed (issue #32). reset() clears the pointer first, so the message is
   // no longer forwarded.
+  single_instance_channel_.reset();
   flutter_controller_.reset();
 }
 
@@ -36,6 +40,18 @@ bool FlutterWindow::OnCreate() {
   RegisterPlugins(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
+  single_instance_channel_ =
+      std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+          flutter_controller_->engine()->messenger(), kSingleInstanceChannel,
+          &flutter::StandardMethodCodec::GetInstance());
+  // Let a second launch reach this window even when this Pulse runs at a
+  // higher integrity level (for example started by an elevated installer).
+  // The message carries no data; it only asks this window to show itself.
+  if (const UINT activate = PulseActivateMessage(); activate != 0) {
+    ::ChangeWindowMessageFilterEx(GetHandle(), activate, MSGFLT_ALLOW,
+                                  nullptr);
+  }
+
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
     this->Show();
   });
@@ -49,6 +65,7 @@ bool FlutterWindow::OnCreate() {
 }
 
 void FlutterWindow::OnDestroy() {
+  single_instance_channel_.reset();
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
   }
@@ -60,6 +77,16 @@ LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
                               LPARAM const lparam) noexcept {
+  // A second launch of Pulse asked for this window. Dart shows it through
+  // window_manager, which also undoes "hidden in the tray".
+  if (const UINT activate = PulseActivateMessage();
+      activate != 0 && message == activate) {
+    if (single_instance_channel_) {
+      single_instance_channel_->InvokeMethod("activate", nullptr);
+    }
+    return 0;
+  }
+
   // Give Flutter, including plugins, an opportunity to handle window messages.
   if (flutter_controller_) {
     std::optional<LRESULT> result =
