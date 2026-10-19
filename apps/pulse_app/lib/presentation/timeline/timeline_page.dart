@@ -60,6 +60,10 @@ class _TimelinePageState extends State<TimelinePage> {
   final Set<String> _expandedIncidents = {};
   bool _advancedFiltersOpen = false;
 
+  /// Shows events whose type the user hid (issue #25). Not saved: hidden
+  /// types are hidden again next time.
+  bool _showHiddenTypes = false;
+
   TimelineSessionController? _session;
   EvtxImport? _shownImport;
   String? _lastTopEventId;
@@ -279,9 +283,22 @@ class _TimelinePageState extends State<TimelinePage> {
   List<TimelineEvent> _visible(List<TimelineEvent> events) {
     final library = context.read<TimelineLibraryController>();
     return pinnedFirst(
-      events.where(_query.matches),
+      events.where(
+        (e) =>
+            _query.matches(e) &&
+            (_showHiddenTypes || !library.isHiddenType(e)),
+      ),
       (e) => library.isPinned(e.eventId),
     );
+  }
+
+  /// Events the filters would show but whose type is hidden.
+  int _hiddenMatchingCount(List<TimelineEvent> events) {
+    final library = context.read<TimelineLibraryController>();
+    if (library.hiddenEventTypes.isEmpty) return 0;
+    return events
+        .where((e) => library.isHiddenType(e) && _query.matches(e))
+        .length;
   }
 
   TimelineEvent? _selectedEvent(List<TimelineEvent> events) {
@@ -493,7 +510,7 @@ class _TimelinePageState extends State<TimelinePage> {
     final connecting = state == IpcConnectionState.connecting;
 
     final session = context.watch<TimelineSessionController>();
-    context.watch<TimelineLibraryController>();
+    final library = context.watch<TimelineLibraryController>();
     final imports = context.watch<EvtxImportController>();
     // An opened .evtx replaces this PC's events until it is closed. It is
     // read without the service, so it also works while PulseService is offline.
@@ -515,6 +532,11 @@ class _TimelinePageState extends State<TimelinePage> {
         imports.loading || (!viewingFile && (connecting || loadingSnapshot));
 
     final visible = _visible(events);
+    final hiddenCount = _hiddenMatchingCount(events);
+    // The overview counts never include hidden types, even while shown.
+    final summaryEvents = library.hiddenEventTypes.isEmpty
+        ? events
+        : events.where((e) => !library.isHiddenType(e)).toList();
     final selectedEvent = _selectedEvent(events);
     final listItems = _incidentEngine.buildItems(visible);
     final selectedRca = selectedEvent == null
@@ -595,7 +617,7 @@ class _TimelinePageState extends State<TimelinePage> {
                                   imported: imported,
                                   onClose: _closeEventLogFile,
                                 ),
-                          sessionEvents: events,
+                          sessionEvents: summaryEvents,
                           selectedEventId: _selectedEventId,
                           selectedEvent: selectedEvent,
                           selectedRca: selectedRca,
@@ -621,6 +643,11 @@ class _TimelinePageState extends State<TimelinePage> {
                             () => _advancedFiltersOpen = !_advancedFiltersOpen,
                           ),
                           filtersActive: _filtersActive,
+                          hiddenCount: hiddenCount,
+                          showHiddenTypes: _showHiddenTypes,
+                          onToggleShowHiddenTypes: () => setState(
+                            () => _showHiddenTypes = !_showHiddenTypes,
+                          ),
                           visible: visible,
                           hasStoredEvents: events.isNotEmpty,
                           emptyMessage: _emptyMessage(
@@ -708,6 +735,9 @@ class _TimelineBody extends StatelessWidget {
     required this.advancedFiltersOpen,
     required this.onToggleAdvancedFilters,
     required this.filtersActive,
+    required this.hiddenCount,
+    required this.showHiddenTypes,
+    required this.onToggleShowHiddenTypes,
     required this.visible,
     required this.hasStoredEvents,
     required this.emptyMessage,
@@ -752,6 +782,11 @@ class _TimelineBody extends StatelessWidget {
   final bool advancedFiltersOpen;
   final VoidCallback onToggleAdvancedFilters;
   final bool filtersActive;
+
+  /// Events matching the filters whose type the user hid (issue #25).
+  final int hiddenCount;
+  final bool showHiddenTypes;
+  final VoidCallback onToggleShowHiddenTypes;
   final List<TimelineEvent> visible;
   final bool hasStoredEvents;
   final String emptyMessage;
@@ -834,6 +869,9 @@ class _TimelineBody extends StatelessWidget {
                     eventIdFilterController: eventIdFilterController,
                     processFilterController: processFilterController,
                     filtersActive: filtersActive,
+                    hiddenCount: hiddenCount,
+                    showHiddenTypes: showHiddenTypes,
+                    onToggleShowHiddenTypes: onToggleShowHiddenTypes,
                     selectedEvent: selectedEvent,
                     onSeverity: onSeverity,
                     onSource: onSource,
@@ -877,11 +915,17 @@ class _TimelineBody extends StatelessWidget {
                             title: hasStoredEvents
                                 ? 'Nothing matches'
                                 : 'Waiting for Windows',
-                            message: emptyMessage,
-                            actionLabel:
-                                filtersActive ? 'Clear filters' : null,
-                            onAction:
-                                filtersActive ? onClearFilters : null,
+                            message: hiddenCount > 0
+                                ? '$emptyMessage\n\n'
+                                    '${_hiddenCountLabel(hiddenCount)} '
+                                    'not shown because you hid their type.'
+                                : emptyMessage,
+                            actionLabel: hiddenCount > 0
+                                ? 'Show hidden events'
+                                : (filtersActive ? 'Clear filters' : null),
+                            onAction: hiddenCount > 0
+                                ? onToggleShowHiddenTypes
+                                : (filtersActive ? onClearFilters : null),
                           ),
                         ),
                       )
@@ -1077,6 +1121,9 @@ class _CompactFilterToolbar extends StatelessWidget {
     required this.eventIdFilterController,
     required this.processFilterController,
     required this.filtersActive,
+    required this.hiddenCount,
+    required this.showHiddenTypes,
+    required this.onToggleShowHiddenTypes,
     required this.selectedEvent,
     required this.onSeverity,
     required this.onSource,
@@ -1100,6 +1147,9 @@ class _CompactFilterToolbar extends StatelessWidget {
   final TextEditingController eventIdFilterController;
   final TextEditingController processFilterController;
   final bool filtersActive;
+  final int hiddenCount;
+  final bool showHiddenTypes;
+  final VoidCallback onToggleShowHiddenTypes;
   final TimelineEvent? selectedEvent;
   final ValueChanged<TimelineSeverityFilter> onSeverity;
   final ValueChanged<TimelineSourceFilter> onSource;
@@ -1289,6 +1339,22 @@ class _CompactFilterToolbar extends StatelessWidget {
                       selected: advancedOpen || advancedActive,
                       onTap: onToggleAdvanced,
                     ),
+                    if (hiddenCount > 0) ...[
+                      const SizedBox(width: 8),
+                      Tooltip(
+                        message: showHiddenTypes
+                            ? 'Hide them again'
+                            : 'Events whose type you hid. Settings lists '
+                                'the hidden types.',
+                        child: _FilterChip(
+                          label: showHiddenTypes
+                              ? 'Showing ${_hiddenCountLabel(hiddenCount)}'
+                              : _hiddenCountLabel(hiddenCount),
+                          selected: showHiddenTypes,
+                          onTap: onToggleShowHiddenTypes,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -1826,3 +1892,7 @@ class _FilterChipState extends State<_FilterChip> with SafeHoverState {
     );
   }
 }
+
+/// "1 hidden event", "12 hidden events".
+String _hiddenCountLabel(int count) =>
+    count == 1 ? '1 hidden event' : '$count hidden events';
