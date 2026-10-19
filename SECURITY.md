@@ -4,11 +4,11 @@
 
 | Version | Supported |
 | --- | --- |
-| `1.4.x` (stable) | Yes |
-| `1.3.x` | Best effort (upgrade to 1.4.x recommended) |
-| `1.2.x` and older | No |
+| `1.5.x` (stable) | Yes |
+| `1.4.x` | Best effort (upgrade to 1.5.x recommended) |
+| `1.3.x` and older | No |
 
-Pulse **1.4.3** is the current stable release. Security reports are welcome and will remain private until a fix is available.
+Pulse **1.5.0** is the current stable release. Security reports are welcome and will remain private until a fix is available.
 
 ## Reporting a vulnerability
 

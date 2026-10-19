@@ -1,5 +1,12 @@
 # Upgrade notes
 
+## To 1.5.0
+
+- Installer: `Pulse-Setup-1.5.0-windows-x64.exe`
+- Product stamp is **`1.5.0`** (UI, PulseService)
+- GPU load can read higher than in 1.4: it is now summed per engine like Task Manager
+- Only one Pulse runs per Windows session; starting it again shows the running one
+
 ## To 1.4.3
 
 - Installer: `Pulse-Setup-1.4.3-windows-x64.exe`

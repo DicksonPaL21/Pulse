@@ -6,7 +6,7 @@ Ship a **normal Windows installer** so a clean PC reaches Connected without Powe
 
 ## Primary deliverable
 
-`dist/Pulse-Setup-1.4.3-windows-x64.exe` (Inno Setup)
+`dist/Pulse-Setup-1.5.0-windows-x64.exe` (Inno Setup)
 
 The installer (admin / UAC):
 
@@ -27,9 +27,9 @@ Prerequisites: Flutter, VS C++ Build Tools, [Inno Setup 6](https://jrsoftware.or
 
 | Output | Role |
 |--------|------|
-| `dist/Pulse-Setup-1.4.3-windows-x64.exe` | **End-user installer** |
+| `dist/Pulse-Setup-1.5.0-windows-x64.exe` | **End-user installer** |
 | `dist/Pulse/` | Payload used by Inno |
-| `dist/Pulse-1.4.3-windows-x64.zip` | Optional payload archive (**not** a true portable SKU — see [40](40-portable-vs-service.md)) |
+| `dist/Pulse-1.5.0-windows-x64.zip` | Optional payload archive (**not** a true portable SKU — see [40](40-portable-vs-service.md)) |
 
 The script finds Visual Studio, the MSVC runtime and `vc_redist.x64.exe` through `vswhere`, so it works with Build Tools locally and with the Enterprise edition on GitHub runners.
 
@@ -63,9 +63,9 @@ Not wired in yet; the application to SignPath Foundation is in review. Once appr
 6. Timeline, System Health, Inventory, and Reports populate as expected
 7. Reboot → PulseService still Running (auto-start) → Pulse reconnects
 8. Optional: install Ollama or LM Studio for the local **Assistant**
-9. Open **Diagnostics** → confirm service version **1.4.3**
+9. Open **Diagnostics** → confirm service version **1.5.0**
 
-Full stability procedures: [35-product-stability.md](35-product-stability.md). Release notes: [v1.4.3.md](../releases/v1.4.3.md).
+Full stability procedures: [35-product-stability.md](35-product-stability.md). Release notes: [v1.5.0.md](../releases/v1.5.0.md).
 
 ## Service CLI (developers)
 
