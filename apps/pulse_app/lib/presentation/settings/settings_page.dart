@@ -11,6 +11,7 @@ import '../../application/connection_controller.dart';
 import '../../application/diagnostics_controller.dart';
 import '../../application/settings_controller.dart';
 import '../../application/shell_navigation.dart';
+import '../../application/timeline_library_controller.dart';
 import '../../application/timeline_session_controller.dart';
 import '../../application/update_check_controller.dart';
 import '../../app/theme/pulse_theme.dart';
@@ -848,6 +849,8 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ],
           ),
+          const SizedBox(height: PulseTokens.spaceMd),
+          const _HiddenEventTypesGroup(),
         ],
       SettingsCategoryId.diagnostics => [
           _SettingsGroup(
@@ -1704,6 +1707,46 @@ class _AssistantConnectionGroupState extends State<_AssistantConnectionGroup> {
                   onPressed: _addToken,
                 ),
         ),
+      ],
+    );
+  }
+}
+
+/// Event types hidden from the Timeline, each with a way back (issue #25).
+class _HiddenEventTypesGroup extends StatelessWidget {
+  const _HiddenEventTypesGroup();
+
+  @override
+  Widget build(BuildContext context) {
+    final library = context.watch<TimelineLibraryController>();
+    final hidden = library.hiddenEventTypes;
+    return _SettingsGroup(
+      title: 'Hidden events',
+      children: [
+        if (hidden.isEmpty)
+          const _SettingsRow(
+            icon: LucideIcons.eyeOff,
+            title: 'No hidden events',
+            subtitle: 'To hide events you expect, open one in the Timeline '
+                'and choose “Hide events like this”. They stay in reports '
+                'and exports.',
+          ),
+        for (final (index, type) in hidden.indexed) ...[
+          if (index > 0) const SoftDivider(indent: 52),
+          _SettingsRow(
+            icon: LucideIcons.eyeOff,
+            title: type.title.isNotEmpty
+                ? type.title
+                : '${type.provider} ${type.eventId}',
+            subtitle: '${type.provider} · Event ID ${type.eventId}',
+            trailing: PulseButton(
+              label: 'Show again',
+              icon: LucideIcons.eye,
+              variant: PulseButtonVariant.secondary,
+              onPressed: () => library.showEventType(type.key),
+            ),
+          ),
+        ],
       ],
     );
   }

@@ -8,7 +8,9 @@ import '../../../app/theme/pulse_theme.dart';
 import '../../../application/timeline_library_controller.dart';
 import '../../../ipc/pulse_ipc_client.dart';
 import '../../../presentation/components/pulse_badge.dart';
+import '../../../presentation/utils/pulse_snack.dart';
 import '../evtx_import.dart';
+import '../hidden_event_types.dart';
 import '../timeline_display.dart';
 import '../timeline_incident_engine.dart';
 import 'detail_section.dart';
@@ -194,6 +196,26 @@ class _TimelineDetailsPanelState extends State<TimelineDetailsPanel> {
     ];
   }
 
+  /// Hides or shows again every event with this provider and Event ID
+  /// (issue #25). Only Pulse's view changes; Windows' logs stay as they are.
+  Future<void> _toggleHiddenType(TimelineLibraryController library) async {
+    final key = hiddenEventTypeKeyOf(event);
+    if (key == null) return;
+    if (library.isHiddenType(event)) {
+      await library.showEventType(key);
+      if (!mounted) return;
+      PulseSnack.info(context, 'Events like this show in the Timeline again.');
+      return;
+    }
+    await library.hideEventType(event, title: event.displayTitle);
+    if (!mounted) return;
+    PulseSnack.info(
+      context,
+      'Hidden: ${event.providerName}, Event ID ${event.winEventId}. '
+      'They stay in reports and exports. Show them again here or in Settings.',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final style = event.severityVisual;
@@ -222,6 +244,10 @@ class _TimelineDetailsPanelState extends State<TimelineDetailsPanel> {
               onTogglePin: () => context
                   .read<TimelineLibraryController>()
                   .togglePin(event.eventId),
+              hiddenType: library.isHiddenType(event),
+              onToggleHiddenType: hiddenEventTypeKeyOf(event) == null
+                  ? null
+                  : () => _toggleHiddenType(library),
             ),
             Expanded(
               child: ListView(
@@ -717,6 +743,8 @@ class _DetailsHeader extends StatelessWidget {
     required this.pinned,
     required this.onToggleBookmark,
     required this.onTogglePin,
+    required this.hiddenType,
+    required this.onToggleHiddenType,
   });
 
   final VoidCallback onClose;
@@ -724,6 +752,10 @@ class _DetailsHeader extends StatelessWidget {
   final bool pinned;
   final VoidCallback onToggleBookmark;
   final VoidCallback onTogglePin;
+  final bool hiddenType;
+
+  /// Null when the event has no provider to match a type on.
+  final VoidCallback? onToggleHiddenType;
 
   @override
   Widget build(BuildContext context) {
@@ -755,6 +787,17 @@ class _DetailsHeader extends StatelessWidget {
               size: 17,
             ),
           ),
+          if (onToggleHiddenType != null)
+            IconButton(
+              tooltip: hiddenType
+                  ? 'Show events like this again'
+                  : 'Hide events like this',
+              onPressed: onToggleHiddenType,
+              icon: Icon(
+                hiddenType ? LucideIcons.eye : LucideIcons.eyeOff,
+                size: 17,
+              ),
+            ),
           IconButton(
             tooltip: 'Close',
             onPressed: onClose,

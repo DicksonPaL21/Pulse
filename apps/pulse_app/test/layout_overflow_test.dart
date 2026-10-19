@@ -10,6 +10,7 @@ import 'package:pulse/application/health_navigation.dart';
 import 'package:pulse/application/service_lifecycle_controller.dart';
 import 'package:pulse/application/settings_controller.dart';
 import 'package:pulse/application/shell_navigation.dart';
+import 'package:pulse/application/timeline_library_controller.dart';
 import 'package:pulse/application/timeline_session_controller.dart';
 import 'package:pulse/application/update_check_controller.dart';
 import 'package:pulse/ipc/pulse_ipc_client.dart';
@@ -45,6 +46,8 @@ Future<Widget> _harness(Widget page) async {
     settings: settings,
     logger: logger,
   );
+  final timelineLibrary = TimelineLibraryController(logger: logger);
+  await timelineLibrary.load();
   final frameMetrics = ClientFrameMetrics();
   final diagnostics = DiagnosticsController(
     ipc: ipc,
@@ -64,6 +67,7 @@ Future<Widget> _harness(Widget page) async {
       ChangeNotifierProvider.value(value: connection),
       ChangeNotifierProvider.value(value: settings),
       ChangeNotifierProvider.value(value: timeline),
+      ChangeNotifierProvider.value(value: timelineLibrary),
       ChangeNotifierProvider.value(value: diagnostics),
       ChangeNotifierProvider.value(value: frameMetrics),
       ChangeNotifierProvider.value(value: lifecycle),

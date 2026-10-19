@@ -1,8 +1,10 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:pulse_protocol/pulse_wire.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../features/timeline/hidden_event_types.dart';
 import '../features/timeline/timeline_query.dart';
 import '../logging/app_logger.dart';
 
@@ -41,7 +43,8 @@ class SavedTimelineSearch {
   }
 }
 
-/// Local-only bookmarks, pins, and saved Timeline searches.
+/// Local-only bookmarks, pins, saved Timeline searches and hidden event
+/// types.
 class TimelineLibraryController extends ChangeNotifier {
   TimelineLibraryController({required this.logger});
 
@@ -50,11 +53,13 @@ class TimelineLibraryController extends ChangeNotifier {
   static const _kBookmarks = 'timeline.bookmarks';
   static const _kPins = 'timeline.pins';
   static const _kSavedSearches = 'timeline.saved_searches';
+  static const _kHiddenEventTypes = 'timeline.hidden_event_types';
 
   SharedPreferences? _prefs;
   final Set<String> _bookmarkedEventIds = {};
   final Set<String> _pinnedEventIds = {};
   final List<SavedTimelineSearch> _savedSearches = [];
+  final Map<String, HiddenEventType> _hiddenEventTypes = {};
 
   Set<String> get bookmarkedEventIds => Set.unmodifiable(_bookmarkedEventIds);
   Set<String> get pinnedEventIds => Set.unmodifiable(_pinnedEventIds);
@@ -66,6 +71,18 @@ class TimelineLibraryController extends ChangeNotifier {
 
   bool isPinned(String eventId) =>
       eventId.isNotEmpty && _pinnedEventIds.contains(eventId);
+
+  /// Hidden types, most recently hidden first (issue #25).
+  List<HiddenEventType> get hiddenEventTypes =>
+      _hiddenEventTypes.values.toList()
+        ..sort((a, b) => b.hiddenAtUnixMs.compareTo(a.hiddenAtUnixMs));
+
+  /// Whether the user hid [event]'s type (provider + Event ID).
+  bool isHiddenType(TimelineEvent event) {
+    if (_hiddenEventTypes.isEmpty) return false;
+    final key = hiddenEventTypeKeyOf(event);
+    return key != null && _hiddenEventTypes.containsKey(key);
+  }
 
   Future<void> load() async {
     _prefs = await SharedPreferences.getInstance();
@@ -79,7 +96,59 @@ class TimelineLibraryController extends ChangeNotifier {
     _savedSearches
       ..clear()
       ..addAll(_decodeSearches(p.getString(_kSavedSearches)));
+    _hiddenEventTypes
+      ..clear()
+      ..addEntries(_decodeHiddenTypes(p.getString(_kHiddenEventTypes))
+          .map((t) => MapEntry(t.key, t)));
     notifyListeners();
+  }
+
+  /// Hides every event with [event]'s provider and Event ID. Returns false
+  /// when the event has no provider to match on.
+  Future<bool> hideEventType(TimelineEvent event, {required String title}) async {
+    final key = hiddenEventTypeKeyOf(event);
+    if (key == null) return false;
+    _hiddenEventTypes[key] = HiddenEventType(
+      provider: event.providerName.trim(),
+      eventId: event.winEventId,
+      title: title.trim(),
+      hiddenAtUnixMs: DateTime.now().millisecondsSinceEpoch,
+    );
+    notifyListeners();
+    await _persistHiddenTypes();
+    logger.info('TimelineLibrary', 'hid event type $key');
+    return true;
+  }
+
+  /// Shows a hidden type again; [key] is [HiddenEventType.key].
+  Future<void> showEventType(String key) async {
+    if (_hiddenEventTypes.remove(key) == null) return;
+    notifyListeners();
+    await _persistHiddenTypes();
+    logger.info('TimelineLibrary', 'showing event type $key again');
+  }
+
+  Future<void> _persistHiddenTypes() async {
+    final encoded =
+        jsonEncode([for (final t in _hiddenEventTypes.values) t.toJson()]);
+    await _prefs?.setString(_kHiddenEventTypes, encoded);
+  }
+
+  List<HiddenEventType> _decodeHiddenTypes(String? raw) {
+    if (raw == null || raw.isEmpty) return [];
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) return [];
+      return [
+        for (final item in decoded)
+          if (item is Map)
+            ?HiddenEventType.fromJson(Map<String, dynamic>.from(item)),
+      ];
+    } catch (e) {
+      // A damaged list must not stop Pulse from starting: hide nothing.
+      logger.warn('TimelineLibrary', 'hidden event types unreadable, ignored: $e');
+      return [];
+    }
   }
 
   Future<void> toggleBookmark(String eventId) async {
