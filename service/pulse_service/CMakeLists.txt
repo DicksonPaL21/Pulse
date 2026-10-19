@@ -55,6 +55,7 @@ add_executable(PulseService WIN32
   src/collectors/disk_health.cpp
   src/collectors/network_etw_engine.cpp
   src/collectors/gpu_adapter_info.cpp
+  src/collectors/gpu_engine_load.cpp
   src/collectors/system_overview_info.cpp
   src/collectors/process_metrics.cpp
   src/diagnostics/service_identity.cpp
@@ -213,6 +214,15 @@ target_include_directories(disk_health_tests PRIVATE
 )
 target_link_libraries(disk_health_tests PRIVATE pulse_wire)
 add_test(NAME disk_health_tests COMMAND disk_health_tests)
+
+add_executable(gpu_engine_load_tests
+  test/gpu_engine_load_test.cpp
+  src/collectors/gpu_engine_load.cpp
+)
+target_include_directories(gpu_engine_load_tests PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+add_test(NAME gpu_engine_load_tests COMMAND gpu_engine_load_tests)
 
 add_executable(services_collector_tests
   test/services_collector_test.cpp

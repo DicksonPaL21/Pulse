@@ -457,6 +457,7 @@ bool HealthMetricsCollector::Initialize() {
   cpu_logical_ = si.dwNumberOfProcessors;
   active_adapter_ = QueryActiveAdapterName();
   gpu_adapter_ = QueryPrimaryGpuAdapter();
+  gpu_adapters_ = QueryHardwareGpuAdapters();
   health_monitor_start_ms_ = 0;
   net_peak_download_bps_ = 0;
   net_peak_upload_bps_ = 0;
@@ -1099,53 +1100,91 @@ void HealthMetricsCollector::SampleCpuCores(ipc::HealthSample* out) {
   }
 }
 
-void HealthMetricsCollector::SampleGpuAdapterMemory(ipc::HealthSample* out) {
-  if (!pdh_gpu_mem_ok_ || pdh_gpu_dedicated_ == nullptr ||
-      pdh_gpu_shared_ == nullptr) {
-    return;
+std::vector<GpuCounterValue> HealthMetricsCollector::ReadGpuCounterValues(
+    void* counter) {
+  std::vector<GpuCounterValue> values;
+  if (counter == nullptr) return values;
+  DWORD buffer_size = 0;
+  DWORD item_count = 0;
+  PDH_STATUS st = PdhGetFormattedCounterArrayW(
+      static_cast<PDH_HCOUNTER>(counter), PDH_FMT_DOUBLE, &buffer_size,
+      &item_count, nullptr);
+  if (st != PDH_MORE_DATA && st != ERROR_SUCCESS) return values;
+  if (buffer_size == 0 || item_count == 0) return values;
+  std::vector<uint8_t> buffer(buffer_size);
+  auto* items = reinterpret_cast<PDH_FMT_COUNTERVALUE_ITEM_W*>(buffer.data());
+  st = PdhGetFormattedCounterArrayW(static_cast<PDH_HCOUNTER>(counter),
+                                    PDH_FMT_DOUBLE, &buffer_size, &item_count,
+                                    items);
+  if (st != ERROR_SUCCESS) return values;
+  values.reserve(item_count);
+  for (DWORD i = 0; i < item_count; ++i) {
+    if (items[i].szName == nullptr) continue;
+    if (items[i].FmtValue.CStatus != ERROR_SUCCESS &&
+        items[i].FmtValue.CStatus != PDH_CSTATUS_VALID_DATA) {
+      continue;
+    }
+    values.push_back({items[i].szName, items[i].FmtValue.doubleValue});
   }
+  return values;
+}
+
+void HealthMetricsCollector::SampleGpuAdapters(ipc::HealthSample* out) {
   CollectPdhOnce();
   if (!pdh_collected_this_sample_) return;
 
-  auto read_luid_bytes = [&](void* counter) -> std::optional<uint64_t> {
-    DWORD buffer_size = 0;
-    DWORD item_count = 0;
-    PDH_STATUS st = PdhGetFormattedCounterArrayW(
-        static_cast<PDH_HCOUNTER>(counter), PDH_FMT_DOUBLE, &buffer_size,
-        &item_count, nullptr);
-    if (st != PDH_MORE_DATA && st != ERROR_SUCCESS) return std::nullopt;
-    if (buffer_size == 0 || item_count == 0) return std::nullopt;
-    std::vector<uint8_t> buffer(buffer_size);
-    auto* items = reinterpret_cast<PDH_FMT_COUNTERVALUE_ITEM_W*>(buffer.data());
-    st = PdhGetFormattedCounterArrayW(static_cast<PDH_HCOUNTER>(counter),
-                                      PDH_FMT_DOUBLE, &buffer_size, &item_count,
-                                      items);
-    if (st != ERROR_SUCCESS || item_count == 0) return std::nullopt;
-    double best = -1.0;
-    for (DWORD i = 0; i < item_count; ++i) {
-      if (items[i].FmtValue.CStatus != ERROR_SUCCESS &&
-          items[i].FmtValue.CStatus != PDH_CSTATUS_VALID_DATA) {
-        continue;
-      }
-      if (gpu_adapter_.has_luid && !gpu_adapter_.luid_pdh_token.empty()) {
-        if (!GpuInstanceMatchesLuid(items[i].szName,
-                                    gpu_adapter_.luid_pdh_token)) {
-          continue;
-        }
-      }
-      best = (std::max)(best, items[i].FmtValue.doubleValue);
-    }
-    if (best < 0.0) return std::nullopt;
-    return static_cast<uint64_t>(best);
-  };
-
-  if (const auto dedicated = read_luid_bytes(pdh_gpu_dedicated_)) {
-    out->has_gpu_dedicated_used = true;
-    out->gpu_dedicated_used_bytes = *dedicated;
+  std::map<std::wstring, GpuAdapterLoad> loads;
+  if (pdh_gpu_ok_) loads = SumGpuEngineLoad(ReadGpuCounterValues(pdh_gpu_));
+  std::map<std::wstring, uint64_t> dedicated_used;
+  std::map<std::wstring, uint64_t> shared_used;
+  if (pdh_gpu_mem_ok_) {
+    dedicated_used =
+        SumGpuAdapterMemory(ReadGpuCounterValues(pdh_gpu_dedicated_));
+    shared_used = SumGpuAdapterMemory(ReadGpuCounterValues(pdh_gpu_shared_));
   }
-  if (const auto shared = read_luid_bytes(pdh_gpu_shared_)) {
+
+  SampleGpuExtended(gpu_adapter_, loads, out);
+  const std::wstring primary_token =
+      GpuLuidTokenOfInstance(gpu_adapter_.luid_pdh_token);
+  if (const auto it = dedicated_used.find(primary_token);
+      it != dedicated_used.end()) {
+    out->has_gpu_dedicated_used = true;
+    out->gpu_dedicated_used_bytes = it->second;
+  }
+  if (const auto it = shared_used.find(primary_token);
+      it != shared_used.end()) {
     out->has_gpu_shared_used = true;
-    out->gpu_shared_used_bytes = *shared;
+    out->gpu_shared_used_bytes = it->second;
+  }
+
+  out->gpus.clear();
+  out->gpus.reserve(gpu_adapters_.size());
+  for (const GpuAdapterSelection& adapter : gpu_adapters_) {
+    ipc::HealthGpuAdapter gpu;
+    gpu.luid_high = adapter.luid_high;
+    gpu.luid_low = adapter.luid_low;
+    gpu.name = adapter.model;
+    gpu.vendor = adapter.vendor;
+    gpu.is_primary = adapter.luid_high == gpu_adapter_.luid_high &&
+                     adapter.luid_low == gpu_adapter_.luid_low;
+    gpu.dedicated_total_bytes = adapter.dedicated_bytes;
+    gpu.shared_total_bytes = adapter.shared_bytes;
+    const std::wstring token = GpuLuidTokenOfInstance(adapter.luid_pdh_token);
+    if (const auto it = loads.find(token);
+        it != loads.end() && it->second.has_overall) {
+      gpu.has_percent = true;
+      gpu.percent = it->second.overall;
+    }
+    if (const auto it = dedicated_used.find(token);
+        it != dedicated_used.end()) {
+      gpu.has_dedicated_used = true;
+      gpu.dedicated_used_bytes = it->second;
+    }
+    if (const auto it = shared_used.find(token); it != shared_used.end()) {
+      gpu.has_shared_used = true;
+      gpu.shared_used_bytes = it->second;
+    }
+    out->gpus.push_back(std::move(gpu));
   }
 }
 
@@ -2167,9 +2206,7 @@ ipc::HealthUpdate HealthMetricsCollector::CollectHealthUpdate() {
   SampleNetwork(&sample);
   SampleDiskThroughput(&sample);
   SampleGpuPercent(&sample);
-  SampleGpuExtended(gpu_adapter_, pdh_gpu_, pdh_gpu_ok_, pdh_query_,
-                    &pdh_collected_this_sample_, nullptr, nullptr, &sample);
-  SampleGpuAdapterMemory(&sample);
+  SampleGpuAdapters(&sample);
   SampleGpuD3dkmtTelemetry(gpu_adapter_, &sample);
   SampleHardwareSensors(&sample);
   SampleCpuFrequency(&sample);
@@ -2389,6 +2426,7 @@ ipc::HealthStaticInfo HealthMetricsCollector::CollectStatic() {
   EnrichCpuOverview(&info);
 
   gpu_adapter_ = QueryPrimaryGpuAdapter();
+  gpu_adapters_ = QueryHardwareGpuAdapters();
   EnrichGpuStaticInfo(gpu_adapter_, &info);
   if (info.gpu_model.empty()) {
     info.gpu_model = gpu_adapter_.model;

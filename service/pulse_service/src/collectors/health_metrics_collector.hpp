@@ -66,7 +66,11 @@ class HealthMetricsCollector {
   void SampleCpuFrequency(ipc::HealthSample* out);
   void SampleNetworkAddresses(ipc::HealthSample* out);
   void SampleTopGpuFromPdh(ipc::HealthSample* out);
-  void SampleGpuAdapterMemory(ipc::HealthSample* out);
+  /// Primary adapter utilization + VRAM use, and every hardware GPU (#9).
+  void SampleGpuAdapters(ipc::HealthSample* out);
+  /// Every instance of a wildcard PDH counter with valid data.
+  [[nodiscard]] static std::vector<GpuCounterValue> ReadGpuCounterValues(
+      void* counter);
   void SampleCpuCores(ipc::HealthSample* out);
   void SampleCachedMemoryFromPdh(ipc::HealthSample* out);
   void SampleCompressedAndFaultsFromPdh(ipc::HealthSample* out);
@@ -118,6 +122,7 @@ class HealthMetricsCollector {
   uint32_t cpu_logical_ = 0;
 
   GpuAdapterSelection gpu_adapter_;
+  std::vector<GpuAdapterSelection> gpu_adapters_;  // hardware only (#9)
   uint64_t health_monitor_start_ms_ = 0;
   double net_peak_download_bps_ = 0.0;
   double net_peak_upload_bps_ = 0.0;

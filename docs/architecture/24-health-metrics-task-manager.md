@@ -22,7 +22,7 @@ Sample rate: ~1 Hz when a client enables health monitoring.
 | Hardware reserved | `GetPhysicallyInstalledSystemMemory − ullTotalPhys` | Hardware reserved | **Aligned** when installed API succeeds |
 | Paged / Non-paged pool | `GetPerformanceInfo` KernelPaged/Nonpaged × PageSize | Paged / Non-paged pool | **Aligned** |
 | Page faults/sec | PDH `\Memory\Page Faults/sec` | (optional) | **Aligned** when counter exists |
-| GPU % | Max of `\GPU Engine(*)\Utilization Percentage` | Max engine util on selected GPU | **Close** |
+| GPU % | `\GPU Engine(*)\Utilization Percentage`, summed per engine, busiest engine | Busiest engine on selected GPU | **Close** |
 | Disk R/W | `\PhysicalDisk(_Total)\Disk Read/Write Bytes/sec` | Same counters | **Aligned** |
 | Disk capacity | Fixed volumes + present removable; primary prefers C: | Selected volume | **Aligned** (multi-volume) |
 | Network | Single active non-virtual adapter octets / Δt | Selected adapter | **Close** |
@@ -134,10 +134,11 @@ This matches the usual Task Manager Details relationship without `OpenProcess` /
 
 | | |
 |--|--|
-| **Pulse API** | PDH `\GPU Engine(*)\Utilization Percentage`, filtered to selected adapter LUID; overall = max engine |
-| **Per-engine** | Max util for `engtype_3D` / `Compute` / `Copy` / `VideoDecode` / `VideoEncode` on that LUID |
-| **Task Manager** | Same PDH family for Performance → GPU graphs |
-| **Difference** | Pulse prefers discrete DXGI adapter; TM uses the user-selected GPU |
+| **Pulse API** | PDH `\GPU Engine(*)\Utilization Percentage`. The counter is per process, so each engine (`luid_…_phys_N_eng_N`) is summed over its processes; overall = busiest engine of the adapter LUID (`gpu_engine_load.cpp`) |
+| **Per-engine** | Busiest engine of type `3D` / `Compute` / `Copy` / `VideoDecode` / `VideoEncode` / `VideoProcessing` on that LUID |
+| **Task Manager** | Same method: an engine's utilization is the sum over its processes, and the GPU's is its busiest engine (DirectX Developer Blog, *GPUs in the Task Manager*, 2017) |
+| **Difference** | Before 1.5 Pulse took the busiest single process/engine pair, which read low when several processes shared an engine. Pulse prefers the discrete DXGI adapter for the detail panel; TM uses the user-selected GPU |
+| **All GPUs (#9)** | `HealthSample.gpus`: every DXGI adapter without `DXGI_ADAPTER_FLAG_SOFTWARE`, with load and `GPU Adapter Memory` usage per LUID. The GPU panel lists them when there is more than one |
 
 ### GPU identity / VRAM / adapter
 

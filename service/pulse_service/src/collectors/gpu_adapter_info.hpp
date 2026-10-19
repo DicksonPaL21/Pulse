@@ -1,9 +1,12 @@
 #pragma once
 
+#include "collectors/gpu_engine_load.hpp"
 #include "pulse_wire.hpp"
 
 #include <cstdint>
+#include <map>
 #include <string>
+#include <vector>
 
 namespace pulse {
 
@@ -21,15 +24,18 @@ struct GpuAdapterSelection {
 
 [[nodiscard]] GpuAdapterSelection QueryPrimaryGpuAdapter();
 
+/// Every DXGI adapter except software ones (Microsoft Basic Render Driver),
+/// in DXGI order (issue #9).
+[[nodiscard]] std::vector<GpuAdapterSelection> QueryHardwareGpuAdapters();
+
 /// SetupAPI / registry / D3DKMT / D3D feature level — unset fields stay empty.
 void EnrichGpuStaticInfo(const GpuAdapterSelection& adapter,
                          ipc::HealthStaticInfo* info);
 
-/// PDH engine utils (incl. Video Processing) for selected LUID.
-void SampleGpuExtended(const GpuAdapterSelection& adapter, void* pdh_gpu_counter,
-                       bool pdh_gpu_ok, void* pdh_query,
-                       bool* pdh_collected_flag,
-                       void (*collect_pdh_once)(void* self), void* self,
+/// Overall and per-engine-type utilization of the selected adapter, from
+/// the loads SumGpuEngineLoad computed for this sample.
+void SampleGpuExtended(const GpuAdapterSelection& adapter,
+                       const std::map<std::wstring, GpuAdapterLoad>& loads,
                        ipc::HealthSample* out);
 
 /// D3DKMT ADAPTERPERFDATA / NODEPERFDATA — only sets fields when values are

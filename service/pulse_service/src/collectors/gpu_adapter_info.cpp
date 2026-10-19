@@ -373,10 +373,17 @@ void EnrichGpuPcieLinkInfo(const GpuAdapterSelection& adapter,
   SetupDiDestroyDeviceInfoList(devs);
 }
 
-double ClampPercent(double value) {
-  if (value < 0.0) return 0.0;
-  if (value > 100.0) return 100.0;
-  return value;
+GpuAdapterSelection SelectionFromDesc(const DXGI_ADAPTER_DESC1& desc) {
+  GpuAdapterSelection sel;
+  sel.model = NarrowFromWide(desc.Description);
+  sel.vendor = GpuVendorNameFromPciId(desc.VendorId);
+  sel.dedicated_bytes = desc.DedicatedVideoMemory;
+  sel.shared_bytes = desc.SharedSystemMemory;
+  sel.has_luid = true;
+  sel.luid_high = desc.AdapterLuid.HighPart;
+  sel.luid_low = static_cast<uint32_t>(desc.AdapterLuid.LowPart);
+  sel.luid_pdh_token = GpuLuidToken(sel.luid_high, sel.luid_low);
+  return sel;
 }
 
 }  // namespace
@@ -420,26 +427,30 @@ GpuAdapterSelection QueryPrimaryGpuAdapter() {
   factory->Release();
 
   if (!have_preferred && !have_fallback) return sel;
-  const DXGI_ADAPTER_DESC1& chosen =
-      have_preferred ? preferred_desc : fallback_desc;
+  return SelectionFromDesc(have_preferred ? preferred_desc : fallback_desc);
+}
 
-  sel.model = NarrowFromWide(chosen.Description);
-  sel.vendor = GpuVendorNameFromPciId(chosen.VendorId);
-  sel.dedicated_bytes = chosen.DedicatedVideoMemory;
-  sel.shared_bytes = chosen.SharedSystemMemory;
-  sel.has_luid = true;
-  sel.luid_high = chosen.AdapterLuid.HighPart;
-  sel.luid_low = static_cast<uint32_t>(chosen.AdapterLuid.LowPart);
-
-  // PDH "\GPU Engine(*)\..." instance names embed the LUID as
-  // "luid_0xHHHHHHHH_0xLLLLLLLL" (both halves zero-padded 8-digit hex).
-  wchar_t token[64]{};
-  swprintf_s(token, L"luid_0x%08X_0x%08X",
-             static_cast<unsigned int>(sel.luid_high),
-             static_cast<unsigned int>(sel.luid_low));
-  sel.luid_pdh_token = token;
-
-  return sel;
+std::vector<GpuAdapterSelection> QueryHardwareGpuAdapters() {
+  std::vector<GpuAdapterSelection> adapters;
+  IDXGIFactory1* factory = nullptr;
+  if (FAILED(CreateDXGIFactory1(__uuidof(IDXGIFactory1),
+                                reinterpret_cast<void**>(&factory))) ||
+      factory == nullptr) {
+    return adapters;
+  }
+  for (UINT i = 0;; ++i) {
+    IDXGIAdapter1* adapter = nullptr;
+    const HRESULT hr = factory->EnumAdapters1(i, &adapter);
+    if (hr == DXGI_ERROR_NOT_FOUND || adapter == nullptr) break;
+    DXGI_ADAPTER_DESC1 desc{};
+    if (SUCCEEDED(adapter->GetDesc1(&desc)) &&
+        (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) == 0) {
+      adapters.push_back(SelectionFromDesc(desc));
+    }
+    adapter->Release();
+  }
+  factory->Release();
+  return adapters;
 }
 
 std::string GpuVendorNameFromPciId(uint32_t vendor_id) {
@@ -506,113 +517,28 @@ void EnrichGpuStaticInfo(const GpuAdapterSelection& adapter,
   EnrichGpuPcieLinkInfo(adapter, info);
 }
 
-void SampleGpuExtended(const GpuAdapterSelection& adapter, void* pdh_gpu_counter,
-                       bool pdh_gpu_ok, void* pdh_query,
-                       bool* pdh_collected_flag,
-                       void (*collect_pdh_once)(void* self), void* self,
+void SampleGpuExtended(const GpuAdapterSelection& adapter,
+                       const std::map<std::wstring, GpuAdapterLoad>& loads,
                        ipc::HealthSample* out) {
-  if (out == nullptr) return;
-  if (!pdh_gpu_ok || pdh_query == nullptr || pdh_gpu_counter == nullptr) {
-    return;
-  }
-  if (!adapter.has_luid || adapter.luid_pdh_token.empty()) return;
-
-  if (collect_pdh_once != nullptr) collect_pdh_once(self);
-  if (pdh_collected_flag != nullptr && !*pdh_collected_flag) return;
-
-  auto counter = static_cast<PDH_HCOUNTER>(pdh_gpu_counter);
-
-  DWORD buffer_size = 0;
-  DWORD item_count = 0;
-  PDH_STATUS st = PdhGetFormattedCounterArrayW(counter, PDH_FMT_DOUBLE,
-                                               &buffer_size, &item_count,
-                                               nullptr);
-  if (st != PDH_MORE_DATA && st != ERROR_SUCCESS) return;
-  if (buffer_size == 0 || item_count == 0) return;
-
-  std::vector<uint8_t> buffer(buffer_size);
-  auto* items = reinterpret_cast<PDH_FMT_COUNTERVALUE_ITEM_W*>(buffer.data());
-  st = PdhGetFormattedCounterArrayW(counter, PDH_FMT_DOUBLE, &buffer_size,
-                                    &item_count, items);
-  if (st != ERROR_SUCCESS || item_count == 0) return;
-
-  bool any_overall = false;
-  double max_overall = 0.0;
-  bool any_3d = false, any_compute = false, any_copy = false,
-       any_decode = false, any_encode = false, any_video_processing = false;
-  double max_3d = 0.0, max_compute = 0.0, max_copy = 0.0, max_decode = 0.0,
-         max_encode = 0.0, max_video_processing = 0.0;
-
-  for (DWORD i = 0; i < item_count; ++i) {
-    if (items[i].szName == nullptr) continue;
-    if (items[i].FmtValue.CStatus != ERROR_SUCCESS &&
-        items[i].FmtValue.CStatus != PDH_CSTATUS_VALID_DATA) {
-      continue;
-    }
-    if (!GpuInstanceMatchesLuid(items[i].szName, adapter.luid_pdh_token)) {
-      continue;
-    }
-
-    const double value = ClampPercent(items[i].FmtValue.doubleValue);
-    any_overall = true;
-    max_overall = (std::max)(max_overall, value);
-
-    const wchar_t* name = items[i].szName;
-    // Engine type tokens as emitted by dxgkrnl for GPU Engine instances.
-    if (wcsstr(name, L"engtype_3D") != nullptr) {
-      any_3d = true;
-      max_3d = (std::max)(max_3d, value);
-    } else if (wcsstr(name, L"engtype_VideoDecode") != nullptr) {
-      any_decode = true;
-      max_decode = (std::max)(max_decode, value);
-    } else if (wcsstr(name, L"engtype_VideoEncode") != nullptr) {
-      any_encode = true;
-      max_encode = (std::max)(max_encode, value);
-    } else if (wcsstr(name, L"engtype_VideoProcessing") != nullptr) {
-      any_video_processing = true;
-      max_video_processing = (std::max)(max_video_processing, value);
-    } else if (wcsstr(name, L"engtype_Copy") != nullptr) {
-      any_copy = true;
-      max_copy = (std::max)(max_copy, value);
-    } else if (wcsstr(name, L"engtype_Compute") != nullptr) {
-      any_compute = true;
-      max_compute = (std::max)(max_compute, value);
-    }
-    // Any other/unknown engine types only contribute to max_overall above.
-  }
-
-  if (!any_overall) return;
+  if (out == nullptr || !adapter.has_luid) return;
+  const auto found = loads.find(GpuLuidTokenOfInstance(adapter.luid_pdh_token));
+  if (found == loads.end() || !found->second.has_overall) return;
+  const GpuAdapterLoad& load = found->second;
 
   out->has_gpu_percent = true;
-  out->gpu_percent = max_overall;
-  if (any_3d) {
-    out->has_gpu_util_3d = true;
-    out->gpu_util_3d = max_3d;
-  }
-  if (any_compute) {
-    out->has_gpu_util_compute = true;
-    out->gpu_util_compute = max_compute;
-  }
-  if (any_copy) {
-    out->has_gpu_util_copy = true;
-    out->gpu_util_copy = max_copy;
-  }
-  if (any_decode) {
-    out->has_gpu_util_video_decode = true;
-    out->gpu_util_video_decode = max_decode;
-  }
-  if (any_encode) {
-    out->has_gpu_util_video_encode = true;
-    out->gpu_util_video_encode = max_encode;
-  }
-  if (any_video_processing) {
-    out->has_gpu_util_video_processing = true;
-    out->gpu_util_video_processing = max_video_processing;
-  }
-
-  // Live VRAM usage (gpu_dedicated_used_bytes / gpu_shared_used_bytes) is
-  // not sampled here — health_metrics_collector owns the adapter-memory PDH
-  // counters. This function only fills per-engine utilization for the LUID.
+  out->gpu_percent = load.overall;
+  out->has_gpu_util_3d = load.has_3d;
+  out->gpu_util_3d = load.util_3d;
+  out->has_gpu_util_compute = load.has_compute;
+  out->gpu_util_compute = load.compute;
+  out->has_gpu_util_copy = load.has_copy;
+  out->gpu_util_copy = load.copy;
+  out->has_gpu_util_video_decode = load.has_video_decode;
+  out->gpu_util_video_decode = load.video_decode;
+  out->has_gpu_util_video_encode = load.has_video_encode;
+  out->gpu_util_video_encode = load.video_encode;
+  out->has_gpu_util_video_processing = load.has_video_processing;
+  out->gpu_util_video_processing = load.video_processing;
 }
 
 void SampleGpuD3dkmtTelemetry(const GpuAdapterSelection& adapter,
