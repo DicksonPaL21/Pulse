@@ -698,6 +698,24 @@ std::vector<uint8_t> EncodeHealthDiskHealth(const HealthDiskHealth& m) {
   return out;
 }
 
+std::vector<uint8_t> EncodeHealthGpuAdapter(const HealthGpuAdapter& m) {
+  std::vector<uint8_t> out;
+  WriteI32(1, m.luid_high, &out);
+  WriteU32(2, m.luid_low, &out);
+  WriteString(3, m.name, &out);
+  WriteString(4, m.vendor, &out);
+  WriteBool(5, m.is_primary, &out);
+  WriteU64(6, m.dedicated_total_bytes, &out);
+  WriteU64(7, m.shared_total_bytes, &out);
+  WriteBool(8, m.has_percent, &out);
+  WriteDouble(9, m.percent, &out);
+  WriteBool(10, m.has_dedicated_used, &out);
+  WriteU64(11, m.dedicated_used_bytes, &out);
+  WriteBool(12, m.has_shared_used, &out);
+  WriteU64(13, m.shared_used_bytes, &out);
+  return out;
+}
+
 std::vector<uint8_t> EncodeHealthPhysicalDisk(const HealthPhysicalDisk& m) {
   std::vector<uint8_t> out;
   WriteString(1, m.id, &out);
@@ -938,6 +956,9 @@ std::vector<uint8_t> EncodeHealthSample(const HealthSample& m) {
   WriteBool(116, m.disk_smart_ok, &out);
   for (const auto& d : m.disk_health) {
     WriteBytesField(117, EncodeHealthDiskHealth(d), &out);
+  }
+  for (const auto& g : m.gpus) {
+    WriteBytesField(118, EncodeHealthGpuAdapter(g), &out);
   }
   return out;
 }
@@ -2843,6 +2864,60 @@ bool DecodeHealthVolume(const uint8_t* data, size_t len, HealthVolume* m) {
   return true;
 }
 
+bool DecodeHealthGpuAdapter(const uint8_t* data, size_t len,
+                            HealthGpuAdapter* m) {
+  const uint8_t* p = data;
+  const uint8_t* end = data + len;
+  while (p < end) {
+    uint64_t tag = 0;
+    if (!ReadVarint(p, end, &tag)) return false;
+    const uint32_t field = static_cast<uint32_t>(tag >> 3);
+    const uint32_t wire = static_cast<uint32_t>(tag & 7);
+    if (field == 1 && wire == 0) {
+      uint64_t v = 0;
+      if (!ReadVarint(p, end, &v)) return false;
+      m->luid_high = static_cast<int32_t>(static_cast<uint32_t>(v));
+    } else if (field == 2 && wire == 0) {
+      uint64_t v = 0;
+      if (!ReadVarint(p, end, &v)) return false;
+      m->luid_low = static_cast<uint32_t>(v);
+    } else if (field == 3 && wire == 2) {
+      if (!DecodeString(p, end, &m->name)) return false;
+    } else if (field == 4 && wire == 2) {
+      if (!DecodeString(p, end, &m->vendor)) return false;
+    } else if (field == 5 && wire == 0) {
+      uint64_t v = 0;
+      if (!ReadVarint(p, end, &v)) return false;
+      m->is_primary = v != 0;
+    } else if (field == 6 && wire == 0) {
+      if (!ReadVarint(p, end, &m->dedicated_total_bytes)) return false;
+    } else if (field == 7 && wire == 0) {
+      if (!ReadVarint(p, end, &m->shared_total_bytes)) return false;
+    } else if (field == 8 && wire == 0) {
+      uint64_t v = 0;
+      if (!ReadVarint(p, end, &v)) return false;
+      m->has_percent = v != 0;
+    } else if (field == 9 && wire == 1) {
+      if (!ReadDouble(p, end, &m->percent)) return false;
+    } else if (field == 10 && wire == 0) {
+      uint64_t v = 0;
+      if (!ReadVarint(p, end, &v)) return false;
+      m->has_dedicated_used = v != 0;
+    } else if (field == 11 && wire == 0) {
+      if (!ReadVarint(p, end, &m->dedicated_used_bytes)) return false;
+    } else if (field == 12 && wire == 0) {
+      uint64_t v = 0;
+      if (!ReadVarint(p, end, &v)) return false;
+      m->has_shared_used = v != 0;
+    } else if (field == 13 && wire == 0) {
+      if (!ReadVarint(p, end, &m->shared_used_bytes)) return false;
+    } else if (!SkipField(wire, p, end)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 bool DecodeHealthDiskHealth(const uint8_t* data, size_t len,
                             HealthDiskHealth* m) {
   const uint8_t* p = data;
@@ -3729,6 +3804,16 @@ bool DecodeHealthSample(const uint8_t* data, size_t len, HealthSample* m) {
         return false;
       }
       m->disk_health.push_back(std::move(disk));
+      p += blen;
+    } else if (field == 118 && wire == 2) {
+      uint64_t blen = 0;
+      if (!ReadVarint(p, end, &blen)) return false;
+      if (p + blen > end) return false;
+      HealthGpuAdapter gpu;
+      if (!DecodeHealthGpuAdapter(p, static_cast<size_t>(blen), &gpu)) {
+        return false;
+      }
+      m->gpus.push_back(std::move(gpu));
       p += blen;
     } else if (!SkipField(wire, p, end)) {
       return false;

@@ -351,6 +351,23 @@ struct HealthDiskHealth {
   uint64_t bytes_written = 0;
 };
 
+/// One hardware GPU adapter (issue #9).
+struct HealthGpuAdapter {
+  int32_t luid_high = 0;
+  uint32_t luid_low = 0;
+  std::string name;
+  std::string vendor;
+  bool is_primary = false;
+  uint64_t dedicated_total_bytes = 0;
+  uint64_t shared_total_bytes = 0;
+  bool has_percent = false;
+  double percent = 0.0;
+  bool has_dedicated_used = false;
+  uint64_t dedicated_used_bytes = 0;
+  bool has_shared_used = false;
+  uint64_t shared_used_bytes = 0;
+};
+
 struct HealthPhysicalDisk {
   std::string id;
   std::string name;
@@ -479,6 +496,7 @@ struct HealthSample {
   bool has_disk_smart_ok = false;
   bool disk_smart_ok = false;
   std::vector<HealthDiskHealth> disk_health;
+  std::vector<HealthGpuAdapter> gpus;
 };
 
 struct GetHealthSnapshot {};
