@@ -92,6 +92,7 @@ class AppServices {
       settings: settings,
       ipc: ipc,
       shellNavigation: shellNavigation,
+      timelineLibrary: timelineLibrary,
       logger: logger,
     );
     final assistant = AssistantController(

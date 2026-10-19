@@ -17,6 +17,7 @@ import 'alert_state_engine.dart';
 import 'settings_controller.dart';
 import 'shell_navigation.dart';
 import 'startup_helper.dart';
+import 'timeline_library_controller.dart';
 import 'window_close_behavior.dart';
 
 /// Coordinates tray icon, hide-on-close, health/event alerts, and local toasts.
@@ -28,6 +29,7 @@ class BackgroundModeController extends ChangeNotifier
     required this.settings,
     required this.ipc,
     required this.shellNavigation,
+    required this.timelineLibrary,
     required this.logger,
     AlertStateEngine? alertEngine,
   }) : _alerts = alertEngine ??
@@ -45,6 +47,9 @@ class BackgroundModeController extends ChangeNotifier
   final SettingsController settings;
   final PulseIpcClient ipc;
   final ShellNavigation shellNavigation;
+
+  /// Event types the user hid do not raise notifications either (#25).
+  final TimelineLibraryController timelineLibrary;
   final AppLogger logger;
   final AlertStateEngine _alerts;
 
@@ -418,6 +423,7 @@ class BackgroundModeController extends ChangeNotifier
     final critical = event.severity == Severity.critical ||
         event.importance == Importance.critical;
     if (!critical) return;
+    if (timelineLibrary.isHiddenType(event)) return;
     final ev = _alerts.onCriticalEventLog(
       now: DateTime.now().toUtc(),
       notificationsEnabled: settings.systemNotifications,
