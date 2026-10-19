@@ -329,6 +329,77 @@ LocalStorageTotals? localStorageTotals(HealthSample? sample) {
   );
 }
 
+/// One line per hardware GPU in the GPU panel (issue #9).
+class GpuAdapterSummary {
+  const GpuAdapterSummary({
+    required this.name,
+    required this.usage,
+    required this.memory,
+    required this.isPrimary,
+  });
+
+  final String name;
+
+  /// "12.0 %", or a dash when Windows reports no engine load for it.
+  final String usage;
+
+  /// "Dedicated 3.0 GiB of 12.0 GiB · Shared 0.2 GiB of 15.8 GiB"; empty
+  /// when nothing is known.
+  final String memory;
+
+  /// The GPU the rest of the panel describes.
+  final bool isPrimary;
+}
+
+/// Shown under the GPU that the rest of the GPU panel describes.
+const String kPrimaryGpuNote = 'The details on this page are for this GPU.';
+
+/// Every hardware GPU the service reported, in Windows' adapter order.
+/// Empty when it reported none (services before 1.5 send no list).
+List<GpuAdapterSummary> gpuAdapterSummaries(HealthSample? sample) {
+  final gpus = sample?.gpus ?? const <HealthGpuAdapter>[];
+  return [
+    for (var index = 0; index < gpus.length; index++)
+      GpuAdapterSummary(
+        name: _gpuDisplayName(gpus[index], index),
+        usage: formatPercentOrDash(gpus[index].hasPercent, gpus[index].percent),
+        memory: [
+          _gpuMemoryPart(
+            'Dedicated',
+            gpus[index].hasDedicatedUsed,
+            gpus[index].dedicatedUsedBytes,
+            gpus[index].dedicatedTotalBytes,
+          ),
+          _gpuMemoryPart(
+            'Shared',
+            gpus[index].hasSharedUsed,
+            gpus[index].sharedUsedBytes,
+            gpus[index].sharedTotalBytes,
+          ),
+        ].whereType<String>().join(' · '),
+        isPrimary: gpus[index].isPrimary,
+      ),
+  ];
+}
+
+String _gpuDisplayName(HealthGpuAdapter gpu, int index) {
+  final name = gpu.name.trim();
+  if (name.isNotEmpty) return name;
+  final vendor = gpu.vendor.trim();
+  return vendor.isNotEmpty ? '$vendor GPU' : 'GPU ${index + 1}';
+}
+
+/// "Dedicated 3.0 GiB of 12.0 GiB", "Dedicated 12.0 GiB" when usage is not
+/// reported, or null when neither is known.
+String? _gpuMemoryPart(String label, bool hasUsed, int usedBytes, int totalBytes) {
+  if (hasUsed && totalBytes > 0) {
+    return '$label ${formatBytesBinary(usedBytes)} of ${formatBytesBinary(totalBytes)}';
+  }
+  if (hasUsed) return '$label ${formatBytesBinary(usedBytes)} used';
+  if (totalBytes > 0) return '$label ${formatBytesBinary(totalBytes)}';
+  return null;
+}
+
 /// Section title for one physical disk, e.g. "Disk 2 · Samsung SSD 980 · NVMe".
 String diskHealthTitle(HealthDiskHealth disk) => [
       'Disk ${disk.index}',

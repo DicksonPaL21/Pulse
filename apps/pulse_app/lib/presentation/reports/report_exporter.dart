@@ -299,6 +299,14 @@ class ReportExporter {
         ('memory_total_bytes', '${sample.memoryTotalBytes}'),
         if (sample.hasGpuPercent)
           ('gpu_percent', sample.gpuPercent.toStringAsFixed(1)),
+        // Every hardware GPU (issue #9); gpu_* above is the primary one.
+        for (final (index, gpu) in sample.gpus.indexed) ...[
+          ('gpu_${index + 1}_name', gpu.name),
+          if (gpu.hasPercent)
+            ('gpu_${index + 1}_percent', gpu.percent.toStringAsFixed(1)),
+          if (gpu.hasDedicatedUsed)
+            ('gpu_${index + 1}_dedicated_used_bytes', '${gpu.dedicatedUsedBytes}'),
+        ],
         if (sample.hasNetDownloadBps)
           ('net_download_bps', sample.netDownloadBps.toStringAsFixed(0)),
         if (sample.hasNetUploadBps)
@@ -1002,6 +1010,21 @@ class ReportExporter {
         'memory_used_bytes': s.memoryUsedBytes,
         'memory_total_bytes': s.memoryTotalBytes,
         if (s.hasGpuPercent) 'gpu_percent': s.gpuPercent,
+        if (s.gpus.isNotEmpty)
+          'gpus': [
+            for (final gpu in s.gpus)
+              {
+                'name': gpu.name,
+                'vendor': gpu.vendor,
+                'primary': gpu.isPrimary,
+                if (gpu.hasPercent) 'percent': gpu.percent,
+                'dedicated_total_bytes': gpu.dedicatedTotalBytes,
+                if (gpu.hasDedicatedUsed)
+                  'dedicated_used_bytes': gpu.dedicatedUsedBytes,
+                'shared_total_bytes': gpu.sharedTotalBytes,
+                if (gpu.hasSharedUsed) 'shared_used_bytes': gpu.sharedUsedBytes,
+              },
+          ],
         if (s.hasNetDownloadBps) 'net_download_bps': s.netDownloadBps,
         if (s.hasNetUploadBps) 'net_upload_bps': s.netUploadBps,
         if (s.hasDiskReadBps) 'disk_read_bps': s.diskReadBps,

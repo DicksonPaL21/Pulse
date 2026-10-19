@@ -759,6 +759,7 @@ class _GpuPanelBody extends StatelessWidget {
     final sharedUsedBytes = s?.gpuSharedUsedBytes ?? 0;
     final hasDedicatedUsed = s?.hasGpuDedicatedUsed ?? false;
     final hasSharedUsed = s?.hasGpuSharedUsed ?? false;
+    final allGpus = gpuAdapterSummaries(s);
 
     final engineHistories = <(String, List<double>)>[
       if (view.gpu3dHistory.isNotEmpty) ('3D', view.gpu3dHistory),
@@ -817,6 +818,16 @@ class _GpuPanelBody extends StatelessWidget {
                   ],
                 ),
               ),
+              // One GPU is already described in full; the list is for PCs
+              // with an integrated and a dedicated GPU (issue #9).
+              if (allGpus.length > 1)
+                _healthPulseSection(
+                  context: context,
+                  kind: 'gpu',
+                  sectionId: 'all-gpus',
+                  title: 'All GPUs (${allGpus.length})',
+                  builder: (context) => _GpuAdapterList(gpus: allGpus),
+                ),
               _healthPulseSection(
                 context: context,
                 kind: 'gpu',
@@ -1118,6 +1129,65 @@ class _GpuPanelBody extends StatelessWidget {
             ],
           ),
         ),
+      ],
+    );
+  }
+}
+
+/// Every hardware GPU with its load and memory (issue #9). The memory line
+/// can be long, so it gets its own line instead of a spec row description.
+class _GpuAdapterList extends StatelessWidget {
+  const _GpuAdapterList({required this.gpus});
+
+  final List<GpuAdapterSummary> gpus;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final strong = theme.textTheme.bodyMedium?.copyWith(
+      color: PulseTokens.textPrimary,
+      fontWeight: FontWeight.w600,
+      fontSize: 11.5,
+    );
+    final detail = theme.textTheme.bodySmall?.copyWith(
+      color: PulseTokens.textTertiary,
+      fontSize: 10,
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var i = 0; i < gpus.length; i++) ...[
+          if (i > 0) const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  gpus[i].name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: strong,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                gpus[i].usage,
+                style: strong?.copyWith(
+                  color: gpus[i].usage == kUnavailableDash
+                      ? PulseTokens.textDisabled
+                      : null,
+                ),
+              ),
+            ],
+          ),
+          if (gpus[i].memory.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text(gpus[i].memory, style: detail),
+          ],
+          if (gpus[i].isPrimary) ...[
+            const SizedBox(height: 2),
+            Text(kPrimaryGpuNote, style: detail),
+          ],
+        ],
       ],
     );
   }
