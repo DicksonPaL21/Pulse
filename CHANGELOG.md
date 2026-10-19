@@ -5,6 +5,19 @@ All notable changes to Pulse are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] — 2026-10-20
+
+### Added
+
+- System Health lists every GPU (for example integrated + dedicated) with its load and memory; the Assistant and health reports include them (#9)
+- Timeline: "Hide events like this" hides an event type (provider + Event ID) from the list and its counts; a "hidden events" counter shows them on demand and Settings → Timeline → Hidden events brings them back. Reports and exports are unchanged (#25)
+- Starting Pulse while it runs brings the running window forward instead of opening a second one
+
+### Changed
+
+- GPU load is computed like Task Manager: each engine summed over its processes, the GPU showing its busiest engine. Pulse used the busiest single process, which read low when several shared an engine (#9)
+- A critical event of a hidden type raises no desktop notification (#25)
+
 ## [1.4.3] — 2026-10-18
 
 ### Added

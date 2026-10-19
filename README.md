@@ -78,6 +78,14 @@ Windows ships two tools for this. Pulse does not replace them; it sits between t
 
 ---
 
+## What's new in 1.5
+
+- **Every GPU.** PCs with an integrated and a dedicated GPU see both in System Health, each with its load and memory. GPU load is now worked out the way Task Manager does it.
+- **Hide events you expect.** "Hide events like this" takes an event type out of the Timeline and its counts. A counter shows how many are hidden, Settings brings them back, and reports and exports still contain every event.
+- **One Pulse at a time.** Starting Pulse again brings the running window forward, even from the tray.
+
+Full notes: [v1.5.0](docs/releases/v1.5.0.md) · [CHANGELOG](CHANGELOG.md)
+
 ## What's new in 1.4
 
 **1.4.3**: no more crash on exit, Markdown and Enter-to-send in the Assistant, a custom date range in the Timeline, and a clean uninstall.
@@ -165,7 +173,7 @@ The release also has a payload ZIP. It still needs PulseService and is not a por
 Each release lists SHA-256 checksums in `SHA256SUMS.txt`:
 
 ```powershell
-Get-FileHash .\Pulse-Setup-1.4.3-windows-x64.exe -Algorithm SHA256
+Get-FileHash .\Pulse-Setup-1.5.0-windows-x64.exe -Algorithm SHA256
 ```
 
 Releases are not code-signed yet (see [Code signing policy](#code-signing-policy)), so SmartScreen or some antivirus tools may warn about a new file. More help: [installation guide](docs/guides/installation.md) · [troubleshooting](docs/guides/troubleshooting.md) · [upgrade notes](docs/guides/upgrade-notes.md)
@@ -276,7 +284,7 @@ Every feature should answer one question: **"What is Windows doing right now?"**
 | [AGENTS.md](AGENTS.md) | Product principles and development rules |
 | [docs/architecture](docs/architecture/README.md) | Architecture package and ADRs |
 | [docs/guides](docs/guides/installation.md) | Installation, troubleshooting, upgrade notes, security |
-| [docs/releases](docs/releases/v1.4.3.md) | Release notes |
+| [docs/releases](docs/releases/v1.5.0.md) | Release notes |
 | [CHANGELOG.md](CHANGELOG.md) | Version history |
 | [BUILD.md](BUILD.md) · [DEVELOPMENT.md](DEVELOPMENT.md) | Building and local workflow |
 | [CONTRIBUTING.md](CONTRIBUTING.md) · [SECURITY.md](SECURITY.md) | Contributing and vulnerability reports |
