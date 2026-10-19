@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:local_notifier/local_notifier.dart';
 import 'package:path/path.dart' as p;
 import 'package:pulse_protocol/pulse_wire.dart';
@@ -53,6 +54,8 @@ class BackgroundModeController extends ChangeNotifier
   final AppLogger logger;
   final AlertStateEngine _alerts;
 
+  static const _singleInstanceChannel = MethodChannel('pulse/single_instance');
+
   StreamSubscription<HealthUpdate>? _healthSub;
   StreamSubscription<TimelineEvent>? _liveSub;
   bool _started = false;
@@ -72,6 +75,15 @@ class BackgroundModeController extends ChangeNotifier
 
     windowManager.addListener(this);
     await windowManager.setPreventClose(true);
+
+    // Starting Pulse again while it runs (Start menu, desktop shortcut)
+    // brings this window forward; the runner keeps the second copy from
+    // opening (windows/runner/single_instance.h).
+    _singleInstanceChannel.setMethodCallHandler((call) async {
+      if (call.method != 'activate') return;
+      logger.info('BackgroundMode', 'Pulse started again; showing the window');
+      await showMainWindow();
+    });
 
     settings.addListener(_onSettingsChanged);
 
