@@ -33,6 +33,37 @@ namespace pulse {
 [[nodiscard]] bool IsCrashDiagnosticEvent(std::string_view provider_name,
                                           std::uint32_t win_event_id);
 
+/// The crash events Pulse explains and collects, by provider and event ID.
+enum class CrashEventType : std::uint8_t {
+  None,
+  UnexpectedRestart,   // Kernel-Power 41
+  Bugcheck,            // WER-SystemErrorReporting 1001
+  HardwareError,       // WHEA-Logger, any event ID
+  ApplicationError,    // Application Error 1000
+  ApplicationHang,     // Application Hang 1002
+  ServiceCrash,        // Service Control Manager 7031 / 7034
+  DisplayDriverReset,  // Display 4101
+};
+
+[[nodiscard]] CrashEventType ClassifyCrashEvent(std::string_view provider_name,
+                                                std::uint32_t win_event_id);
+
+/// What a Kernel-Power 41 event says about the restart.
+struct UnexpectedRestart {
+  /// Set when Windows stopped with a blue screen.
+  std::optional<std::uint32_t> stop_code;
+  bool power_button_held = false;
+  bool during_sleep = false;
+};
+
+/// nullopt when the event has no data (no BugcheckCode field).
+[[nodiscard]] std::optional<UnexpectedRestart> ReadUnexpectedRestart(
+    std::string_view event_xml);
+
+/// Stop code of a BugCheck 1001 event, from its data or else its message.
+[[nodiscard]] std::optional<std::uint32_t> ReadBugcheckStopCode(
+    const ipc::TimelineEvent& event);
+
 /// Value of <Data Name='name'> in event XML; nullopt when absent.
 [[nodiscard]] std::optional<std::string> FindEventDataValue(
     std::string_view event_xml, std::string_view name);

@@ -26,34 +26,10 @@ constexpr std::string_view kServiceControlManagerProvider =
 // has none.
 constexpr std::uint32_t kServiceCrashWithRecoveryEventId = 7031;
 constexpr std::uint32_t kServiceCrashEventId = 7034;
+constexpr std::string_view kDisplayProvider = "Display";
+constexpr std::uint32_t kDisplayDriverResetEventId = 4101;
 
 constexpr std::string_view kDumpExtension = ".dmp";
-
-bool IsKernelPower41(const ipc::TimelineEvent& event) {
-  return event.win_event_id == kUnexpectedRestartEventId &&
-         ContainsIgnoreCase(event.provider_name, kKernelPowerProvider);
-}
-
-bool IsBugcheck1001(const ipc::TimelineEvent& event) {
-  return event.win_event_id == kBugcheckEventId &&
-         ContainsIgnoreCase(event.provider_name, kBugcheckProvider);
-}
-
-bool IsApplicationError(std::string_view provider, std::uint32_t id) {
-  return id == kApplicationErrorEventId &&
-         ContainsIgnoreCase(provider, kApplicationErrorProvider);
-}
-
-bool IsApplicationHang(std::string_view provider, std::uint32_t id) {
-  return id == kApplicationHangEventId &&
-         ContainsIgnoreCase(provider, kApplicationHangProvider);
-}
-
-bool IsServiceCrash(std::string_view provider, std::uint32_t id) {
-  return (id == kServiceCrashWithRecoveryEventId ||
-          id == kServiceCrashEventId) &&
-         ContainsIgnoreCase(provider, kServiceControlManagerProvider);
-}
 
 std::string DecodeXmlEntities(std::string_view text) {
   struct Entity {
@@ -185,25 +161,16 @@ EventInsight BlueScreenInsight(std::string title, std::uint32_t code) {
 
 std::optional<EventInsight> ExplainUnexpectedRestart(
     const ipc::TimelineEvent& event) {
-  const auto bugcheck_value = FindEventDataValue(event.raw_xml, "BugcheckCode");
-  if (!bugcheck_value) {
+  const auto restart = ReadUnexpectedRestart(event.raw_xml);
+  if (!restart) {
     return std::nullopt;  // No event data: keep the generic catalog wording.
   }
-  const auto bugcheck = ParseEventDataNumber(*bugcheck_value, 10).value_or(0);
-  const auto power_button =
-      FindEventDataValue(event.raw_xml, "PowerButtonTimestamp");
-  const bool power_button_held =
-      IsTruthy(power_button) ||
-      IsTruthy(FindEventDataValue(event.raw_xml, "LongPowerButtonPressDetected"));
-  const bool during_sleep =
-      IsTruthy(FindEventDataValue(event.raw_xml, "SleepInProgress"));
 
   EventInsight out;
-  if (bugcheck != 0 && bugcheck <= std::numeric_limits<std::uint32_t>::max()) {
-    // Event 41 stores the stop code in decimal (159 = 0x9F).
+  if (restart->stop_code) {
     out = BlueScreenInsight("Windows Restarted After a Blue Screen",
-                            static_cast<std::uint32_t>(bugcheck));
-  } else if (power_button_held) {
+                            *restart->stop_code);
+  } else if (restart->power_button_held) {
     out.title = "PC Was Forced Off With the Power Button";
     out.summary =
         "The power button was held down to turn the PC off, usually because "
@@ -227,17 +194,14 @@ std::optional<EventInsight> ExplainUnexpectedRestart(
     out.importance = Importance::Critical;
     out.category = InsightCategory::Power;
   }
-  if (during_sleep) {
+  if (restart->during_sleep) {
     out.summary += " It happened while the PC was going to sleep or waking up.";
   }
   return out;
 }
 
 std::optional<EventInsight> ExplainBugcheck(const ipc::TimelineEvent& event) {
-  auto code = FindStopCode(event.raw_xml);
-  if (!code) {
-    code = FindStopCode(event.message);
-  }
+  const auto code = ReadBugcheckStopCode(event);
   if (!code) {
     return std::nullopt;
   }
@@ -430,43 +394,108 @@ std::optional<std::uint64_t> ParseEventDataNumber(std::string_view text,
   return value;
 }
 
+CrashEventType ClassifyCrashEvent(std::string_view provider_name,
+                                  std::uint32_t win_event_id) {
+  const auto is = [&](std::string_view provider, std::uint32_t id) {
+    return win_event_id == id && ContainsIgnoreCase(provider_name, provider);
+  };
+  if (is(kKernelPowerProvider, kUnexpectedRestartEventId)) {
+    return CrashEventType::UnexpectedRestart;
+  }
+  if (is(kBugcheckProvider, kBugcheckEventId)) {
+    return CrashEventType::Bugcheck;
+  }
+  if (is(kApplicationErrorProvider, kApplicationErrorEventId)) {
+    return CrashEventType::ApplicationError;
+  }
+  if (is(kApplicationHangProvider, kApplicationHangEventId)) {
+    return CrashEventType::ApplicationHang;
+  }
+  if (is(kServiceControlManagerProvider, kServiceCrashWithRecoveryEventId) ||
+      is(kServiceControlManagerProvider, kServiceCrashEventId)) {
+    return CrashEventType::ServiceCrash;
+  }
+  if (is(kDisplayProvider, kDisplayDriverResetEventId)) {
+    return CrashEventType::DisplayDriverReset;
+  }
+  if (ContainsIgnoreCase(provider_name, kWheaProvider)) {
+    return CrashEventType::HardwareError;
+  }
+  return CrashEventType::None;
+}
+
+std::optional<UnexpectedRestart> ReadUnexpectedRestart(
+    std::string_view event_xml) {
+  const auto bugcheck_value = FindEventDataValue(event_xml, "BugcheckCode");
+  if (!bugcheck_value) {
+    return std::nullopt;
+  }
+  UnexpectedRestart out;
+  // Event 41 stores the stop code in decimal (159 = 0x9F).
+  const auto bugcheck = ParseEventDataNumber(*bugcheck_value, 10).value_or(0);
+  if (bugcheck != 0 && bugcheck <= std::numeric_limits<std::uint32_t>::max()) {
+    out.stop_code = static_cast<std::uint32_t>(bugcheck);
+  }
+  out.power_button_held =
+      IsTruthy(FindEventDataValue(event_xml, "PowerButtonTimestamp")) ||
+      IsTruthy(FindEventDataValue(event_xml, "LongPowerButtonPressDetected"));
+  out.during_sleep = IsTruthy(FindEventDataValue(event_xml, "SleepInProgress"));
+  return out;
+}
+
+std::optional<std::uint32_t> ReadBugcheckStopCode(
+    const ipc::TimelineEvent& event) {
+  auto code = FindStopCode(event.raw_xml);
+  if (!code) {
+    code = FindStopCode(event.message);
+  }
+  return code;
+}
+
 bool IsCrashDiagnosticEvent(std::string_view provider_name,
                             std::uint32_t win_event_id) {
-  return (win_event_id == kUnexpectedRestartEventId &&
-          ContainsIgnoreCase(provider_name, kKernelPowerProvider)) ||
-         (win_event_id == kBugcheckEventId &&
-          ContainsIgnoreCase(provider_name, kBugcheckProvider)) ||
-         IsApplicationError(provider_name, win_event_id) ||
-         IsApplicationHang(provider_name, win_event_id) ||
-         IsServiceCrash(provider_name, win_event_id);
+  switch (ClassifyCrashEvent(provider_name, win_event_id)) {
+    case CrashEventType::UnexpectedRestart:
+    case CrashEventType::Bugcheck:
+    case CrashEventType::ApplicationError:
+    case CrashEventType::ApplicationHang:
+    case CrashEventType::ServiceCrash:
+      return true;
+    case CrashEventType::None:
+    case CrashEventType::HardwareError:
+    case CrashEventType::DisplayDriverReset:
+      return false;
+  }
+  return false;
 }
 
 std::optional<EventInsight> ExplainCrashEvent(const ipc::TimelineEvent& event) {
-  if (IsKernelPower41(event)) {
-    return ExplainUnexpectedRestart(event);
-  }
-  if (IsBugcheck1001(event)) {
-    return ExplainBugcheck(event);
-  }
-  if (IsApplicationError(event.provider_name, event.win_event_id)) {
-    const auto fault = ParseApplicationFault(event.raw_xml);
-    if (!fault) {
-      return std::nullopt;
+  switch (ClassifyCrashEvent(event.provider_name, event.win_event_id)) {
+    case CrashEventType::UnexpectedRestart:
+      return ExplainUnexpectedRestart(event);
+    case CrashEventType::Bugcheck:
+      return ExplainBugcheck(event);
+    case CrashEventType::ApplicationError: {
+      const auto fault = ParseApplicationFault(event.raw_xml);
+      if (!fault) {
+        return std::nullopt;
+      }
+      return ExplainApplicationFault(*fault, /*module_company=*/"");
     }
-    return ExplainApplicationFault(*fault, /*module_company=*/"");
-  }
-  if (IsApplicationHang(event.provider_name, event.win_event_id)) {
-    const auto hang = ParseApplicationHang(event.raw_xml);
-    if (!hang) {
-      return std::nullopt;
+    case CrashEventType::ApplicationHang: {
+      const auto hang = ParseApplicationHang(event.raw_xml);
+      if (!hang) {
+        return std::nullopt;
+      }
+      return ExplainApplicationHang(*hang);
     }
-    return ExplainApplicationHang(*hang);
-  }
-  if (IsServiceCrash(event.provider_name, event.win_event_id)) {
-    return ExplainServiceCrash(event);
-  }
-  if (ContainsIgnoreCase(event.provider_name, kWheaProvider)) {
-    return ExplainHardwareError(event);
+    case CrashEventType::ServiceCrash:
+      return ExplainServiceCrash(event);
+    case CrashEventType::HardwareError:
+      return ExplainHardwareError(event);
+    case CrashEventType::DisplayDriverReset:
+    case CrashEventType::None:
+      break;
   }
   return std::nullopt;
 }

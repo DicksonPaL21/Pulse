@@ -49,6 +49,9 @@ add_executable(PulseService WIN32
   src/collector/collector.cpp
   src/collectors/event_log_collector.cpp
   src/collectors/event_log_subscriber.cpp
+  src/collectors/crash_history_collector.cpp
+  src/intelligence/crash_history.cpp
+  src/windows/file_version_info.cpp
   src/collectors/event_log_channels.cpp
   src/collectors/evtx_file_reader.cpp
   src/commands/read_evtx_command.cpp
@@ -188,6 +191,24 @@ target_include_directories(app_crash_explainer_tests PRIVATE
 )
 target_link_libraries(app_crash_explainer_tests PRIVATE pulse_wire)
 add_test(NAME app_crash_explainer_tests COMMAND app_crash_explainer_tests)
+
+add_executable(crash_history_tests
+  test/crash_history_test.cpp
+  src/intelligence/crash_history.cpp
+  src/intelligence/event_intelligence.cpp
+  src/intelligence/crash_explainer.cpp
+  src/intelligence/wake_explainer.cpp
+  src/intelligence/bugcheck_catalog.cpp
+  src/intelligence/app_crash_explainer.cpp
+  src/intelligence/exception_catalog.cpp
+)
+target_include_directories(crash_history_tests PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/src"
+  "${PULSE_ROOT}/shared/pulse_protocol/cpp"
+  "${PULSE_ROOT}/shared/pulse_common/include"
+)
+target_link_libraries(crash_history_tests PRIVATE pulse_wire)
+add_test(NAME crash_history_tests COMMAND crash_history_tests)
 
 add_executable(logger_tests
   test/logger_test.cpp
