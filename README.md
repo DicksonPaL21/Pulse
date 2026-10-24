@@ -35,7 +35,7 @@
 ## Contents
 
 - [Why Pulse](#why-pulse)
-- [What's new in 1.4](#whats-new-in-14)
+- [What's new in 1.6](#whats-new-in-16)
 - [Features](#features)
 - [Install](#install)
 - [Privacy and security](#privacy-and-security)
@@ -78,6 +78,15 @@ Windows ships two tools for this. Pulse does not replace them; it sits between t
 
 ---
 
+## What's new in 1.6
+
+- **Crashes page.** Blue screens, app crashes and hangs, unexpected restarts, graphics driver resets, service crashes and hardware errors of the last 7, 30 or 90 days on one page, grouped by cause, with a bar for each day.
+- **Why it crashed, in plain words.** Each group says what happened, how often, which file an app crashed in and whether it belongs to the app, Windows, a driver or another program, the versions it happened on, and what to try next.
+- **Named crashes in the Timeline.** "Discord Crashed" instead of "Application Crashed", with the error and the file.
+- **Crash history report** and a crash history tool for the local Assistant.
+
+Full notes: [v1.6.0](docs/releases/v1.6.0.md) · [CHANGELOG](CHANGELOG.md)
+
 ## What's new in 1.5
 
 - **Every GPU.** PCs with an integrated and a dedicated GPU see both in System Health, each with its load and memory. GPU load is now worked out the way Task Manager does it.
@@ -119,6 +128,11 @@ Full notes: [v1.4.3](docs/releases/v1.4.3.md) · [v1.4.2](docs/releases/v1.4.2.m
 - Search and filters by severity, source, category, provider, Event ID, process and time; saved searches, bookmarks and pins
 - Open exported `.evtx` files; export the view as JSON or CSV
 
+**Crashes**
+- Blue screens, app crashes and hangs, unexpected restarts, graphics driver resets, service crashes and hardware errors of the last 7, 30 or 90 days, grouped by cause
+- What happened and what to try, how often, the versions it happened on, and the file an app crashed in with who made it
+- Opens each Windows event in the Timeline's Explained · Technical · Raw XML views
+
 **System Health**
 - Health score, CPU (frequency-aware, matches Task Manager), memory, GPU, disk and network, with 60-second history
 - Per-process CPU, memory and network
@@ -130,7 +144,7 @@ Full notes: [v1.4.3](docs/releases/v1.4.3.md) · [v1.4.2](docs/releases/v1.4.2.m
 - Software: installed programs, drivers and Windows services
 
 **Reports and diagnostics**
-- Health, Timeline, Diagnostics and inventory reports as JSON, CSV, HTML or PDF, saved locally
+- Health, Timeline, crash history, Diagnostics and inventory reports as JSON, CSV, HTML or PDF, saved locally
 - Service and IPC diagnostics with a support bundle you can attach to an issue
 
 **Assistant (optional)**
@@ -173,7 +187,7 @@ The release also has a payload ZIP. It still needs PulseService and is not a por
 Each release lists SHA-256 checksums in `SHA256SUMS.txt`:
 
 ```powershell
-Get-FileHash .\Pulse-Setup-1.5.0-windows-x64.exe -Algorithm SHA256
+Get-FileHash .\Pulse-Setup-1.6.0-windows-x64.exe -Algorithm SHA256
 ```
 
 Releases are not code-signed yet (see [Code signing policy](#code-signing-policy)), so SmartScreen or some antivirus tools may warn about a new file. More help: [installation guide](docs/guides/installation.md) · [troubleshooting](docs/guides/troubleshooting.md) · [upgrade notes](docs/guides/upgrade-notes.md)
@@ -261,6 +275,8 @@ Releases are built by [`.github/workflows/release.yml`](.github/workflows/releas
 - [x] Midnight redesign — 1.2
 - [x] Stability release, ~100 MB smaller — 1.3
 - [x] Crash explainer, `.evtx` import, masked exports, update notice — 1.4
+- [x] Every GPU, hide expected events, one Pulse at a time — 1.5
+- [x] Crashes page: crash history grouped by cause — 1.6
 - [ ] Code-signed releases (SignPath Foundation, in review)
 - [ ] Process lifecycle in the Timeline via ETW ([ADR-015](docs/architecture/decisions/ADR-015-kernel-activity-via-etw.md))
 - [ ] Minidump analysis for blue screens
@@ -286,7 +302,7 @@ Every feature should answer one question: **"What is Windows doing right now?"**
 | [AGENTS.md](AGENTS.md) | Product principles and development rules |
 | [docs/architecture](docs/architecture/README.md) | Architecture package and ADRs |
 | [docs/guides](docs/guides/installation.md) | Installation, troubleshooting, upgrade notes, security |
-| [docs/releases](docs/releases/v1.5.0.md) | Release notes |
+| [docs/releases](docs/releases/v1.6.0.md) | Release notes |
 | [CHANGELOG.md](CHANGELOG.md) | Version history |
 | [BUILD.md](BUILD.md) · [DEVELOPMENT.md](DEVELOPMENT.md) | Building and local workflow |
 | [CONTRIBUTING.md](CONTRIBUTING.md) · [SECURITY.md](SECURITY.md) | Contributing and vulnerability reports |
