@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:pulse_protocol/pulse_wire.dart';
 
+import '../features/crashes/crash_display.dart';
 import '../ipc/pulse_ipc_client.dart';
 import 'assistant_tools.dart';
 import 'diagnostic_tool_allowlist.dart';
@@ -20,6 +21,7 @@ String assistantToolActivityLabel(String toolName) {
     'process_list' || 'process_search' || 'process_details' =>
       'Checking running processes...',
     'timeline_list' || 'timeline_search' => 'Checking recent events...',
+    'crash_history' => 'Checking crash history...',
     'windows_services' => 'Checking Windows services...',
     'diagnostics_snapshot' => 'Checking Pulse diagnostics...',
     'service_status' => 'Checking PulseService status...',
@@ -111,6 +113,8 @@ class IpcAssistantToolLayer implements AssistantToolLayer {
         return _timelineList(args);
       case 'timeline_search':
         return _timelineSearch(args);
+      case 'crash_history':
+        return _crashHistory(args);
       case 'windows_services':
         return _windowsServices(args);
       case 'diagnostics_snapshot':
@@ -384,6 +388,48 @@ class IpcAssistantToolLayer implements AssistantToolLayer {
       data: {
         'count': snap.events.length,
         'events': snap.events.take(limit).map(_eventBrief).toList(),
+      },
+    );
+  }
+
+  /// Most crash groups one answer carries; the newest come first.
+  static const int _maxCrashGroups = 25;
+
+  Future<AssistantToolResult> _crashHistory(Map<String, Object?> args) async {
+    final days = _clampInt(args['days'], fallback: 30, min: 1, max: 90);
+    final history = await _ipc.getCrashHistory(days: days);
+    String time(int unixMs) =>
+        DateTime.fromMillisecondsSinceEpoch(unixMs).toIso8601String();
+    return AssistantToolResult(
+      ok: true,
+      data: {
+        'days': history.days,
+        'kinds': history.groups.length,
+        'crashes': history.groups.fold<int>(0, (sum, g) => sum + g.count),
+        if (history.truncated) 'olderEventsNotRead': true,
+        'groups': [
+          for (final g in history.groups.take(_maxCrashGroups))
+            {
+              'kind': g.kind.name,
+              'title': g.title,
+              'explanation': g.summary,
+              if (g.recommendation.isNotEmpty) 'whatToDo': g.recommendation,
+              'times': g.count,
+              'first': time(g.firstUnixMs),
+              'last': time(g.lastUnixMs),
+              if (g.subject.isNotEmpty) 'subject': g.subject,
+              if (g.moduleName.isNotEmpty) 'file': g.moduleName,
+              if (g.moduleOrigin != FaultingModuleOrigin.unknown)
+                'fileOwner': g.moduleOrigin.name,
+              if (g.moduleCompany.isNotEmpty) 'fileCompany': g.moduleCompany,
+              if (g.hasCode) 'code': formatCrashCode(g.code),
+              if (g.versions.isNotEmpty)
+                'versions': [
+                  for (final v in g.versions.take(3))
+                    {'version': v.version, 'times': v.count},
+                ],
+            },
+        ],
       },
     );
   }
