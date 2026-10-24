@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:pulse/app/theme/pulse_theme.dart';
 import 'package:pulse/application/client_frame_metrics.dart';
 import 'package:pulse/application/connection_controller.dart';
+import 'package:pulse/application/crash_history_controller.dart';
 import 'package:pulse/application/diagnostics_controller.dart';
 import 'package:pulse/application/health_navigation.dart';
 import 'package:pulse/application/service_lifecycle_controller.dart';
@@ -16,6 +17,7 @@ import 'package:pulse/application/update_check_controller.dart';
 import 'package:pulse/ipc/pulse_ipc_client.dart';
 import 'package:pulse/logging/app_logger.dart';
 import 'package:pulse/platform/pulse_service_scm.dart';
+import 'package:pulse/presentation/crashes/crashes_page.dart';
 import 'package:pulse/presentation/diagnostics/diagnostics_page.dart';
 import 'package:pulse/presentation/health/health_cards.dart';
 import 'package:pulse/presentation/health/health_view_models.dart';
@@ -76,6 +78,9 @@ Future<Widget> _harness(Widget page) async {
             UpdateCheckController(settings: settings, logger: logger),
       ),
       ChangeNotifierProvider(create: (_) => HealthNavigation()),
+      ChangeNotifierProvider(
+        create: (_) => CrashHistoryController(ipc: ipc, logger: logger),
+      ),
       ChangeNotifierProvider(create: (_) => ShellNavigation()),
     ],
     child: MaterialApp(
@@ -228,6 +233,21 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('PulseService is stopped'), findsOneWidget);
+    expect(find.text('Start PulseService'), findsOneWidget);
+  });
+
+  testWidgets('Crashes page shows offline recovery when disconnected',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      await _harness(const CrashesPage(title: 'Crashes')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Crashes'), findsWidgets);
     expect(find.text('Start PulseService'), findsOneWidget);
   });
 

@@ -6,6 +6,7 @@ import '../application/assistant_controller.dart';
 import '../application/background_mode_controller.dart';
 import '../application/client_frame_metrics.dart';
 import '../application/connection_controller.dart';
+import '../application/crash_history_controller.dart';
 import '../application/diagnostics_controller.dart';
 import '../application/evtx_import_controller.dart';
 import '../application/health_navigation.dart';
@@ -39,6 +40,7 @@ class AppServices {
     required this.shellNavigation,
     required this.backgroundMode,
     required this.assistant,
+    required this.crashHistory,
   });
 
   final PulseIpcClient ipcClient;
@@ -56,6 +58,7 @@ class AppServices {
   final ShellNavigation shellNavigation;
   final BackgroundModeController backgroundMode;
   final AssistantController assistant;
+  final CrashHistoryController crashHistory;
 
   static Future<AppServices> create() async {
     final logger = AppLogger(file: AppLogFile.openDefault());
@@ -101,6 +104,7 @@ class AppServices {
       tokenStore: WindowsCredentialTokenStore(logger: logger),
     );
     final updateCheck = UpdateCheckController(settings: settings, logger: logger);
+    final crashHistory = CrashHistoryController(ipc: ipc, logger: logger);
     // GitHub edition only, and only when the user turned it on.
     if (!const WindowsPulseDeployment().isPackagedMsix) {
       unawaited(updateCheck.checkAutomaticallyIfDue());
@@ -128,6 +132,7 @@ class AppServices {
       shellNavigation: shellNavigation,
       backgroundMode: backgroundMode,
       assistant: assistant,
+      crashHistory: crashHistory,
     );
   }
 }
