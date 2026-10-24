@@ -4134,6 +4134,253 @@ bool DecodeInjectDiagnosticsTestEvent(const uint8_t* data, size_t len,
   return true;
 }
 
+std::vector<uint8_t> EncodeCrashOccurrence(const CrashOccurrence& m) {
+  std::vector<uint8_t> out;
+  WriteI64(1, m.timestamp_unix_ms, &out);
+  WriteString(2, m.channel, &out);
+  WriteU64(3, m.record_id, &out);
+  WriteString(4, m.version, &out);
+  return out;
+}
+
+std::vector<uint8_t> EncodeCrashVersion(const CrashVersion& m) {
+  std::vector<uint8_t> out;
+  WriteString(1, m.version, &out);
+  WriteU32(2, m.count, &out);
+  WriteI64(3, m.last_unix_ms, &out);
+  return out;
+}
+
+std::vector<uint8_t> EncodeCrashGroup(const CrashGroup& m) {
+  std::vector<uint8_t> out;
+  WriteU32(1, static_cast<uint32_t>(m.kind), &out);
+  WriteString(2, m.key, &out);
+  WriteString(3, m.subject, &out);
+  WriteString(4, m.module_name, &out);
+  WriteString(5, m.module_path, &out);
+  WriteString(6, m.module_company, &out);
+  WriteU32(7, static_cast<uint32_t>(m.module_origin), &out);
+  WriteU32(8, m.code, &out);
+  WriteBool(9, m.has_code, &out);
+  WriteString(10, m.title, &out);
+  WriteString(11, m.summary, &out);
+  WriteString(12, m.recommendation, &out);
+  WriteU32(13, m.count, &out);
+  WriteI64(14, m.first_unix_ms, &out);
+  WriteI64(15, m.last_unix_ms, &out);
+  for (const int64_t unix_ms : m.occurrence_unix_ms) {
+    WriteI64(16, unix_ms, &out);
+  }
+  for (const auto& version : m.versions) {
+    WriteBytesField(17, EncodeCrashVersion(version), &out);
+  }
+  for (const auto& occurrence : m.recent) {
+    WriteBytesField(18, EncodeCrashOccurrence(occurrence), &out);
+  }
+  return out;
+}
+
+std::vector<uint8_t> EncodeGetCrashHistory(const GetCrashHistory& m) {
+  std::vector<uint8_t> out;
+  WriteU32(1, m.days, &out);
+  return out;
+}
+
+std::vector<uint8_t> EncodeCrashHistory(const CrashHistory& m) {
+  std::vector<uint8_t> out;
+  WriteU32(1, m.days, &out);
+  WriteI64(2, m.collected_unix_ms, &out);
+  for (const auto& group : m.groups) {
+    WriteBytesField(3, EncodeCrashGroup(group), &out);
+  }
+  WriteU32(4, m.scanned_events, &out);
+  WriteBool(5, m.truncated, &out);
+  for (const auto& channel : m.unreadable_channels) {
+    WriteString(6, channel, &out);
+  }
+  return out;
+}
+
+/// Decodes one length-delimited sub-message at `p` with `decode`.
+template <typename T, typename Decode>
+bool DecodeNested(const uint8_t*& p, const uint8_t* end, Decode decode,
+                  std::vector<T>* out) {
+  uint64_t blen = 0;
+  if (!ReadVarint(p, end, &blen)) return false;
+  if (p + blen > end) return false;
+  T entry;
+  if (!decode(p, static_cast<size_t>(blen), &entry)) return false;
+  out->push_back(std::move(entry));
+  p += static_cast<size_t>(blen);
+  return true;
+}
+
+bool DecodeCrashOccurrence(const uint8_t* data, size_t len,
+                           CrashOccurrence* m) {
+  const uint8_t* p = data;
+  const uint8_t* end = data + len;
+  while (p < end) {
+    uint64_t tag = 0;
+    if (!ReadVarint(p, end, &tag)) return false;
+    const uint32_t field = static_cast<uint32_t>(tag >> 3);
+    const uint32_t wire = static_cast<uint32_t>(tag & 7);
+    uint64_t v = 0;
+    if (field == 1 && wire == 0) {
+      if (!ReadVarint(p, end, &v)) return false;
+      m->timestamp_unix_ms = static_cast<int64_t>(v);
+    } else if (field == 2 && wire == 2) {
+      if (!DecodeString(p, end, &m->channel)) return false;
+    } else if (field == 3 && wire == 0) {
+      if (!ReadVarint(p, end, &v)) return false;
+      m->record_id = v;
+    } else if (field == 4 && wire == 2) {
+      if (!DecodeString(p, end, &m->version)) return false;
+    } else if (!SkipField(wire, p, end)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool DecodeCrashVersion(const uint8_t* data, size_t len, CrashVersion* m) {
+  const uint8_t* p = data;
+  const uint8_t* end = data + len;
+  while (p < end) {
+    uint64_t tag = 0;
+    if (!ReadVarint(p, end, &tag)) return false;
+    const uint32_t field = static_cast<uint32_t>(tag >> 3);
+    const uint32_t wire = static_cast<uint32_t>(tag & 7);
+    uint64_t v = 0;
+    if (field == 1 && wire == 2) {
+      if (!DecodeString(p, end, &m->version)) return false;
+    } else if (field == 2 && wire == 0) {
+      if (!ReadVarint(p, end, &v)) return false;
+      m->count = static_cast<uint32_t>(v);
+    } else if (field == 3 && wire == 0) {
+      if (!ReadVarint(p, end, &v)) return false;
+      m->last_unix_ms = static_cast<int64_t>(v);
+    } else if (!SkipField(wire, p, end)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool DecodeCrashGroup(const uint8_t* data, size_t len, CrashGroup* m) {
+  const uint8_t* p = data;
+  const uint8_t* end = data + len;
+  while (p < end) {
+    uint64_t tag = 0;
+    if (!ReadVarint(p, end, &tag)) return false;
+    const uint32_t field = static_cast<uint32_t>(tag >> 3);
+    const uint32_t wire = static_cast<uint32_t>(tag & 7);
+    uint64_t v = 0;
+    if (field == 1 && wire == 0) {
+      if (!ReadVarint(p, end, &v)) return false;
+      m->kind = static_cast<CrashKind>(static_cast<uint32_t>(v));
+    } else if (field == 2 && wire == 2) {
+      if (!DecodeString(p, end, &m->key)) return false;
+    } else if (field == 3 && wire == 2) {
+      if (!DecodeString(p, end, &m->subject)) return false;
+    } else if (field == 4 && wire == 2) {
+      if (!DecodeString(p, end, &m->module_name)) return false;
+    } else if (field == 5 && wire == 2) {
+      if (!DecodeString(p, end, &m->module_path)) return false;
+    } else if (field == 6 && wire == 2) {
+      if (!DecodeString(p, end, &m->module_company)) return false;
+    } else if (field == 7 && wire == 0) {
+      if (!ReadVarint(p, end, &v)) return false;
+      m->module_origin =
+          static_cast<FaultingModuleOrigin>(static_cast<uint32_t>(v));
+    } else if (field == 8 && wire == 0) {
+      if (!ReadVarint(p, end, &v)) return false;
+      m->code = static_cast<uint32_t>(v);
+    } else if (field == 9 && wire == 0) {
+      if (!ReadVarint(p, end, &v)) return false;
+      m->has_code = v != 0;
+    } else if (field == 10 && wire == 2) {
+      if (!DecodeString(p, end, &m->title)) return false;
+    } else if (field == 11 && wire == 2) {
+      if (!DecodeString(p, end, &m->summary)) return false;
+    } else if (field == 12 && wire == 2) {
+      if (!DecodeString(p, end, &m->recommendation)) return false;
+    } else if (field == 13 && wire == 0) {
+      if (!ReadVarint(p, end, &v)) return false;
+      m->count = static_cast<uint32_t>(v);
+    } else if (field == 14 && wire == 0) {
+      if (!ReadVarint(p, end, &v)) return false;
+      m->first_unix_ms = static_cast<int64_t>(v);
+    } else if (field == 15 && wire == 0) {
+      if (!ReadVarint(p, end, &v)) return false;
+      m->last_unix_ms = static_cast<int64_t>(v);
+    } else if (field == 16 && wire == 0) {
+      if (!ReadVarint(p, end, &v)) return false;
+      m->occurrence_unix_ms.push_back(static_cast<int64_t>(v));
+    } else if (field == 17 && wire == 2) {
+      if (!DecodeNested(p, end, DecodeCrashVersion, &m->versions)) return false;
+    } else if (field == 18 && wire == 2) {
+      if (!DecodeNested(p, end, DecodeCrashOccurrence, &m->recent)) return false;
+    } else if (!SkipField(wire, p, end)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool DecodeGetCrashHistory(const uint8_t* data, size_t len,
+                           GetCrashHistory* m) {
+  const uint8_t* p = data;
+  const uint8_t* end = data + len;
+  while (p < end) {
+    uint64_t tag = 0;
+    if (!ReadVarint(p, end, &tag)) return false;
+    const uint32_t field = static_cast<uint32_t>(tag >> 3);
+    const uint32_t wire = static_cast<uint32_t>(tag & 7);
+    if (field == 1 && wire == 0) {
+      uint64_t v = 0;
+      if (!ReadVarint(p, end, &v)) return false;
+      m->days = static_cast<uint32_t>(v);
+    } else if (!SkipField(wire, p, end)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool DecodeCrashHistory(const uint8_t* data, size_t len, CrashHistory* m) {
+  const uint8_t* p = data;
+  const uint8_t* end = data + len;
+  while (p < end) {
+    uint64_t tag = 0;
+    if (!ReadVarint(p, end, &tag)) return false;
+    const uint32_t field = static_cast<uint32_t>(tag >> 3);
+    const uint32_t wire = static_cast<uint32_t>(tag & 7);
+    uint64_t v = 0;
+    if (field == 1 && wire == 0) {
+      if (!ReadVarint(p, end, &v)) return false;
+      m->days = static_cast<uint32_t>(v);
+    } else if (field == 2 && wire == 0) {
+      if (!ReadVarint(p, end, &v)) return false;
+      m->collected_unix_ms = static_cast<int64_t>(v);
+    } else if (field == 3 && wire == 2) {
+      if (!DecodeNested(p, end, DecodeCrashGroup, &m->groups)) return false;
+    } else if (field == 4 && wire == 0) {
+      if (!ReadVarint(p, end, &v)) return false;
+      m->scanned_events = static_cast<uint32_t>(v);
+    } else if (field == 5 && wire == 0) {
+      if (!ReadVarint(p, end, &v)) return false;
+      m->truncated = v != 0;
+    } else if (field == 6 && wire == 2) {
+      std::string channel;
+      if (!DecodeString(p, end, &channel)) return false;
+      m->unreadable_channels.push_back(std::move(channel));
+    } else if (!SkipField(wire, p, end)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 }  // namespace
 
 bool EncodeEnvelope(const Envelope& env, std::vector<uint8_t>* out) {
@@ -4205,6 +4452,11 @@ bool EncodeEnvelope(const Envelope& env, std::vector<uint8_t>* out) {
         38,
         EncodeInventoryDomainSnapshot(std::get<InventoryDomainSnapshot>(env.body)),
         out);
+  } else if (std::holds_alternative<GetCrashHistory>(env.body)) {
+    WriteBytesField(39, EncodeGetCrashHistory(std::get<GetCrashHistory>(env.body)),
+                    out);
+  } else if (std::holds_alternative<CrashHistory>(env.body)) {
+    WriteBytesField(40, EncodeCrashHistory(std::get<CrashHistory>(env.body)), out);
   } else if (std::holds_alternative<ErrorResponse>(env.body)) {
     WriteBytesField(99, EncodeError(std::get<ErrorResponse>(env.body)), out);
   }
@@ -4232,7 +4484,7 @@ bool DecodeEnvelope(const uint8_t* data, size_t len, Envelope* out) {
                 field == 27 || field == 28 || field == 29 || field == 30 ||
                 field == 31 || field == 32 || field == 33 || field == 34 ||
                 field == 35 || field == 36 || field == 37 || field == 38 ||
-                field == 99)) {
+                field == 39 || field == 40 || field == 99)) {
       uint64_t blen = 0;
       if (!ReadVarint(p, end, &blen)) return false;
       if (p + blen > end) return false;
@@ -4341,6 +4593,18 @@ bool DecodeEnvelope(const uint8_t* data, size_t len, Envelope* out) {
       } else if (field == 38) {
         InventoryDomainSnapshot m;
         if (!DecodeInventoryDomainSnapshot(sub, static_cast<size_t>(blen), &m)) {
+          return false;
+        }
+        out->body = std::move(m);
+      } else if (field == 39) {
+        GetCrashHistory m;
+        if (!DecodeGetCrashHistory(sub, static_cast<size_t>(blen), &m)) {
+          return false;
+        }
+        out->body = std::move(m);
+      } else if (field == 40) {
+        CrashHistory m;
+        if (!DecodeCrashHistory(sub, static_cast<size_t>(blen), &m)) {
           return false;
         }
         out->body = std::move(m);

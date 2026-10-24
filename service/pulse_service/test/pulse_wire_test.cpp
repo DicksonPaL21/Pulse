@@ -853,6 +853,82 @@ int main() {
     return 44;
   }
 
+  // Crash history (doc 43).
+  Envelope crash_req_env;
+  crash_req_env.request_id = 5001;
+  crash_req_env.body = GetCrashHistory{30};
+  std::vector<uint8_t> crash_req_payload;
+  Envelope crash_req_decoded;
+  if (!EncodeEnvelope(crash_req_env, &crash_req_payload) ||
+      !DecodeEnvelope(crash_req_payload.data(), crash_req_payload.size(),
+                      &crash_req_decoded) ||
+      !std::holds_alternative<GetCrashHistory>(crash_req_decoded.body) ||
+      std::get<GetCrashHistory>(crash_req_decoded.body).days != 30) {
+    std::cerr << "GetCrashHistory round trip failed\n";
+    return 45;
+  }
+
+  CrashGroup crash_group;
+  crash_group.kind = CrashKind::AppCrash;
+  crash_group.key = "app|discord.exe|nvwgf2umx.dll|c0000005";
+  crash_group.subject = "Discord.exe";
+  crash_group.module_name = "nvwgf2umx.dll";
+  crash_group.module_company = "NVIDIA Corporation";
+  crash_group.module_origin = FaultingModuleOrigin::Driver;
+  crash_group.code = 0xC0000005;
+  crash_group.has_code = true;
+  crash_group.title = "Discord Crashed";
+  crash_group.count = 3;
+  crash_group.first_unix_ms = 1760000000000;
+  crash_group.last_unix_ms = 1760100000000;
+  crash_group.occurrence_unix_ms = {1760100000000, 1760050000000, 1760000000000};
+  crash_group.versions.push_back(CrashVersion{"1.0.9170", 2, 1760100000000});
+  crash_group.versions.push_back(CrashVersion{"1.0.9168", 1, 1760000000000});
+  crash_group.recent.push_back(
+      CrashOccurrence{1760100000000, "Application", 9876543210ull, "1.0.9170"});
+  CrashHistory crash_history;
+  crash_history.days = 30;
+  crash_history.collected_unix_ms = 1760200000000;
+  crash_history.groups.push_back(crash_group);
+  crash_history.scanned_events = 42;
+  crash_history.truncated = true;
+  crash_history.unreadable_channels.push_back("Security");
+  Envelope crash_env;
+  crash_env.request_id = 5002;
+  crash_env.body = crash_history;
+  std::vector<uint8_t> crash_payload;
+  Envelope crash_decoded;
+  if (!EncodeEnvelope(crash_env, &crash_payload) ||
+      !DecodeEnvelope(crash_payload.data(), crash_payload.size(),
+                      &crash_decoded) ||
+      !std::holds_alternative<CrashHistory>(crash_decoded.body)) {
+    std::cerr << "CrashHistory round trip failed\n";
+    return 46;
+  }
+  const auto& crash_out = std::get<CrashHistory>(crash_decoded.body);
+  if (crash_out.days != 30 || crash_out.scanned_events != 42 ||
+      !crash_out.truncated || crash_out.unreadable_channels.size() != 1 ||
+      crash_out.groups.size() != 1) {
+    std::cerr << "CrashHistory payload mismatch\n";
+    return 46;
+  }
+  const auto& group_out = crash_out.groups[0];
+  if (group_out.kind != CrashKind::AppCrash ||
+      group_out.module_origin != FaultingModuleOrigin::Driver ||
+      group_out.code != 0xC0000005 || !group_out.has_code ||
+      group_out.module_company != "NVIDIA Corporation" ||
+      group_out.count != 3 || group_out.last_unix_ms != 1760100000000 ||
+      group_out.occurrence_unix_ms.size() != 3 ||
+      group_out.occurrence_unix_ms[2] != 1760000000000 ||
+      group_out.versions.size() != 2 ||
+      group_out.versions[0].version != "1.0.9170" ||
+      group_out.versions[0].count != 2 || group_out.recent.size() != 1 ||
+      group_out.recent[0].record_id != 9876543210ull ||
+      group_out.recent[0].channel != "Application") {
+    std::cerr << "CrashGroup payload mismatch\n";
+    return 46;
+  }
+
   std::cout << "pulse_wire_tests OK\n";
   return 0;
 }

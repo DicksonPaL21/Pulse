@@ -313,4 +313,66 @@ void main() {
     expect(req.sinceGeneration, 3);
     expect(req.limit, 100);
   });
+
+  test('CrashHistory roundtrip', () {
+    final request = decodeEnvelope(encodeEnvelope(
+      Envelope(requestId: 39, body: GetCrashHistory(days: 90)),
+    ));
+    expect((request.body! as GetCrashHistory).days, 90);
+
+    final env = Envelope(
+      requestId: 40,
+      body: CrashHistory(
+        days: 30,
+        collectedUnixMs: 1760200000000,
+        scannedEvents: 12,
+        truncated: true,
+        unreadableChannels: ['Security'],
+        groups: [
+          CrashGroup(
+            kind: CrashKind.appCrash,
+            key: 'app|discord.exe|nvwgf2umx.dll|c0000005',
+            subject: 'Discord.exe',
+            moduleName: 'nvwgf2umx.dll',
+            moduleCompany: 'NVIDIA Corporation',
+            moduleOrigin: FaultingModuleOrigin.driver,
+            code: 0xC0000005,
+            hasCode: true,
+            title: 'Discord Crashed',
+            count: 2,
+            firstUnixMs: 1760000000000,
+            lastUnixMs: 1760100000000,
+            occurrenceUnixMs: [1760100000000, 1760000000000],
+            versions: [
+              CrashVersion(version: '1.0.9170', count: 2, lastUnixMs: 1760100000000),
+            ],
+            recent: [
+              CrashOccurrence(
+                timestampUnixMs: 1760100000000,
+                channel: 'Application',
+                recordId: 9876543210,
+                version: '1.0.9170',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+    final decoded = decodeEnvelope(encodeEnvelope(env));
+    final history = decoded.body! as CrashHistory;
+    expect(history.days, 30);
+    expect(history.truncated, isTrue);
+    expect(history.unreadableChannels, ['Security']);
+    expect(history.groups, hasLength(1));
+    final group = history.groups.single;
+    expect(group.kind, CrashKind.appCrash);
+    expect(group.moduleOrigin, FaultingModuleOrigin.driver);
+    expect(group.code, 0xC0000005);
+    expect(group.hasCode, isTrue);
+    expect(group.moduleCompany, 'NVIDIA Corporation');
+    expect(group.occurrenceUnixMs, [1760100000000, 1760000000000]);
+    expect(group.versions.single.version, '1.0.9170');
+    expect(group.recent.single.recordId, 9876543210);
+    expect(group.recent.single.channel, 'Application');
+  });
 }
