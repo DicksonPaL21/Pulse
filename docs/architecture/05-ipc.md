@@ -94,6 +94,10 @@ Live pushes: `request_id = 0`, `LiveEventBatch` of **summaries** (Level 1 fields
 
 `GetDiagnosticsSnapshot` includes cumulative IPC message/byte counters and rates (messages/sec, bytes/sec) derived from framed pipe I/O. Client ping RTT and reconnect history remain Flutter-owned (`IpcStatus` + ring buffer). See [29 — System Health quality](29-system-health-quality-milestone.md) Phase 5.
 
+### Crash history (1.6)
+
+`GetCrashHistory { days }` (Envelope field 39) → `CrashHistory` (field 40): crash events of the last 1–90 days, grouped by cause and explained by the service. A service older than the client answers "Unsupported message". See [43 — Crash history](43-crash-history.md).
+
 ---
 
 ## Related Documents

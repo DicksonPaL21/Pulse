@@ -70,6 +70,7 @@ Each feature should answer: **"What is Windows doing right now?"**
 | 40 | [Portable ZIP vs Windows Service](40-portable-vs-service.md) | FAQ — ZIP is not a true portable SKU; PulseService required |
 | 41 | [Store packaged PulseService](41-store-packaged-service.md) | MSIX desktop6:Service vs classic Inno SCM |
 | 42 | [Background tray & alerts](background-tray-and-alerts.md) | Tray lifecycle, hide-on-close, local notifications |
+| 43 | [Crash history](43-crash-history.md) | Crashes page: crash events grouped by cause and explained (Event Log only) |
 
 **Architecture Decision Records:** [decisions/](decisions/)
 

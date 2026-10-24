@@ -69,6 +69,16 @@ See [ADR-011](decisions/ADR-011-inventory-engine.md) for full domain catalog, fa
 
 ---
 
+## 1.6 — Crash history ([43](43-crash-history.md))
+
+| Function | Purpose | Reference |
+|----------|---------|-----------|
+| `EvtQuery` with an XPath filter (`timediff`, provider + Event ID) and `EvtQueryReverseDirection` | Crash events of the last days, newest first | [EvtQuery](https://learn.microsoft.com/en-us/windows/win32/api/winevt/nf-winevt-evtquery) |
+| `GetFileVersionInfoSizeW` / `GetFileVersionInfoW` / `VerQueryValueW` | Publisher (`CompanyName`) of the file an app crashed in | [GetFileVersionInfoW](https://learn.microsoft.com/en-us/windows/win32/api/winver/nf-winver-getfileversioninfow) |
+| `GetDriveTypeW` | Read version resources on local fixed drives only (never a network path) | [GetDriveTypeW](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getdrivetypew) |
+
+---
+
 ## Explicitly Never Used
 
 Hooks, injection, remote thread, registry writes, undocumented Nt* for collection, legacy `ReadEventLog` as primary path.
