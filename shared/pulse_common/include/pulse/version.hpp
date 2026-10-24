@@ -9,7 +9,7 @@ struct VersionInfo {
   // Defaults are the shipping product version; keep in sync with
   // constants.hpp kServiceVersion.
   int major = 1;
-  int minor = 5;
+  int minor = 6;
   int patch = 0;
   /// Optional prerelease / channel label (empty for stable).
   const char* label = "";
