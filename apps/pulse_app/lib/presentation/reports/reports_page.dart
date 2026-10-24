@@ -5,6 +5,7 @@ import 'package:pulse_protocol/pulse_wire.dart';
 
 import '../../application/client_frame_metrics.dart';
 import '../../application/connection_controller.dart';
+import '../../application/crash_history_controller.dart';
 import '../../application/diagnostics_controller.dart';
 import '../../application/settings_controller.dart';
 import '../../application/timeline_session_controller.dart';
@@ -49,12 +50,14 @@ class _ReportsPageState extends State<ReportsPage> {
       final timeline = context.read<TimelineSessionController>();
       final diag = context.read<DiagnosticsController>();
       final frames = context.read<ClientFrameMetrics>();
+      final crashDays = context.read<CrashHistoryController>().days;
       final dark = Theme.of(context).brightness == Brightness.dark;
 
       final health = await _fetchHealthIfNeeded(ipc);
       final inventory = await _fetchInventoryIfNeeded(ipc);
       final hardwarePair = await _fetchHardwareInventoryIfNeeded(ipc);
       final systemDomains = await _fetchSystemInventoryIfNeeded(ipc);
+      final crashHistory = await _fetchCrashHistoryIfNeeded(ipc, crashDays);
       if (_template == ReportTemplate.diagnostics && diag.snapshot == null) {
         try {
           await diag.refresh();
@@ -75,6 +78,7 @@ class _ReportsPageState extends State<ReportsPage> {
         inventoryStorage: systemDomains.$5,
         inventoryNetworkAdapters: systemDomains.$6,
         events: List.of(timeline.events),
+        crashHistory: crashHistory,
         diagnostics: diag.snapshot,
         ipcStatus: ipc.status,
         frameMetrics: frames,
@@ -102,6 +106,20 @@ class _ReportsPageState extends State<ReportsPage> {
     if (ipc.status.state != IpcConnectionState.connected) return null;
     try {
       return await ipc.getHealthSnapshot();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// [days] is the period picked on the Crashes page.
+  Future<CrashHistory?> _fetchCrashHistoryIfNeeded(
+    PulseIpcClient ipc,
+    int days,
+  ) async {
+    if (_template != ReportTemplate.crashHistory) return null;
+    if (ipc.status.state != IpcConnectionState.connected) return null;
+    try {
+      return await ipc.getCrashHistory(days: days);
     } catch (_) {
       return null;
     }
@@ -578,6 +596,7 @@ IconData _templateIcon(ReportTemplate template) {
   return switch (template) {
     ReportTemplate.healthSnapshot => LucideIcons.activity,
     ReportTemplate.timeline => LucideIcons.list,
+    ReportTemplate.crashHistory => LucideIcons.octagonAlert,
     ReportTemplate.diagnostics => LucideIcons.stethoscope,
     ReportTemplate.hardwareInventory => LucideIcons.cpu,
     ReportTemplate.serviceInventory => LucideIcons.cog,

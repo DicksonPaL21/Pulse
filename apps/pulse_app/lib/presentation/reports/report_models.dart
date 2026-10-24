@@ -4,6 +4,7 @@ import 'package:pulse_protocol/pulse_wire.dart' show InventoryDomainId;
 enum ReportTemplate {
   healthSnapshot,
   timeline,
+  crashHistory,
   diagnostics,
   hardwareInventory,
   serviceInventory,
@@ -24,6 +25,7 @@ extension ReportTemplateX on ReportTemplate {
   String get title => switch (this) {
         ReportTemplate.healthSnapshot => 'System Health snapshot',
         ReportTemplate.timeline => 'Timeline events',
+        ReportTemplate.crashHistory => 'Crash history',
         ReportTemplate.diagnostics => 'Diagnostics',
         ReportTemplate.hardwareInventory => 'Hardware inventory',
         ReportTemplate.serviceInventory => 'Service inventory',
@@ -37,6 +39,9 @@ extension ReportTemplateX on ReportTemplate {
           'Current CPU, memory, GPU, disk, and network metrics plus system identity.',
         ReportTemplate.timeline =>
           'Events currently loaded in the Timeline session.',
+        ReportTemplate.crashHistory =>
+          'Blue screens, app crashes and unexpected restarts of the period '
+              'picked on the Crashes page, grouped by cause.',
         ReportTemplate.diagnostics =>
           'Service identity, IPC stats, pipeline stages, and client metrics.',
         ReportTemplate.hardwareInventory =>
@@ -55,6 +60,7 @@ extension ReportTemplateX on ReportTemplate {
   String get fileStem => switch (this) {
         ReportTemplate.healthSnapshot => 'pulse-health',
         ReportTemplate.timeline => 'pulse-timeline',
+        ReportTemplate.crashHistory => 'pulse-crashes',
         ReportTemplate.diagnostics => 'pulse-diagnostics',
         ReportTemplate.hardwareInventory => 'pulse-hardware',
         ReportTemplate.serviceInventory => 'pulse-services',
