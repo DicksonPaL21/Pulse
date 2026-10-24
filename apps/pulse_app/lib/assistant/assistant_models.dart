@@ -93,6 +93,7 @@ String assistantToolConsultedLabel(String toolName) {
     'process_details' => 'Process details',
     'timeline_list' => 'Timeline',
     'timeline_search' => 'Timeline search',
+    'crash_history' => 'Crash history',
     'diagnostics_snapshot' => 'Diagnostics',
     'windows_services' => 'Windows services',
     'service_status' => 'PulseService',

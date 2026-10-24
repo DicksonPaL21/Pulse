@@ -141,6 +141,21 @@ std::string WideToUtf8(const std::wstring& value) {
   return WideToUtf8(value.c_str());
 }
 
+std::wstring Utf8ToWide(const std::string& value) {
+  if (value.empty()) {
+    return {};
+  }
+  const int length = static_cast<int>(value.size());
+  const int needed =
+      MultiByteToWideChar(CP_UTF8, 0, value.c_str(), length, nullptr, 0);
+  if (needed <= 0) {
+    return {};
+  }
+  std::wstring out(static_cast<std::size_t>(needed), L'\0');
+  MultiByteToWideChar(CP_UTF8, 0, value.c_str(), length, out.data(), needed);
+  return out;
+}
+
 std::string FormatWin32Error(DWORD error_code) {
   wchar_t* buffer = nullptr;
   const DWORD flags = FORMAT_MESSAGE_ALLOCATE_BUFFER |

@@ -8,6 +8,7 @@ import 'package:pulse_protocol/pulse_wire.dart';
 
 import '../../application/client_frame_metrics.dart';
 import '../../application/settings_controller.dart';
+import '../../features/crashes/crash_display.dart';
 import '../../features/privacy/personal_data_redactor.dart';
 import '../../features/timeline/timeline_display.dart';
 import '../../features/timeline/timeline_export.dart';
@@ -32,6 +33,7 @@ class ReportExportInput {
     this.inventoryStorage,
     this.inventoryNetworkAdapters,
     this.events = const [],
+    this.crashHistory,
     this.diagnostics,
     this.ipcStatus,
     this.frameMetrics,
@@ -61,6 +63,8 @@ class ReportExportInput {
   /// System inventory SSOT (P2 domains) — network adapters.
   final InventoryDomainSnapshot? inventoryNetworkAdapters;
   final List<TimelineEvent> events;
+  /// Crash history report (doc 43).
+  final CrashHistory? crashHistory;
   final DiagnosticsSnapshot? diagnostics;
   final IpcStatus? ipcStatus;
   final ClientFrameMetrics? frameMetrics;
@@ -147,6 +151,8 @@ class ReportExporter {
     switch (input.template) {
       case ReportTemplate.timeline:
         return _timelineCsv(input.events);
+      case ReportTemplate.crashHistory:
+        return crashHistoryCsv(input.crashHistory);
       case ReportTemplate.healthSnapshot:
         return _keyValueCsv(healthMetricsRows(input.health));
       case ReportTemplate.hardwareInventory:
@@ -363,6 +369,106 @@ class ReportExporter {
         ('net_link_speed_bps', '${info.netLinkSpeedBps}'),
     ];
   }
+
+  /// One JSON object per crash group, newest first.
+  static Map<String, dynamic> crashHistoryJson(CrashHistory? history) {
+    if (history == null) return {'status': 'No crash history available'};
+    String time(int unixMs) =>
+        DateTime.fromMillisecondsSinceEpoch(unixMs).toIso8601String();
+    return {
+      'days': history.days,
+      'collected_at': time(history.collectedUnixMs),
+      'truncated': history.truncated,
+      if (history.unreadableChannels.isNotEmpty)
+        'unreadable_logs': history.unreadableChannels,
+      'groups': [
+        for (final g in history.groups)
+          {
+            'kind': g.kind.name,
+            'title': g.title,
+            'summary': g.summary,
+            if (g.recommendation.isNotEmpty) 'recommendation': g.recommendation,
+            'count': g.count,
+            'first': time(g.firstUnixMs),
+            'last': time(g.lastUnixMs),
+            if (g.subject.isNotEmpty) 'subject': g.subject,
+            if (g.moduleName.isNotEmpty)
+              'module': {
+                'name': g.moduleName,
+                if (g.modulePath.isNotEmpty) 'path': g.modulePath,
+                'origin': g.moduleOrigin.name,
+                if (g.moduleCompany.isNotEmpty) 'company': g.moduleCompany,
+              },
+            if (g.hasCode) 'code': formatCrashCode(g.code),
+            if (g.versions.isNotEmpty)
+              'versions': [
+                for (final v in g.versions)
+                  {'version': v.version, 'count': v.count},
+              ],
+            'events': [
+              for (final o in g.recent)
+                {
+                  'time': time(o.timestampUnixMs),
+                  'log': o.channel,
+                  'record_id': o.recordId,
+                  if (o.version.isNotEmpty) 'version': o.version,
+                },
+            ],
+          },
+      ],
+    };
+  }
+
+  /// One CSV row per crash group, newest first.
+  static String crashHistoryCsv(CrashHistory? history) {
+    if (history == null) return 'status\nNo crash history available\n';
+    final buf = StringBuffer(
+      'kind,title,count,first,last,subject,file,file_owner,file_company,'
+      'code,summary,recommendation\n',
+    );
+    String time(int unixMs) =>
+        DateTime.fromMillisecondsSinceEpoch(unixMs).toIso8601String();
+    for (final g in history.groups) {
+      buf.writeln(
+        [
+          _csvCell(CrashKindVisual.of(g.kind).label),
+          _csvCell(g.title),
+          '${g.count}',
+          _csvCell(time(g.firstUnixMs)),
+          _csvCell(time(g.lastUnixMs)),
+          _csvCell(g.subject),
+          _csvCell(g.moduleName),
+          _csvCell(faultingModuleOriginLabel(g.moduleOrigin)),
+          _csvCell(g.moduleCompany),
+          g.hasCode ? formatCrashCode(g.code) : '',
+          _csvCell(g.summary),
+          _csvCell(g.recommendation),
+        ].join(','),
+      );
+    }
+    return buf.toString();
+  }
+
+  static List<List<String>> _crashHistoryTableRows(CrashHistory? history) => [
+        for (final g in history?.groups ?? const <CrashGroup>[])
+          [
+            CrashKindVisual.of(g.kind).label,
+            g.title,
+            '${g.count}',
+            formatCrashTime(g.lastUnixMs),
+            [g.summary, g.recommendation]
+                .where((text) => text.isNotEmpty)
+                .join(' '),
+          ],
+      ];
+
+  static const _crashHistoryHeaders = [
+    'Kind',
+    'What happened',
+    'Times',
+    'Last',
+    'Details',
+  ];
 
   /// Hardware report CSV — Inventory USB + PCI catalogs (ADR-011 SSOT).
   static String hardwareInventoryCsv(
@@ -960,6 +1066,8 @@ class ReportExporter {
         base['events'] = [
           for (final e in input.events) TimelineExport.eventToJson(e),
         ];
+      case ReportTemplate.crashHistory:
+        base['crash_history'] = crashHistoryJson(input.crashHistory);
       case ReportTemplate.diagnostics:
         base['fields'] = {
           for (final row in diagnosticsRows(
@@ -1183,6 +1291,30 @@ class ReportExporter {
         }
         buf.writeln('</table></section>');
         return buf.toString();
+      case ReportTemplate.crashHistory:
+        final history = input.crashHistory;
+        if (history == null) {
+          return '<section><h2>Crashes</h2>'
+              '<p>No crash history available.</p></section>';
+        }
+        final buf = StringBuffer()
+          ..writeln(
+            '<section><h2>Crashes in the last ${history.days} days</h2>',
+          )
+          ..writeln('<table><tr>'
+              '<th style="width:12%">${_crashHistoryHeaders[0]}</th>'
+              '<th style="width:20%">${_crashHistoryHeaders[1]}</th>'
+              '<th style="width:7%">${_crashHistoryHeaders[2]}</th>'
+              '<th style="width:15%">${_crashHistoryHeaders[3]}</th>'
+              '<th>${_crashHistoryHeaders[4]}</th></tr>');
+        for (final row in _crashHistoryTableRows(history)) {
+          buf.writeln(
+            '<tr>${row.map((cell) => '<td>${_escapeHtml(cell)}</td>').join()}'
+            '</tr>',
+          );
+        }
+        buf.writeln('</table></section>');
+        return buf.toString();
       case ReportTemplate.healthSnapshot:
         return '<section><h2>Health metrics</h2>'
             '${_kvTableHtml(healthMetricsRows(input.health))}</section>';
@@ -1366,6 +1498,31 @@ class ReportExporter {
                   clean(e.displayTitle),
                   clean(e.displaySummary),
                 ],
+            ],
+            headerStyle: pw.TextStyle(
+              fontWeight: pw.FontWeight.bold,
+              fontSize: 8,
+            ),
+            cellStyle: const pw.TextStyle(fontSize: 7),
+            cellAlignment: pw.Alignment.centerLeft,
+            headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
+          ),
+        ];
+      case ReportTemplate.crashHistory:
+        final history = input.crashHistory;
+        return [
+          pw.Text(
+            history == null
+                ? 'No crash history available'
+                : 'Crashes in the last ${history.days} days',
+            style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+          ),
+          pw.SizedBox(height: 6),
+          pw.TableHelper.fromTextArray(
+            headers: _crashHistoryHeaders,
+            data: [
+              for (final row in _crashHistoryTableRows(history))
+                [for (final cell in row) clean(cell)],
             ],
             headerStyle: pw.TextStyle(
               fontWeight: pw.FontWeight.bold,

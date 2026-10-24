@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../../app/dev_flags.dart';
 import '../../app/theme/pulse_theme.dart';
 import '../../app/theme/pulse_window_chrome.dart';
+import '../../application/crash_history_controller.dart';
 import '../../application/diagnostics_controller.dart';
 import '../../application/health_navigation.dart';
 import '../../application/settings_controller.dart';
@@ -20,6 +21,7 @@ import '../components/pulse_content_frame.dart';
 import '../components/connection_indicator.dart';
 import '../components/pulse_nav_rail.dart';
 import '../components/pulse_title_bar.dart';
+import '../crashes/crashes_page.dart';
 import '../diagnostics/diagnostics_page.dart';
 import '../health/health_view_models.dart';
 import '../health/system_health_page.dart';
@@ -30,7 +32,8 @@ import '../timeline/timeline_page.dart';
 import '../utils/pulse_snack.dart';
 import 'command_palette.dart';
 
-/// Sidebar / shell page indices.
+/// Sidebar / shell page indices. Append new pages: indices are stable ids
+/// (the rail order and Ctrl+number shortcuts are set separately below).
 abstract final class PulseShellPages {
   static const timeline = 0;
   static const health = 1;
@@ -39,7 +42,8 @@ abstract final class PulseShellPages {
   static const diagnostics = 4;
   static const settings = 5;
   static const assistant = 6;
-  static const count = 7;
+  static const crashes = 7;
+  static const count = 8;
 }
 
 class AppShell extends StatefulWidget {
@@ -74,28 +78,34 @@ class _AppShellState extends State<AppShell> {
       tooltip: 'Timeline (Ctrl+1)',
     ),
     PulseNavItem(
+      label: 'Crashes',
+      icon: LucideIcons.octagonAlert,
+      pageIndex: PulseShellPages.crashes,
+      tooltip: 'Crashes (Ctrl+2)',
+    ),
+    PulseNavItem(
       label: 'Health',
       icon: LucideIcons.heartPulse,
       pageIndex: PulseShellPages.health,
-      tooltip: 'System Health (Ctrl+2)',
+      tooltip: 'System Health (Ctrl+3)',
     ),
     PulseNavItem(
       label: 'Inventory',
       icon: LucideIcons.packageSearch,
       pageIndex: PulseShellPages.inventory,
-      tooltip: 'Inventory (Ctrl+3)',
+      tooltip: 'Inventory (Ctrl+4)',
     ),
     PulseNavItem(
       label: 'Reports',
       icon: LucideIcons.fileText,
       pageIndex: PulseShellPages.reports,
-      tooltip: 'Reports (Ctrl+4)',
+      tooltip: 'Reports (Ctrl+5)',
     ),
     PulseNavItem(
       label: 'Diagnose',
       icon: LucideIcons.stethoscope,
       pageIndex: PulseShellPages.diagnostics,
-      tooltip: 'Diagnostics (Ctrl+5)',
+      tooltip: 'Diagnostics (Ctrl+6)',
     ),
   ];
 
@@ -110,8 +120,29 @@ class _AppShellState extends State<AppShell> {
       label: 'Settings',
       icon: LucideIcons.settings,
       pageIndex: PulseShellPages.settings,
-      tooltip: 'Settings (Ctrl+6)',
+      tooltip: 'Settings (Ctrl+7)',
     ),
+  ];
+
+  /// Ctrl+1…7 follow the rail from the top.
+  static const _shortcutPages = [
+    PulseShellPages.timeline,
+    PulseShellPages.crashes,
+    PulseShellPages.health,
+    PulseShellPages.inventory,
+    PulseShellPages.reports,
+    PulseShellPages.diagnostics,
+    PulseShellPages.settings,
+  ];
+
+  static const _digitKeys = [
+    LogicalKeyboardKey.digit1,
+    LogicalKeyboardKey.digit2,
+    LogicalKeyboardKey.digit3,
+    LogicalKeyboardKey.digit4,
+    LogicalKeyboardKey.digit5,
+    LogicalKeyboardKey.digit6,
+    LogicalKeyboardKey.digit7,
   ];
 
   static const _titles = [
@@ -122,6 +153,7 @@ class _AppShellState extends State<AppShell> {
     'Diagnostics',
     'Settings',
     'Assistant',
+    'Crashes',
   ];
 
   @override
@@ -175,6 +207,9 @@ class _AppShellState extends State<AppShell> {
     final timeline = context.read<TimelineSessionController>();
     final diag = context.read<DiagnosticsController>();
     unawaited(timeline.setPageVisible(index == PulseShellPages.timeline));
+    context
+        .read<CrashHistoryController>()
+        .setPageVisible(index == PulseShellPages.crashes);
     if (index == PulseShellPages.diagnostics) {
       diag.frameMetrics.noteRebuild();
       diag.startPolling();
@@ -230,6 +265,14 @@ class _AppShellState extends State<AppShell> {
         icon: LucideIcons.listTree,
         keywords: const ['navigate', 'page'],
         onInvoke: () => go(PulseShellPages.timeline),
+      ),
+      PulseCommand(
+        id: 'nav.crashes',
+        title: 'Go to Crashes',
+        subtitle: 'Blue screens, app crashes and restarts',
+        icon: LucideIcons.octagonAlert,
+        keywords: const ['navigate', 'page', 'crash', 'bsod', 'blue screen'],
+        onInvoke: () => go(PulseShellPages.crashes),
       ),
       PulseCommand(
         id: 'nav.health',
@@ -370,30 +413,12 @@ class _AppShellState extends State<AppShell> {
             () => _openCommandPalette(),
         const SingleActivator(LogicalKeyboardKey.keyK, meta: true):
             () => _openCommandPalette(),
-        const SingleActivator(LogicalKeyboardKey.digit1, control: true):
-            () => _selectPage(PulseShellPages.timeline),
-        const SingleActivator(LogicalKeyboardKey.digit2, control: true):
-            () => _selectPage(PulseShellPages.health),
-        const SingleActivator(LogicalKeyboardKey.digit3, control: true):
-            () => _selectPage(PulseShellPages.inventory),
-        const SingleActivator(LogicalKeyboardKey.digit4, control: true):
-            () => _selectPage(PulseShellPages.reports),
-        const SingleActivator(LogicalKeyboardKey.digit5, control: true):
-            () => _selectPage(PulseShellPages.diagnostics),
-        const SingleActivator(LogicalKeyboardKey.digit6, control: true):
-            () => _selectPage(PulseShellPages.settings),
-        const SingleActivator(LogicalKeyboardKey.digit1, meta: true):
-            () => _selectPage(PulseShellPages.timeline),
-        const SingleActivator(LogicalKeyboardKey.digit2, meta: true):
-            () => _selectPage(PulseShellPages.health),
-        const SingleActivator(LogicalKeyboardKey.digit3, meta: true):
-            () => _selectPage(PulseShellPages.inventory),
-        const SingleActivator(LogicalKeyboardKey.digit4, meta: true):
-            () => _selectPage(PulseShellPages.reports),
-        const SingleActivator(LogicalKeyboardKey.digit5, meta: true):
-            () => _selectPage(PulseShellPages.diagnostics),
-        const SingleActivator(LogicalKeyboardKey.digit6, meta: true):
-            () => _selectPage(PulseShellPages.settings),
+        for (final (index, key) in _shortcutPages.indexed) ...{
+          SingleActivator(_digitKeys[index], control: true): () =>
+              _selectPage(key),
+          SingleActivator(_digitKeys[index], meta: true): () =>
+              _selectPage(key),
+        },
       },
       child: Focus(
         autofocus: true,
@@ -466,6 +491,8 @@ class _AppShellState extends State<AppShell> {
         return SettingsPage(title: title);
       case PulseShellPages.assistant:
         return AssistantPage(title: title);
+      case PulseShellPages.crashes:
+        return CrashesPage(title: title);
       default:
         return SettingsPage(title: title);
     }

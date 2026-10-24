@@ -887,6 +887,73 @@ struct InventoryDomainSnapshot {
   std::vector<InventoryNetworkAdapterEntry> network_adapters;
 };
 
+// Crash history (doc 43).
+enum class CrashKind : uint32_t {
+  Unspecified = 0,
+  AppCrash = 1,
+  AppHang = 2,
+  BlueScreen = 3,
+  UnexpectedRestart = 4,
+  GpuReset = 5,
+  ServiceCrash = 6,
+  HardwareError = 7,
+};
+
+enum class FaultingModuleOrigin : uint32_t {
+  Unknown = 0,
+  App = 1,
+  Windows = 2,
+  Driver = 3,
+  Other = 4,
+};
+
+struct CrashOccurrence {
+  int64_t timestamp_unix_ms = 0;
+  std::string channel;
+  uint64_t record_id = 0;
+  std::string version;
+};
+
+struct CrashVersion {
+  std::string version;
+  uint32_t count = 0;
+  int64_t last_unix_ms = 0;
+};
+
+struct CrashGroup {
+  CrashKind kind = CrashKind::Unspecified;
+  std::string key;
+  std::string subject;
+  std::string module_name;
+  std::string module_path;
+  std::string module_company;
+  FaultingModuleOrigin module_origin = FaultingModuleOrigin::Unknown;
+  uint32_t code = 0;
+  bool has_code = false;
+  std::string title;
+  std::string summary;
+  std::string recommendation;
+  uint32_t count = 0;
+  int64_t first_unix_ms = 0;
+  int64_t last_unix_ms = 0;
+  std::vector<int64_t> occurrence_unix_ms;
+  std::vector<CrashVersion> versions;
+  std::vector<CrashOccurrence> recent;
+};
+
+struct GetCrashHistory {
+  uint32_t days = 0;
+};
+
+struct CrashHistory {
+  uint32_t days = 0;
+  int64_t collected_unix_ms = 0;
+  std::vector<CrashGroup> groups;
+  uint32_t scanned_events = 0;
+  bool truncated = false;
+  std::vector<std::string> unreadable_channels;
+};
+
 struct Envelope {
   uint64_t request_id = 0;
   std::variant<std::monostate, ClientHello, ServerHello, Ping, Pong, Heartbeat,
@@ -897,7 +964,7 @@ struct Envelope {
                DiagnosticsSnapshot, InjectDiagnosticsTestEvent,
                GetProcessDetails, ProcessDetails, GetTimelineEventDetail,
                TimelineEventDetail, GetInventoryDomain, InventoryDomainSnapshot,
-               ErrorResponse>
+               GetCrashHistory, CrashHistory, ErrorResponse>
       body;
 };
 

@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <iostream>
 #include <optional>
+#include <utility>
 
 #define WIN32_LEAN_AND_MEAN
 #ifndef NOMINMAX
@@ -46,7 +47,8 @@ EventLevel LevelFromVariant(const EVT_VARIANT& variant) {
 
 EventRecord ParseSystemProperties(const EVT_VARIANT* properties,
                                   DWORD property_count,
-                                  EVT_HANDLE event_handle) {
+                                  EVT_HANDLE event_handle,
+                                  bool format_message) {
   EventRecord record;
 
   auto at = [&](EVT_SYSTEM_PROPERTY_ID id) -> const EVT_VARIANT* {
@@ -162,6 +164,10 @@ EventRecord ParseSystemProperties(const EVT_VARIANT* properties,
     }
   }
 
+  if (!format_message) {
+    return record;
+  }
+
   // Best-effort message — missing publisher metadata is common and non-fatal.
   if (!provider_wide.empty()) {
     record.message = wevt::FormatEventMessage(event_handle, provider_wide);
@@ -172,6 +178,17 @@ EventRecord ParseSystemProperties(const EVT_VARIANT* properties,
   }
 
   return record;
+}
+
+/// Crash and wake events are explained from their EventData (stop code,
+/// power button, wake source). They are rare, so rendering their XML up front
+/// is cheap.
+void AttachDiagnosticXml(EVT_HANDLE event_handle, EventRecord* record) {
+  if (record->event_id.has_value() &&
+      (IsCrashDiagnosticEvent(record->provider_name, *record->event_id) ||
+       IsWakeDiagnosticEvent(record->provider_name, *record->event_id))) {
+    record->raw_xml = wevt::RenderEventXml(event_handle);
+  }
 }
 
 const char* OrUnavailable(const std::string& value) {
@@ -259,8 +276,11 @@ CollectResult<std::vector<EventRecord>> EventLogCollector::CollectLatest(
           reinterpret_cast<const EVT_VARIANT*>(buffer.data());
 
       try {
-        events.push_back(ParseSystemProperties(properties, property_count,
-                                               event_handle.get()));
+        EventRecord record = ParseSystemProperties(
+            properties, property_count, event_handle.get(),
+            /*format_message=*/true);
+        AttachDiagnosticXml(event_handle.get(), &record);
+        events.push_back(std::move(record));
       } catch (...) {
         Logger::Instance().Warn("EventLogCollector",
                                 "Skipping event — unexpected parse failure");
@@ -396,7 +416,8 @@ CollectResult<std::optional<EventRecord>> EventLogCollector::CollectByRecordId(
 
 std::optional<EventRecord> EventLogCollector::ParseEvtHandle(
     void* event_handle,
-    void* system_render_context) {
+    void* system_render_context,
+    bool format_message) {
   if (event_handle == nullptr || system_render_context == nullptr) {
     return std::nullopt;
   }
@@ -415,17 +436,11 @@ std::optional<EventRecord> EventLogCollector::ParseEvtHandle(
 
   const auto* properties = reinterpret_cast<const EVT_VARIANT*>(buffer.data());
   try {
-    EventRecord record = ParseSystemProperties(
-        properties, property_count, static_cast<EVT_HANDLE>(event_handle));
-    // Crash and wake events are explained from their EventData (stop code,
-    // power button, wake source). They are rare, so rendering their XML up
-    // front is cheap.
-    if (record.event_id.has_value() &&
-        (IsCrashDiagnosticEvent(record.provider_name, *record.event_id) ||
-         IsWakeDiagnosticEvent(record.provider_name, *record.event_id))) {
-      record.raw_xml =
-          wevt::RenderEventXml(static_cast<EVT_HANDLE>(event_handle));
-    }
+    EventRecord record =
+        ParseSystemProperties(properties, property_count,
+                              static_cast<EVT_HANDLE>(event_handle),
+                              format_message);
+    AttachDiagnosticXml(static_cast<EVT_HANDLE>(event_handle), &record);
     return record;
   } catch (...) {
     return std::nullopt;

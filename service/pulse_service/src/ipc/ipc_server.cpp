@@ -1,5 +1,6 @@
 #include "ipc/ipc_server.hpp"
 
+#include "collectors/crash_history_collector.hpp"
 #include "collectors/event_log_channels.hpp"
 #include "collectors/event_log_collector.hpp"
 #include "diagnostics/service_identity.hpp"
@@ -594,6 +595,17 @@ void IpcServer::HandleEnvelope(const std::shared_ptr<ClientConnection>& conn,
     reply.request_id = env.request_id;
     reply.body = inventory_engine_.GetDomain(creq);
     WriteEnvelopeLocked(conn, reply);
+    return;
+  }
+
+  if (std::holds_alternative<ipc::GetCrashHistory>(env.body)) {
+    const auto& req = std::get<ipc::GetCrashHistory>(env.body);
+    ipc::Envelope reply;
+    reply.request_id = env.request_id;
+    reply.body = CrashHistoryCollector().Collect(req.days);
+    if (!WriteEnvelopeLocked(conn, reply)) {
+      Logger::Instance().Error("IpcServer", "Failed to write CrashHistory");
+    }
     return;
   }
 

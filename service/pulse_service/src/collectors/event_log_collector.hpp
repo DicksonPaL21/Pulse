@@ -71,9 +71,12 @@ class EventLogCollector {
 
   /// Parse a single EVT_HANDLE into EventRecord (shared by snapshot + live).
   /// `system_context` must be from EvtCreateRenderContext(..., System).
+  /// Without `format_message` the message and the process name are skipped:
+  /// both are slow and not needed when scanning many old events.
   [[nodiscard]] static std::optional<EventRecord> ParseEvtHandle(
       void* event_handle,
-      void* system_render_context);
+      void* system_render_context,
+      bool format_message = true);
 
   /// Prints records to stdout for TASK-002.1 console verification.
   static void PrintToConsole(const std::vector<EventRecord>& events);

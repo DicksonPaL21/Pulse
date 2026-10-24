@@ -115,6 +115,21 @@ abstract final class AssistantToolAllowlist {
       },
     ),
     AssistantToolDescriptor(
+      name: 'crash_history',
+      description:
+          'Blue screens, app crashes and hangs, unexpected restarts, graphics '
+          'driver resets, service crashes and hardware errors of the last '
+          'days, grouped by cause, each with a plain-language explanation, '
+          'how often it happened, the file an app crashed in and who made '
+          'it. Read-only.',
+      inputSchema: {
+        'type': 'object',
+        'properties': {
+          'days': {'type': 'integer', 'minimum': 1, 'maximum': 90},
+        },
+      },
+    ),
+    AssistantToolDescriptor(
       name: 'diagnostics_snapshot',
       description:
           'PulseService pipeline diagnostics snapshot (service health). Read-only.',

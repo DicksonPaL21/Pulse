@@ -117,6 +117,22 @@ class IpcStatus {
 }
 
 /// UI-facing IPC client. Pipe I/O runs on a dedicated isolate (ADR-008 / P0-5).
+/// PulseService answered a crash history request with an error, e.g. an older
+/// service that does not know the request yet ("Unsupported message").
+class CrashHistoryUnavailable implements Exception {
+  const CrashHistoryUnavailable(this.message, this.technicalDetail);
+
+  final String message;
+  final String technicalDetail;
+
+  bool get serviceTooOld => message.toLowerCase().contains('unsupported');
+
+  @override
+  String toString() => technicalDetail.isEmpty
+      ? message
+      : '$message: $technicalDetail';
+}
+
 class PulseIpcClient extends ChangeNotifier {
   PulseIpcClient({this.reconnectHistoryCapacity = 12, String? pipeName})
       : pipeName = pipeName ??
@@ -333,6 +349,27 @@ class PulseIpcClient extends ChangeNotifier {
       throw StateError(
         'Expected InventoryDomainSnapshot, got ${body.runtimeType}',
       );
+    }
+    return body;
+  }
+
+  /// Crash events of the last [days] (service default 30, at most 90),
+  /// grouped by cause (doc 43).
+  Future<CrashHistory> getCrashHistory({int days = 30}) async {
+    final env = Envelope(
+      requestId: _nextRequestId++,
+      body: GetCrashHistory(days: days),
+    );
+    final reply = await _request(
+      env,
+      timeout: const Duration(seconds: 60),
+    );
+    final body = reply.body;
+    if (body is ErrorResponse) {
+      throw CrashHistoryUnavailable(body.message, body.technicalDetail);
+    }
+    if (body is! CrashHistory) {
+      throw StateError('Expected CrashHistory, got ${body.runtimeType}');
     }
     return body;
   }

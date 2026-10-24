@@ -393,4 +393,80 @@ void main() {
       InventoryDomainId.networkAdapters,
     ]);
   });
+
+  group('Crash history report', () {
+    final history = CrashHistory(
+      days: 30,
+      collectedUnixMs: 1760200000000,
+      groups: [
+        CrashGroup(
+          kind: CrashKind.appCrash,
+          key: 'app|tool.exe|tool.dll|0xC0000005',
+          subject: 'Tool.exe',
+          moduleName: 'tool.dll',
+          modulePath: r'C:\Users\jane\AppData\Local\Tool\tool.dll',
+          moduleOrigin: FaultingModuleOrigin.app,
+          code: 0xC0000005,
+          hasCode: true,
+          title: 'Tool Crashed',
+          summary: 'Tool closed unexpectedly after a memory access error.',
+          recommendation: 'Update the app.',
+          count: 3,
+          firstUnixMs: 1760000000000,
+          lastUnixMs: 1760100000000,
+          versions: [CrashVersion(version: '1.2', count: 3)],
+          recent: [
+            CrashOccurrence(
+              timestampUnixMs: 1760100000000,
+              channel: 'Application',
+              recordId: 7,
+              version: '1.2',
+            ),
+          ],
+        ),
+      ],
+    );
+    final input = ReportExportInput(
+      template: ReportTemplate.crashHistory,
+      format: ReportFormat.json,
+      crashHistory: history,
+    );
+
+    test('JSON lists groups and masks profile paths', () {
+      final exporter = ReportExporter();
+      final json = ReportExporter.buildJson(
+        input,
+        redactor: exporter.redactorFor(input),
+      );
+      expect(json, contains('"pulse_export": "pulse-crashes"'));
+      expect(json, contains('"title": "Tool Crashed"'));
+      expect(json, contains('"code": "0xC0000005"'));
+      expect(json, contains('"origin": "app"'));
+      expect(json, contains('"record_id": 7'));
+      expect(json, isNot(contains('jane')));
+    });
+
+    test('CSV has one row per group', () {
+      final csv = ReportExporter.buildCsv(input);
+      final lines = csv.trim().split('\n');
+      expect(lines.first, startsWith('kind,title,count,first,last'));
+      expect(lines, hasLength(2));
+      expect(lines[1], startsWith('App crash,Tool Crashed,3,'));
+      expect(lines[1], contains("The app's own file"));
+    });
+
+    test('HTML and missing history', () {
+      final html = ReportExporter.buildHtml(input);
+      expect(html, contains('Crashes in the last 30 days</h2>'));
+      expect(html, contains('Tool Crashed'));
+      final empty = ReportExporter.buildHtml(
+        const ReportExportInput(
+          template: ReportTemplate.crashHistory,
+          format: ReportFormat.html,
+        ),
+      );
+      expect(empty, contains('No crash history available.'));
+      expect(ReportTemplate.crashHistory.supportsCsv, isTrue);
+    });
+  });
 }

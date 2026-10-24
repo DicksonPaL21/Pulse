@@ -5,6 +5,22 @@ All notable changes to Pulse are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Crashes page (Ctrl+2): blue screens, app crashes and hangs, unexpected restarts, graphics driver resets, service crashes and hardware errors of the last 7, 30 or 90 days, grouped by cause, with a bar per day. Each group says what happened in plain language, how often, which file an app crashed in and who made it, the versions it happened on, and opens the Windows events themselves
+- Crash history report (JSON, CSV, HTML, PDF) and a read-only `crash_history` tool for the Assistant
+
+### Changed
+
+- App crashes in the Timeline name the app, the error and the file: "Discord closed unexpectedly after a memory access error. The error happened in nvwgf2umx.dll, part of a device driver." App hangs and service crashes name the app or service
+- Ctrl+1–7 follow the sidebar from the top: Crashes is Ctrl+2, so Health moves to Ctrl+3 and Settings to Ctrl+7
+
+### Fixed
+
+- Blue screens, sudden restarts and wake-ups loaded with the Timeline at startup showed the generic wording; only events that arrived later got the detailed explanation
+
 ## [1.5.0] — 2026-10-20
 
 ### Added

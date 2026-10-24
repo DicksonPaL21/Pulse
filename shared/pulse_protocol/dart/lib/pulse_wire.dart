@@ -1645,6 +1645,116 @@ class InjectDiagnosticsTestEvent {
   InjectDiagnosticsTestEvent();
 }
 
+// --- Crash history (doc 43) ---
+
+/// Wire order matches `CrashKind` in pulse.proto.
+enum CrashKind {
+  unspecified,
+  appCrash,
+  appHang,
+  blueScreen,
+  unexpectedRestart,
+  gpuReset,
+  serviceCrash,
+  hardwareError,
+}
+
+/// Wire order matches `FaultingModuleOrigin` in pulse.proto.
+enum FaultingModuleOrigin { unknown, app, windows, driver, other }
+
+/// One event of a [CrashGroup]; load it with [GetTimelineEventDetail].
+class CrashOccurrence {
+  CrashOccurrence({
+    this.timestampUnixMs = 0,
+    this.channel = '',
+    this.recordId = 0,
+    this.version = '',
+  });
+  int timestampUnixMs;
+  String channel;
+  int recordId;
+  String version;
+}
+
+class CrashVersion {
+  CrashVersion({this.version = '', this.count = 0, this.lastUnixMs = 0});
+  String version;
+  int count;
+  int lastUnixMs;
+}
+
+/// Crashes with the same cause, explained from the newest event.
+class CrashGroup {
+  CrashGroup({
+    this.kind = CrashKind.unspecified,
+    this.key = '',
+    this.subject = '',
+    this.moduleName = '',
+    this.modulePath = '',
+    this.moduleCompany = '',
+    this.moduleOrigin = FaultingModuleOrigin.unknown,
+    this.code = 0,
+    this.hasCode = false,
+    this.title = '',
+    this.summary = '',
+    this.recommendation = '',
+    this.count = 0,
+    this.firstUnixMs = 0,
+    this.lastUnixMs = 0,
+    List<int>? occurrenceUnixMs,
+    List<CrashVersion>? versions,
+    List<CrashOccurrence>? recent,
+  })  : occurrenceUnixMs = occurrenceUnixMs ?? <int>[],
+        versions = versions ?? <CrashVersion>[],
+        recent = recent ?? <CrashOccurrence>[];
+  CrashKind kind;
+  String key;
+  String subject;
+  String moduleName;
+  String modulePath;
+  String moduleCompany;
+  FaultingModuleOrigin moduleOrigin;
+  int code;
+  bool hasCode;
+  String title;
+  String summary;
+  String recommendation;
+  int count;
+  int firstUnixMs;
+  int lastUnixMs;
+  /// Newest first; capped by the service.
+  List<int> occurrenceUnixMs;
+  /// Most crashes first.
+  List<CrashVersion> versions;
+  /// Newest first; capped by the service.
+  List<CrashOccurrence> recent;
+}
+
+class GetCrashHistory {
+  GetCrashHistory({this.days = 0});
+  int days;
+}
+
+class CrashHistory {
+  CrashHistory({
+    this.days = 0,
+    this.collectedUnixMs = 0,
+    List<CrashGroup>? groups,
+    this.scannedEvents = 0,
+    this.truncated = false,
+    List<String>? unreadableChannels,
+  })  : groups = groups ?? <CrashGroup>[],
+        unreadableChannels = unreadableChannels ?? <String>[];
+  int days;
+  int collectedUnixMs;
+  /// Ordered by their newest event.
+  List<CrashGroup> groups;
+  int scannedEvents;
+  /// The service hit its read cap; older events were not read.
+  bool truncated;
+  List<String> unreadableChannels;
+}
+
 class Envelope {
   Envelope({this.requestId = 0, this.body});
   int requestId;
@@ -2668,6 +2778,73 @@ void _writeBytesField(int field, Uint8List bytes, BytesBuilder out) {
   out.add(bytes);
 }
 
+Uint8List _encodeCrashOccurrence(CrashOccurrence m) {
+  final out = BytesBuilder();
+  _writeU64(1, m.timestampUnixMs, out);
+  _writeString(2, m.channel, out);
+  _writeU64(3, m.recordId, out);
+  _writeString(4, m.version, out);
+  return out.toBytes();
+}
+
+Uint8List _encodeCrashVersion(CrashVersion m) {
+  final out = BytesBuilder();
+  _writeString(1, m.version, out);
+  _writeU64(2, m.count, out);
+  _writeU64(3, m.lastUnixMs, out);
+  return out.toBytes();
+}
+
+Uint8List _encodeCrashGroup(CrashGroup m) {
+  final out = BytesBuilder();
+  _writeU64(1, m.kind.index, out);
+  _writeString(2, m.key, out);
+  _writeString(3, m.subject, out);
+  _writeString(4, m.moduleName, out);
+  _writeString(5, m.modulePath, out);
+  _writeString(6, m.moduleCompany, out);
+  _writeU64(7, m.moduleOrigin.index, out);
+  _writeU64(8, m.code, out);
+  _writeBool(9, m.hasCode, out);
+  _writeString(10, m.title, out);
+  _writeString(11, m.summary, out);
+  _writeString(12, m.recommendation, out);
+  _writeU64(13, m.count, out);
+  _writeU64(14, m.firstUnixMs, out);
+  _writeU64(15, m.lastUnixMs, out);
+  for (final unixMs in m.occurrenceUnixMs) {
+    _writeU64(16, unixMs, out);
+  }
+  for (final version in m.versions) {
+    _writeBytesField(17, _encodeCrashVersion(version), out);
+  }
+  for (final occurrence in m.recent) {
+    _writeBytesField(18, _encodeCrashOccurrence(occurrence), out);
+  }
+  return out.toBytes();
+}
+
+Uint8List _encodeGetCrashHistory(GetCrashHistory m) {
+  final out = BytesBuilder();
+  _writeU64(1, m.days, out);
+  return out.toBytes();
+}
+
+Uint8List _encodeCrashHistory(CrashHistory m) {
+  final out = BytesBuilder();
+  _writeU64(1, m.days, out);
+  _writeU64(2, m.collectedUnixMs, out);
+  for (final group in m.groups) {
+    _writeBytesField(3, _encodeCrashGroup(group), out);
+  }
+  _writeU64(4, m.scannedEvents, out);
+  _writeBool(5, m.truncated, out);
+  for (final channel in m.unreadableChannels) {
+    _writeString(6, channel, out);
+  }
+  return out.toBytes();
+}
+
 Uint8List encodeEnvelope(Envelope env) {
   final out = BytesBuilder();
   _writeU64(1, env.requestId, out);
@@ -2720,6 +2897,10 @@ Uint8List encodeEnvelope(Envelope env) {
     _writeBytesField(37, _encodeGetInventoryDomain(body), out);
   } else if (body is InventoryDomainSnapshot) {
     _writeBytesField(38, _encodeInventoryDomainSnapshot(body), out);
+  } else if (body is GetCrashHistory) {
+    _writeBytesField(39, _encodeGetCrashHistory(body), out);
+  } else if (body is CrashHistory) {
+    _writeBytesField(40, _encodeCrashHistory(body), out);
   } else if (body is ErrorResponse) {
     _writeBytesField(99, _encodeError(body), out);
   }
@@ -4772,6 +4953,154 @@ InjectDiagnosticsTestEvent _decodeInjectDiagnosticsTestEvent(Uint8List data) {
   return InjectDiagnosticsTestEvent();
 }
 
+CrashKind _crashKindFromWire(int v) {
+  if (v < 0 || v >= CrashKind.values.length) {
+    return CrashKind.unspecified;
+  }
+  return CrashKind.values[v];
+}
+
+FaultingModuleOrigin _faultingModuleOriginFromWire(int v) {
+  if (v < 0 || v >= FaultingModuleOrigin.values.length) {
+    return FaultingModuleOrigin.unknown;
+  }
+  return FaultingModuleOrigin.values[v];
+}
+
+CrashOccurrence _decodeCrashOccurrence(Uint8List data) {
+  final r = _Reader(data);
+  final m = CrashOccurrence();
+  while (r.hasMore) {
+    final tag = r.readVarint();
+    final field = tag >> 3;
+    final wire = tag & 7;
+    if (field == 1 && wire == 0) {
+      m.timestampUnixMs = r.readVarint();
+    } else if (field == 2 && wire == 2) {
+      m.channel = r.readString();
+    } else if (field == 3 && wire == 0) {
+      m.recordId = r.readVarint();
+    } else if (field == 4 && wire == 2) {
+      m.version = r.readString();
+    } else {
+      r.skip(wire);
+    }
+  }
+  return m;
+}
+
+CrashVersion _decodeCrashVersion(Uint8List data) {
+  final r = _Reader(data);
+  final m = CrashVersion();
+  while (r.hasMore) {
+    final tag = r.readVarint();
+    final field = tag >> 3;
+    final wire = tag & 7;
+    if (field == 1 && wire == 2) {
+      m.version = r.readString();
+    } else if (field == 2 && wire == 0) {
+      m.count = r.readVarint();
+    } else if (field == 3 && wire == 0) {
+      m.lastUnixMs = r.readVarint();
+    } else {
+      r.skip(wire);
+    }
+  }
+  return m;
+}
+
+CrashGroup _decodeCrashGroup(Uint8List data) {
+  final r = _Reader(data);
+  final m = CrashGroup();
+  while (r.hasMore) {
+    final tag = r.readVarint();
+    final field = tag >> 3;
+    final wire = tag & 7;
+    if (field == 1 && wire == 0) {
+      m.kind = _crashKindFromWire(r.readVarint());
+    } else if (field == 2 && wire == 2) {
+      m.key = r.readString();
+    } else if (field == 3 && wire == 2) {
+      m.subject = r.readString();
+    } else if (field == 4 && wire == 2) {
+      m.moduleName = r.readString();
+    } else if (field == 5 && wire == 2) {
+      m.modulePath = r.readString();
+    } else if (field == 6 && wire == 2) {
+      m.moduleCompany = r.readString();
+    } else if (field == 7 && wire == 0) {
+      m.moduleOrigin = _faultingModuleOriginFromWire(r.readVarint());
+    } else if (field == 8 && wire == 0) {
+      m.code = r.readVarint();
+    } else if (field == 9 && wire == 0) {
+      m.hasCode = r.readVarint() != 0;
+    } else if (field == 10 && wire == 2) {
+      m.title = r.readString();
+    } else if (field == 11 && wire == 2) {
+      m.summary = r.readString();
+    } else if (field == 12 && wire == 2) {
+      m.recommendation = r.readString();
+    } else if (field == 13 && wire == 0) {
+      m.count = r.readVarint();
+    } else if (field == 14 && wire == 0) {
+      m.firstUnixMs = r.readVarint();
+    } else if (field == 15 && wire == 0) {
+      m.lastUnixMs = r.readVarint();
+    } else if (field == 16 && wire == 0) {
+      m.occurrenceUnixMs.add(r.readVarint());
+    } else if (field == 17 && wire == 2) {
+      m.versions.add(_decodeCrashVersion(r.readBytes()));
+    } else if (field == 18 && wire == 2) {
+      m.recent.add(_decodeCrashOccurrence(r.readBytes()));
+    } else {
+      r.skip(wire);
+    }
+  }
+  return m;
+}
+
+GetCrashHistory _decodeGetCrashHistory(Uint8List data) {
+  final r = _Reader(data);
+  final m = GetCrashHistory();
+  while (r.hasMore) {
+    final tag = r.readVarint();
+    final field = tag >> 3;
+    final wire = tag & 7;
+    if (field == 1 && wire == 0) {
+      m.days = r.readVarint();
+    } else {
+      r.skip(wire);
+    }
+  }
+  return m;
+}
+
+CrashHistory _decodeCrashHistory(Uint8List data) {
+  final r = _Reader(data);
+  final m = CrashHistory();
+  while (r.hasMore) {
+    final tag = r.readVarint();
+    final field = tag >> 3;
+    final wire = tag & 7;
+    if (field == 1 && wire == 0) {
+      m.days = r.readVarint();
+    } else if (field == 2 && wire == 0) {
+      m.collectedUnixMs = r.readVarint();
+    } else if (field == 3 && wire == 2) {
+      m.groups.add(_decodeCrashGroup(r.readBytes()));
+    } else if (field == 4 && wire == 0) {
+      m.scannedEvents = r.readVarint();
+    } else if (field == 5 && wire == 0) {
+      m.truncated = r.readVarint() != 0;
+    } else if (field == 6 && wire == 2) {
+      m.unreadableChannels.add(r.readString());
+    } else {
+      r.skip(wire);
+    }
+  }
+  return m;
+}
+
 Envelope decodeEnvelope(Uint8List data) {
   final r = _Reader(data);
   final env = Envelope();
@@ -4806,6 +5135,8 @@ Envelope decodeEnvelope(Uint8List data) {
             field == 36 ||
             field == 37 ||
             field == 38 ||
+            field == 39 ||
+            field == 40 ||
             field == 99)) {
       final len = r.readVarint();
       final sub = r.data.sublist(r.offset, r.offset + len);
@@ -4882,6 +5213,12 @@ Envelope decodeEnvelope(Uint8List data) {
           break;
         case 38:
           env.body = _decodeInventoryDomainSnapshot(sub);
+          break;
+        case 39:
+          env.body = _decodeGetCrashHistory(sub);
+          break;
+        case 40:
+          env.body = _decodeCrashHistory(sub);
           break;
         case 99:
           env.body = _decodeError(sub);

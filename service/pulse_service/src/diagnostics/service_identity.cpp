@@ -20,16 +20,7 @@ namespace pulse {
 namespace diagnostics {
 namespace {
 
-std::wstring Utf8ToWide(const std::string& utf8) {
-  if (utf8.empty()) return {};
-  const int n = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(),
-                                    static_cast<int>(utf8.size()), nullptr, 0);
-  if (n <= 0) return {};
-  std::wstring out(static_cast<size_t>(n), L'\0');
-  MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), static_cast<int>(utf8.size()),
-                      out.data(), n);
-  return out;
-}
+using wevt::Utf8ToWide;
 
 std::wstring NormalizePathWide(const std::wstring& path) {
   if (path.empty()) return {};

@@ -7,6 +7,8 @@
 #include "collectors/system_overview_info.hpp"
 #include "logging/logger.hpp"
 #include "util/windows_edition.hpp"
+#include "windows/file_version_info.hpp"
+#include "windows/wevt_helpers.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -1439,58 +1441,17 @@ void HealthMetricsCollector::SamplePerProcessNetwork(
   network_etw_.Snapshot(bytes_by_pid);
 }
 
-std::wstring Utf8ToWide(const std::string& utf8) {
-  if (utf8.empty()) return {};
-  const int wlen =
-      MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, nullptr, 0);
-  if (wlen <= 1) return {};
-  std::wstring out(static_cast<size_t>(wlen - 1), L'\0');
-  MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, out.data(), wlen);
-  return out;
-}
-
-std::string QueryVersionString(const std::wstring& wpath, const wchar_t* key) {
-  DWORD dummy = 0;
-  const DWORD ver_size = GetFileVersionInfoSizeW(wpath.c_str(), &dummy);
-  if (ver_size == 0) return {};
-  std::vector<uint8_t> ver(ver_size);
-  if (!GetFileVersionInfoW(wpath.c_str(), 0, ver_size, ver.data())) return {};
-
-  struct LANGANDCODEPAGE {
-    WORD wLanguage;
-    WORD wCodePage;
-  };
-  LANGANDCODEPAGE* translate = nullptr;
-  UINT translate_len = 0;
-  if (!VerQueryValueW(ver.data(), L"\\VarFileInfo\\Translation",
-                      reinterpret_cast<LPVOID*>(&translate), &translate_len) ||
-      translate == nullptr || translate_len < sizeof(LANGANDCODEPAGE)) {
-    return {};
-  }
-  wchar_t sub[96];
-  swprintf_s(sub, L"\\StringFileInfo\\%04x%04x\\%s", translate[0].wLanguage,
-             translate[0].wCodePage, key);
-  wchar_t* value = nullptr;
-  UINT value_len = 0;
-  if (!VerQueryValueW(ver.data(), sub, reinterpret_cast<LPVOID*>(&value),
-                      &value_len) ||
-      value == nullptr || value_len <= 1) {
-    return {};
-  }
-  return TrimCopy(NarrowFromWide(value));
-}
-
 void FillVersionStrings(const std::string& path, ipc::ProcessDetails* d) {
-  const std::wstring wpath = Utf8ToWide(path);
+  const std::wstring wpath = wevt::Utf8ToWide(path);
   if (wpath.empty()) return;
-  const std::string company = QueryVersionString(wpath, L"CompanyName");
+  const std::string company = QueryFileVersionString(wpath, L"CompanyName");
   if (!company.empty()) {
     d->company = company;
     d->has_company = true;
   }
-  std::string product = QueryVersionString(wpath, L"FileDescription");
+  std::string product = QueryFileVersionString(wpath, L"FileDescription");
   if (product.empty()) {
-    product = QueryVersionString(wpath, L"ProductName");
+    product = QueryFileVersionString(wpath, L"ProductName");
   }
   if (!product.empty()) {
     d->product_name = product;

@@ -99,5 +99,6 @@ See [37-timeline-correlation-rules.md](37-timeline-correlation-rules.md). Count:
 ## Notes
 
 - Unmatched events fall back to a softened provider title + first-line summary — never invented Event IDs.
+- Since 1.6 the crash explainer reads the data of Application Error 1000, Application Hang 1002 and Service Control Manager 7031 / 7034, so their titles name the app or service ("Discord Crashed", "Spooler Service Crashed"); the catalog titles above remain the fallback when the event has no data. See [43 — Crash history](43-crash-history.md).
 - Security-channel rules only surface when the Security log is readable under the user’s privileges.
 - Further expansions require Microsoft-documented IDs + this inventory update in the same change.

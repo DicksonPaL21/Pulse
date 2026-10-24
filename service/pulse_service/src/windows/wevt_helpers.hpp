@@ -64,6 +64,9 @@ class EvtHandle {
 [[nodiscard]] std::string WideToUtf8(const wchar_t* value);
 [[nodiscard]] std::string WideToUtf8(const std::wstring& value);
 
+/// Converts UTF-8 to UTF-16. Empty or invalid input → empty output.
+[[nodiscard]] std::wstring Utf8ToWide(const std::string& value);
+
 /// Formats a Win32 error code into a readable UTF-8 string.
 [[nodiscard]] std::string FormatWin32Error(DWORD error_code);
 

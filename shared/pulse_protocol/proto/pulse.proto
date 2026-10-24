@@ -946,6 +946,80 @@ message InventoryDomainSnapshot {
   repeated InventoryNetworkAdapterEntry network_adapters = 25;
 }
 
+// --- Crash history (doc 43): crash events of the last days, grouped ---
+
+enum CrashKind {
+  CRASH_KIND_UNSPECIFIED = 0;
+  CRASH_KIND_APP_CRASH = 1;          // Application Error 1000
+  CRASH_KIND_APP_HANG = 2;           // Application Hang 1002
+  CRASH_KIND_BLUE_SCREEN = 3;        // BugCheck 1001, or Kernel-Power 41 with a stop code
+  CRASH_KIND_UNEXPECTED_RESTART = 4; // Kernel-Power 41 without a stop code
+  CRASH_KIND_GPU_RESET = 5;          // Display 4101
+  CRASH_KIND_SERVICE_CRASH = 6;      // Service Control Manager 7031 / 7034
+  CRASH_KIND_HARDWARE_ERROR = 7;     // WHEA-Logger at Error / Critical level
+}
+
+// Where the file an app crashed in comes from (app crashes only).
+enum FaultingModuleOrigin {
+  FAULTING_MODULE_ORIGIN_UNKNOWN = 0;
+  FAULTING_MODULE_ORIGIN_APP = 1;     // the app's own file
+  FAULTING_MODULE_ORIGIN_WINDOWS = 2; // a Microsoft file under the Windows folder
+  FAULTING_MODULE_ORIGIN_DRIVER = 3;  // part of a device driver
+  FAULTING_MODULE_ORIGIN_OTHER = 4;   // another program's file loaded into the app
+}
+
+// One event of a group; load it with GetTimelineEventDetail.
+message CrashOccurrence {
+  int64 timestamp_unix_ms = 1;
+  string channel = 2;
+  uint64 record_id = 3;
+  string version = 4;  // app version for app crashes and hangs
+}
+
+message CrashVersion {
+  string version = 1;
+  uint32 count = 2;
+  int64 last_unix_ms = 3;
+}
+
+// Crashes with the same cause: same app, file and exception code; same stop
+// code; same service; and so on.
+message CrashGroup {
+  CrashKind kind = 1;
+  string key = 2;            // stable for the same group across requests
+  string subject = 3;        // app, service, driver or stop code name
+  string module_name = 4;
+  string module_path = 5;
+  string module_company = 6; // CompanyName of the module's version resource
+  FaultingModuleOrigin module_origin = 7;
+  uint32 code = 8;           // exception code or stop code
+  bool has_code = 9;
+  string title = 10;         // Level 1, from the newest event
+  string summary = 11;
+  string recommendation = 12;
+  uint32 count = 13;
+  int64 first_unix_ms = 14;
+  int64 last_unix_ms = 15;
+  repeated int64 occurrence_unix_ms = 16;  // newest first, capped
+  repeated CrashVersion versions = 17;     // most crashes first
+  repeated CrashOccurrence recent = 18;    // newest first, capped
+}
+
+// Client -> Service.
+message GetCrashHistory {
+  uint32 days = 1;  // default 30, at most 90
+}
+
+// Service -> Client: groups ordered by their newest event.
+message CrashHistory {
+  uint32 days = 1;
+  int64 collected_unix_ms = 2;
+  repeated CrashGroup groups = 3;
+  uint32 scanned_events = 4;
+  bool truncated = 5;                      // read cap reached; older events skipped
+  repeated string unreadable_channels = 6;
+}
+
 message Envelope {
   uint64 request_id = 1; // 0 = server push
   oneof body {
@@ -973,6 +1047,8 @@ message Envelope {
     TimelineEventDetail timeline_event_detail = 36;
     GetInventoryDomain get_inventory_domain = 37;
     InventoryDomainSnapshot inventory_domain_snapshot = 38;
+    GetCrashHistory get_crash_history = 39;
+    CrashHistory crash_history = 40;
     ErrorResponse error = 99;
   }
 }

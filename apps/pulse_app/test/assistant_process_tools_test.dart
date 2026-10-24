@@ -6,11 +6,24 @@ import 'package:pulse_protocol/pulse_wire.dart';
 
 /// Serves canned PulseService replies; never opens the pipe.
 class _FakeIpc extends PulseIpcClient {
-  _FakeIpc({this.details, this.services = const [], this.processes = const []});
+  _FakeIpc({
+    this.details,
+    this.services = const [],
+    this.processes = const [],
+    this.crashes,
+  });
 
   final ProcessDetails? details;
   final List<InventoryServiceEntry> services;
   final List<HealthProcessEntry> processes;
+  final CrashHistory? crashes;
+  int? requestedCrashDays;
+
+  @override
+  Future<CrashHistory> getCrashHistory({int days = 30}) async {
+    requestedCrashDays = days;
+    return crashes!;
+  }
 
   @override
   Future<ProcessDetails> getProcessDetails(int pid) async => details!;
@@ -161,5 +174,51 @@ void main() {
       unorderedEquals(['query', 'state', 'limit']),
     );
     expect(AssistantToolAllowlist.isAllowed('stop_service'), isFalse);
+  });
+
+  test('crash_history explains grouped crashes and caps the period', () async {
+    final ipc = _FakeIpc(
+      crashes: CrashHistory(
+        days: 90,
+        truncated: true,
+        groups: [
+          CrashGroup(
+            kind: CrashKind.appCrash,
+            subject: 'Game.exe',
+            moduleName: 'nvwgf2umx.dll',
+            moduleOrigin: FaultingModuleOrigin.driver,
+            moduleCompany: 'NVIDIA Corporation',
+            code: 0xC0000005,
+            hasCode: true,
+            title: 'Game Crashed',
+            summary: 'Game closed unexpectedly after a memory access error.',
+            count: 4,
+            versions: [CrashVersion(version: '2.1', count: 4)],
+          ),
+          CrashGroup(
+            kind: CrashKind.unexpectedRestart,
+            title: 'PC Lost Power or Stopped Suddenly',
+            summary: 'The PC turned off without recording an error.',
+            count: 1,
+          ),
+        ],
+      ),
+    );
+    final layer = IpcAssistantToolLayer(ipc: ipc);
+
+    final result = await layer.invoke('crash_history', arguments: {'days': 365});
+    expect(ipc.requestedCrashDays, 90);
+    final data = result.data!;
+    expect(data['crashes'], 5);
+    expect(data['olderEventsNotRead'], isTrue);
+    final first = (data['groups'] as List).first as Map;
+    expect(first['kind'], 'appCrash');
+    expect(first['fileOwner'], 'driver');
+    expect(first['fileCompany'], 'NVIDIA Corporation');
+    expect(first['code'], '0xC0000005');
+    final second = (data['groups'] as List).last as Map;
+    expect(second.containsKey('code'), isFalse);
+    expect(AssistantToolAllowlist.isAllowed('crash_history'), isTrue);
+    expect(AssistantToolAllowlist.looksDangerous('crash_history'), isFalse);
   });
 }
