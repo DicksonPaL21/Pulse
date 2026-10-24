@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <iostream>
 #include <optional>
+#include <utility>
 
 #define WIN32_LEAN_AND_MEAN
 #ifndef NOMINMAX
@@ -174,6 +175,17 @@ EventRecord ParseSystemProperties(const EVT_VARIANT* properties,
   return record;
 }
 
+/// Crash and wake events are explained from their EventData (stop code,
+/// power button, wake source). They are rare, so rendering their XML up front
+/// is cheap.
+void AttachDiagnosticXml(EVT_HANDLE event_handle, EventRecord* record) {
+  if (record->event_id.has_value() &&
+      (IsCrashDiagnosticEvent(record->provider_name, *record->event_id) ||
+       IsWakeDiagnosticEvent(record->provider_name, *record->event_id))) {
+    record->raw_xml = wevt::RenderEventXml(event_handle);
+  }
+}
+
 const char* OrUnavailable(const std::string& value) {
   return value.empty() ? "(unavailable)" : value.c_str();
 }
@@ -259,8 +271,10 @@ CollectResult<std::vector<EventRecord>> EventLogCollector::CollectLatest(
           reinterpret_cast<const EVT_VARIANT*>(buffer.data());
 
       try {
-        events.push_back(ParseSystemProperties(properties, property_count,
-                                               event_handle.get()));
+        EventRecord record = ParseSystemProperties(properties, property_count,
+                                                   event_handle.get());
+        AttachDiagnosticXml(event_handle.get(), &record);
+        events.push_back(std::move(record));
       } catch (...) {
         Logger::Instance().Warn("EventLogCollector",
                                 "Skipping event — unexpected parse failure");
@@ -417,15 +431,7 @@ std::optional<EventRecord> EventLogCollector::ParseEvtHandle(
   try {
     EventRecord record = ParseSystemProperties(
         properties, property_count, static_cast<EVT_HANDLE>(event_handle));
-    // Crash and wake events are explained from their EventData (stop code,
-    // power button, wake source). They are rare, so rendering their XML up
-    // front is cheap.
-    if (record.event_id.has_value() &&
-        (IsCrashDiagnosticEvent(record.provider_name, *record.event_id) ||
-         IsWakeDiagnosticEvent(record.provider_name, *record.event_id))) {
-      record.raw_xml =
-          wevt::RenderEventXml(static_cast<EVT_HANDLE>(event_handle));
-    }
+    AttachDiagnosticXml(static_cast<EVT_HANDLE>(event_handle), &record);
     return record;
   } catch (...) {
     return std::nullopt;
