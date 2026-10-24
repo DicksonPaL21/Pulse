@@ -207,7 +207,10 @@ class _TimelineDetailsPanelState extends State<TimelineDetailsPanel> {
       PulseSnack.info(context, 'Events like this show in the Timeline again.');
       return;
     }
-    await library.hideEventType(event, title: event.displayTitle);
+    await library.hideEventType(
+      event,
+      title: hiddenEventTypeTitleOf(event, event.displayTitle),
+    );
     if (!mounted) return;
     PulseSnack.info(
       context,

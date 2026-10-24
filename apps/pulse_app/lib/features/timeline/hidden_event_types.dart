@@ -53,3 +53,18 @@ String? hiddenEventTypeKeyOf(TimelineEvent event) {
   if (event.providerName.trim().isEmpty) return null;
   return hiddenEventTypeKey(event.providerName, event.winEventId);
 }
+
+/// Event types whose titles name one app or service ("Discord Crashed"),
+/// while hiding the type hides it for every app or service.
+const _typeTitles = {
+  'application error#1000': 'App crashes',
+  'application hang#1002': 'Apps that stopped responding',
+  'service control manager#7031': 'Service crashes (with recovery)',
+  'service control manager#7034': 'Service crashes',
+};
+
+/// The name Settings shows for [event]'s type once hidden.
+String hiddenEventTypeTitleOf(TimelineEvent event, String displayTitle) {
+  final key = hiddenEventTypeKeyOf(event);
+  return _typeTitles[key] ?? displayTitle;
+}
