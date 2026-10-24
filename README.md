@@ -19,6 +19,13 @@
 </p>
 
 <p align="center">
+  <a href="https://trendshift.io/repositories/102083"><img src="https://trendshift.io/api/badge/repositories/102083" alt="Regncreative/Pulse on GitHub Trending (Dart) | Trendshift" width="250" height="55" /></a>
+  <a href="https://trendshift.io/repositories/102083"><img src="https://trendshift.io/api/badge/trendshift/repositories/102083/weekly?language=Dart" alt="Regncreative/Pulse on the Trendshift weekly list for Dart" width="250" height="55" /></a>
+  <br />
+  <sub>Featured on GitHub Trending (Dart) and Trendshift</sub>
+</p>
+
+<p align="center">
   <a href="https://github.com/Regncreative/Pulse/releases/latest"><strong>Download for Windows</strong></a>
   ·
   <a href="https://apps.microsoft.com/detail/9PNDTLNTJ82T"><strong>Microsoft Store</strong></a>
@@ -292,15 +299,6 @@ Every feature should answer one question: **"What is Windows doing right now?"**
 - **IT-Connect** (France, 24 October 2026) — [*Pulse : les journaux d’événements de Windows facilement lisibles, avec de l’IA locale*](https://www.it-connect.fr/pulse-journaux-evenements-de-windows-facilement-lisibles-avec-ia-locale/) by Florian Burnel, covering Pulse 1.5 ([English version](https://www.it-connect.tech/pulse-makes-windows-event-logs-readable-with-local-ai/)). The Assistant connects only to a local AI on this PC (127.0.0.1); a remote Ollama or LM Studio is not supported by design.
 - **TecnoAndroid** (Italy, 18 October 2026) — [*Pulse per Windows 11: il Visualizzatore eventi diventa leggibile*](https://www.tecnoandroid.it/news/pulse-per-windows-11-il-visualizzatore-eventi-diventa-leggibile-1994644/) by Manuel De Pandis. PulseMCP mentioned there was removed in 1.3; the Assistant talks only to a local AI on this PC.
 - **IlSoftware.it** (Italy, 13 October 2026) — [*Visualizzatore eventi Windows 11 più comprensibile con un tool open source*](https://www.ilsoftware.it/focus/visualizzatore-eventi-windows-11-migliorato-pulse/) by Michele Nasi. The article covers Pulse 1.2; AI Integration (MCP) mentioned there was replaced by the local Assistant in 1.3.
-
-### Recognition
-
-Pulse was on GitHub Trending's Dart list and on Trendshift's weekly Dart list in October 2026.
-
-<p>
-  <a href="https://trendshift.io/repositories/102083"><img src="https://trendshift.io/api/badge/repositories/102083" alt="Regncreative/Pulse on GitHub Trending (Dart) | Trendshift" width="250" height="55" /></a>
-  <a href="https://trendshift.io/repositories/102083"><img src="https://trendshift.io/api/badge/trendshift/repositories/102083/weekly?language=Dart" alt="Regncreative/Pulse on the Trendshift weekly list for Dart" width="250" height="55" /></a>
-</p>
 
 ---
 
