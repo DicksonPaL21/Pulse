@@ -1,5 +1,13 @@
 # Upgrade notes
 
+## To 1.6.0
+
+- Installer: `Pulse-Setup-1.6.0-windows-x64.exe`
+- Product stamp is **`1.6.0`** (UI, PulseService)
+- Keyboard shortcuts follow the sidebar: Ctrl+2 opens the new Crashes page, System Health moves to Ctrl+3 and Settings to Ctrl+7
+- The Crashes page lists every crash, including event types hidden in the Timeline
+- PulseService must be 1.6.0 too: an older service cannot answer the Crashes page, which then asks to update
+
 ## To 1.5.0
 
 - Installer: `Pulse-Setup-1.5.0-windows-x64.exe`

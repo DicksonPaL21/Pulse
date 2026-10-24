@@ -2,7 +2,7 @@
 
 ## Recommended
 
-1. Download `Pulse-Setup-1.5.0-windows-x64.exe` from [GitHub Releases](https://github.com/Regncreative/Pulse/releases/tag/v1.5.0)
+1. Download `Pulse-Setup-1.6.0-windows-x64.exe` from [GitHub Releases](https://github.com/Regncreative/Pulse/releases/tag/v1.6.0)
 2. Run the Setup (UAC). It installs Visual C++ runtime, registers PulseService, and launches Pulse.
 3. Optional: install Ollama or LM Studio yourself to use the local **Assistant**.
 
