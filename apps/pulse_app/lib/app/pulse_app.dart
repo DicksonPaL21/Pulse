@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:pulse_protocol/pulse_constants.dart';
 
 import '../application/settings_controller.dart';
 import '../presentation/onboarding/welcome_page.dart';
@@ -25,7 +26,7 @@ class PulseApp extends StatelessWidget {
     final dark = PulseTheme.dark(accent: accent);
 
     return MaterialApp(
-      title: 'Pulse',
+      title: kProductName,
       debugShowCheckedModeBanner: false,
       theme: light,
       darkTheme: dark,

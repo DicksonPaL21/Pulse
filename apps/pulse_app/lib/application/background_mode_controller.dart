@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:local_notifier/local_notifier.dart';
 import 'package:path/path.dart' as p;
+import 'package:pulse_protocol/pulse_constants.dart';
 import 'package:pulse_protocol/pulse_wire.dart';
 import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
@@ -207,7 +208,7 @@ class BackgroundModeController extends ChangeNotifier
       trayManager.addListener(this);
       final icon = _resolveTrayIconPath();
       await trayManager.setIcon(icon);
-      await trayManager.setToolTip('Pulse Diagnostics');
+      await trayManager.setToolTip(kProductName);
       await _rebuildTrayMenu();
       _trayReady = true;
     } catch (e) {
@@ -247,7 +248,7 @@ class BackgroundModeController extends ChangeNotifier
     if (!Platform.isWindows) return;
     final menu = Menu(
       items: [
-        MenuItem(key: 'open', label: 'Open Pulse'),
+        MenuItem(key: 'open', label: 'Open $kProductName'),
         MenuItem.separator(),
         MenuItem(key: 'dashboard', label: 'Dashboard'),
         MenuItem(key: 'health', label: 'System Health'),
@@ -269,7 +270,7 @@ class BackgroundModeController extends ChangeNotifier
           checked: settings.backgroundMode,
         ),
         MenuItem.separator(),
-        MenuItem(key: 'exit', label: 'Exit Pulse'),
+        MenuItem(key: 'exit', label: 'Exit $kProductName'),
       ],
     );
     try {

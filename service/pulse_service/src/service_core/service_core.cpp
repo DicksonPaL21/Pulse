@@ -3,6 +3,7 @@
 #include "collector/event_engine.hpp"
 #include "logging/logger.hpp"
 #include "pulse/constants.hpp"
+#include "windows/wevt_helpers.hpp"
 
 #include <atomic>
 #include <iostream>
@@ -173,6 +174,7 @@ int InstallService() {
   // Quote the image path: an unquoted path with spaces (C:\Program Files\...)
   // makes the SCM probe C:\Program.exe first (unquoted service path).
   const std::wstring binary_path = L"\"" + std::wstring(path) + L"\"";
+  const std::wstring display_name = wevt::Utf8ToWide(kServiceDisplayName);
 
   SC_HANDLE scm = OpenSCManagerW(nullptr, nullptr, SC_MANAGER_ALL_ACCESS);
   if (!scm) {
@@ -186,7 +188,8 @@ int InstallService() {
     if (!ChangeServiceConfigW(svc, SERVICE_WIN32_OWN_PROCESS, SERVICE_AUTO_START,
                               SERVICE_ERROR_NORMAL, binary_path.c_str(), nullptr,
                               nullptr, nullptr,
-                              L"NT AUTHORITY\\LocalService", nullptr, L"Pulse")) {
+                              L"NT AUTHORITY\\LocalService", nullptr,
+                              display_name.c_str())) {
       const DWORD err = GetLastError();
       CloseServiceHandle(svc);
       CloseServiceHandle(scm);
@@ -195,7 +198,7 @@ int InstallService() {
     }
   } else {
     svc = CreateServiceW(
-        scm, L"PulseService", L"Pulse", SERVICE_ALL_ACCESS,
+        scm, L"PulseService", display_name.c_str(), SERVICE_ALL_ACCESS,
         SERVICE_WIN32_OWN_PROCESS, SERVICE_AUTO_START, SERVICE_ERROR_NORMAL,
         binary_path.c_str(), nullptr, nullptr, nullptr, L"NT AUTHORITY\\LocalService",
         nullptr);
@@ -208,7 +211,7 @@ int InstallService() {
   }
 
   SERVICE_DESCRIPTIONW desc{};
-  wchar_t text[] = L"Read-only Windows diagnostics collector for Pulse";
+  wchar_t text[] = L"Read-only Windows diagnostics collector for Pulse Diagnostics";
   desc.lpDescription = text;
   ChangeServiceConfig2W(svc, SERVICE_CONFIG_DESCRIPTION, &desc);
 

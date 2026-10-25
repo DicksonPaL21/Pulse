@@ -43,7 +43,7 @@ flutter run -d windows
 .\tools\scripts\package_beta.ps1
 ```
 
-Produces `dist\Pulse-Setup-1.6.0-windows-x64.exe`, `dist\Pulse\`, and `dist\Pulse-1.6.0-windows-x64.zip`. See [docs/architecture/25-beta-release.md](docs/architecture/25-beta-release.md) and [docs/releases/v1.6.0.md](docs/releases/v1.6.0.md).
+Produces `dist\PulseDiagnostics-Setup-1.6.0-windows-x64.exe`, `dist\Pulse\`, and `dist\PulseDiagnostics-1.6.0-windows-x64.zip`. See [docs/architecture/25-beta-release.md](docs/architecture/25-beta-release.md) and [docs/releases/v1.6.0.md](docs/releases/v1.6.0.md).
 
 ## Package Microsoft Store (MSIX)
 

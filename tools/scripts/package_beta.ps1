@@ -1,13 +1,13 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-  Build Pulse release: Flutter Release payload + VC++ CRT + Inno Setup installer.
+  Build Pulse Diagnostics release: Flutter Release payload + VC++ CRT + Inno Setup installer.
 
 .DESCRIPTION
   Produces:
-    dist/Pulse-Setup-<version>-windows-x64.exe  (primary end-user installer)
-    dist/Pulse/                                  (payload)
-    dist/Pulse-<version>-windows-x64.zip        (optional payload archive)
+    dist/PulseDiagnostics-Setup-<version>-windows-x64.exe  (primary end-user installer)
+    dist/Pulse/                                            (payload)
+    dist/PulseDiagnostics-<version>-windows-x64.zip        (optional payload archive)
 
   The Setup.exe elevates via UAC, installs VC++ redist, registers/starts
   PulseService (--install-start), and launches Pulse — no PowerShell.
@@ -178,10 +178,10 @@ foreach ($g in $guideExtras) {
 
 Write-Host "==> Writing README for payload folder (advanced / portable)"
 @"
-Pulse payload folder (advanced)
-===============================
+Pulse Diagnostics payload folder (advanced)
+===========================================
 
-End users should run Pulse-Setup-$Version-windows-x64.exe instead of this folder.
+End users should run PulseDiagnostics-Setup-$Version-windows-x64.exe instead of this folder.
 
 This folder is the install payload. For developers:
 
@@ -192,7 +192,7 @@ Privacy: local-only. No telemetry. Observation only.
 "@ | Set-Content -Path (Join-Path $dist "README_INSTALL.txt") -Encoding UTF8
 
 # Zip (payload / CI artifact - not the primary end-user deliverable)
-$zip = Join-Path $root "dist\Pulse-$Version-windows-x64.zip"
+$zip = Join-Path $root "dist\PulseDiagnostics-$Version-windows-x64.zip"
 if (Test-Path $zip) { Remove-Item $zip -Force }
 Write-Host "==> Creating $zip"
 Compress-Archive -Path (Join-Path $dist "*") -DestinationPath $zip -Force
@@ -211,7 +211,7 @@ if (-not $iscc) {
   throw "ISCC.exe not found. Install Inno Setup 6 (winget install JRSoftware.InnoSetup)."
 }
 $iss = Join-Path $root "tools\installer\Pulse.iss"
-$setupOut = Join-Path $root "dist\Pulse-Setup-$Version-windows-x64.exe"
+$setupOut = Join-Path $root "dist\PulseDiagnostics-Setup-$Version-windows-x64.exe"
 if (Test-Path $setupOut) { Remove-Item $setupOut -Force }
 & $iscc "/DPulsePayloadDir=$dist" "/DPulseOutDir=$(Join-Path $root 'dist')" $iss
 if ($LASTEXITCODE -ne 0) { throw "Inno Setup compile failed" }

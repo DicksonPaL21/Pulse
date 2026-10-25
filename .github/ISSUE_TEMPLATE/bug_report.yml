@@ -24,8 +24,8 @@ body:
       label: Steps to reproduce
       description: Exact steps another person can follow.
       placeholder: |
-        1. Install Pulse-Setup-…
-        2. Launch Pulse
+        1. Install PulseDiagnostics-Setup-… (Pulse-Setup-… up to 1.6.0)
+        2. Launch Pulse Diagnostics
         3. …
       value: |
         1.
