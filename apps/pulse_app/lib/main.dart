@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_acrylic/flutter_acrylic.dart';
 import 'package:provider/provider.dart';
+import 'package:pulse_protocol/pulse_constants.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'app/pulse_app.dart';
@@ -25,10 +26,10 @@ Future<void> main(List<String> args) async {
     backgroundColor: Colors.transparent,
     skipTaskbar: false,
     titleBarStyle: TitleBarStyle.hidden,
-    title: 'Pulse',
+    title: kProductName,
     windowButtonVisibility: false,
   );
-  await windowManager.setTitle('Pulse');
+  await windowManager.setTitle(kProductName);
   await windowManager.waitUntilReadyToShow(windowOptions);
 
   final services = await AppServices.create();

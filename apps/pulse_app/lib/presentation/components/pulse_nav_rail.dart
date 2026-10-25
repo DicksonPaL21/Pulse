@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:pulse_protocol/pulse_constants.dart';
 
 import '../../app/theme/pulse_theme.dart';
 import 'safe_hover.dart';
@@ -66,7 +67,7 @@ class PulseNavRail extends StatelessWidget {
       child: Column(
         children: [
           Semantics(
-            label: 'Pulse',
+            label: kProductName,
             image: true,
             child: Container(
               width: _markTileSize,

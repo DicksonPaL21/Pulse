@@ -1070,7 +1070,7 @@ class _SettingsPageState extends State<SettingsPage> {
             children: [
               _SettingsRow(
                 icon: LucideIcons.info,
-                title: 'Pulse version',
+                title: '$kProductName version',
                 subtitle: kAppVersion,
                 trailing: const PulseBadge(
                   label: 'Bootstrap',

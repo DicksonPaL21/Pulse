@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="apps/pulse_app/assets/branding/app_icon_128.png" alt="Pulse logo" width="96" height="96" />
+  <img src="apps/pulse_app/assets/branding/app_icon_128.png" alt="Pulse Diagnostics logo" width="96" height="96" />
 </p>
 
-<h1 align="center">Pulse</h1>
+<h1 align="center">Pulse Diagnostics</h1>
 
 <p align="center">
   <strong>See what Windows is really doing.</strong><br />

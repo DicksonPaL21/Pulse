@@ -1,10 +1,10 @@
-; Pulse Windows installer (Inno Setup 6)
+; Pulse Diagnostics Windows installer (Inno Setup 6)
 ; Produced by tools/scripts/package_beta.ps1
 ;
-; End users double-click Pulse-Setup-*-windows-x64.exe
+; End users double-click PulseDiagnostics-Setup-*-windows-x64.exe
 ; No PowerShell. No ExecutionPolicy. UAC elevation only.
 
-#define MyAppName "Pulse"
+#define MyAppName "Pulse Diagnostics"
 #define MyAppVersion "1.6.0"
 #define MyAppPublisher "Regncreative"
 #define MyAppURL "https://github.com/Regncreative/Pulse"
@@ -26,14 +26,18 @@ AppVerName={#MyAppName} {#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
-DefaultDirName={autopf}\Pulse
-DefaultGroupName=Pulse
+; Upgrades keep their install folder (C:\Program Files\Pulse up to 1.6.0).
+; The Start menu folder takes the new name; [InstallDelete] removes the old
+; shortcuts.
+DefaultDirName={autopf}\{#MyAppName}
+DefaultGroupName={#MyAppName}
+UsePreviousGroup=no
 DisableProgramGroupPage=yes
 PrivilegesRequired=admin
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir={#PulseOutDir}
-OutputBaseFilename=Pulse-Setup-{#MyAppVersion}-windows-x64
+OutputBaseFilename=PulseDiagnostics-Setup-{#MyAppVersion}-windows-x64
 Compression=lzma2
 SolidCompression=yes
 ; Midnight look (ADR-012): forced dark, no bevel lines, app canvas color.
@@ -72,6 +76,13 @@ Type: files; Name: "{app}\PulseMCP.cmd"
 Type: filesandordirs; Name: "{app}\runtime"
 Type: filesandordirs; Name: "{app}\mcp"
 Type: files; Name: "{app}\docs\guides\ai-integration.md"
+; Shortcuts from 1.6.0 and earlier, when the app was called Pulse. Another
+; app can be called Pulse too, so a shortcut is only removed when it opens a
+; file in this install folder.
+Type: files; Name: "{commonprograms}\Pulse\Pulse.lnk"; Check: ShortcutOpensInstallFolder('{commonprograms}\Pulse\Pulse.lnk')
+Type: files; Name: "{commonprograms}\Pulse\Uninstall Pulse.lnk"; Check: ShortcutOpensInstallFolder('{commonprograms}\Pulse\Uninstall Pulse.lnk')
+Type: dirifempty; Name: "{commonprograms}\Pulse"
+Type: files; Name: "{commondesktop}\Pulse.lnk"; Check: ShortcutOpensInstallFolder('{commondesktop}\Pulse.lnk')
 
 [Files]
 Source: "{#PulsePayloadDir}\*"; DestDir: "{app}"; Excludes: "redist\*,*.pdb"; Flags: ignoreversion recursesubdirs
@@ -79,14 +90,14 @@ Source: "{#PulsePayloadDir}\*"; DestDir: "{app}"; Excludes: "redist\*,*.pdb"; Fl
 Source: "{#PulsePayloadDir}\redist\VC_redist.x64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall
 
 [Icons]
-Name: "{group}\Pulse"; Filename: "{app}\{#MyAppExeName}"
-Name: "{group}\Uninstall Pulse"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\Pulse"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
+Name: "{group}\Uninstall {#MyAppName}"; Filename: "{uninstallexe}"
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
 ; Launch after install — service is started in [Code] before this runs.
 Filename: "{app}\{#MyAppExeName}"; \
-  Description: "Launch Pulse"; \
+  Description: "Launch {#MyAppName}"; \
   Flags: nowait postinstall skipifsilent
 
 [UninstallRun]
@@ -103,6 +114,30 @@ procedure RegisterExtraCloseApplicationsResources;
 begin
   RegisterExtraCloseApplicationsResource(False, ExpandConstant('{app}\runtime\node.exe'));
   RegisterExtraCloseApplicationsResource(False, ExpandConstant('{app}\PulseMCP.exe'));
+end;
+
+{ True when the shortcut at Path (constants allowed) opens a file in this
+  install folder. Used to remove the shortcuts of the old name only when they
+  are ours. }
+function ShortcutOpensInstallFolder(const Path: String): Boolean;
+var
+  Shell, Shortcut: Variant;
+  ShortcutPath, Target: String;
+begin
+  Result := False;
+  ShortcutPath := ExpandConstant(Path);
+  if not FileExists(ShortcutPath) then
+    Exit;
+  try
+    Shell := CreateOleObject('WScript.Shell');
+    Shortcut := Shell.CreateShortcut(ShortcutPath);
+    Target := Shortcut.TargetPath;
+    Result := CompareText(ExtractFilePath(Target), AddBackslash(ExpandConstant('{app}'))) = 0;
+  except
+    Log('Could not read shortcut ' + ShortcutPath + ': ' + GetExceptionMessage);
+  end;
+  if not Result then
+    Log('Keeping shortcut ' + ShortcutPath + ' (it does not open this install)');
 end;
 
 function ExecChecked(const FileName, Params, WorkDir: String; var ResultCode: Integer): Boolean;

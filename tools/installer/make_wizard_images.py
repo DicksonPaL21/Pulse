@@ -91,11 +91,13 @@ def side_image(scale):
 
     draw = ImageDraw.Draw(img)
     title_font = ImageFont.truetype(str(FONTS / "Geist-Bold.ttf"), round(w * s * 0.2))
+    name_font = ImageFont.truetype(str(FONTS / "Geist-Medium.ttf"), round(w * s * 0.1))
     tag_font = ImageFont.truetype(str(FONTS / "Geist-Medium.ttf"), round(w * s * 0.068))
-    draw.text((w * s / 2, h * s * 0.57), "Pulse", font=title_font, fill=TEXT_PRIMARY, anchor="mm")
+    draw.text((w * s / 2, h * s * 0.54), "Pulse", font=title_font, fill=TEXT_PRIMARY, anchor="mm")
+    draw.text((w * s / 2, h * s * 0.61), "Diagnostics", font=name_font, fill=LIME, anchor="mm")
     for i, line in enumerate(("See what Windows", "is really doing.")):
         draw.text(
-            (w * s / 2, h * s * (0.65 + i * 0.045)),
+            (w * s / 2, h * s * (0.68 + i * 0.045)),
             line,
             font=tag_font,
             fill=TEXT_SECONDARY,

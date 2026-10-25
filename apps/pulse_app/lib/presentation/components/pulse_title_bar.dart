@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:pulse_protocol/pulse_constants.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../../app/theme/pulse_theme.dart';
@@ -78,7 +79,7 @@ class _PulseTitleBarState extends State<PulseTitleBar> with WindowListener {
         child: Row(
           children: [
             Text(
-              'Pulse',
+              kProductName,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: _focused
                         ? PulseTokens.textSecondary
