@@ -22,7 +22,9 @@
   <a href="https://trendshift.io/repositories/102083"><img src="https://trendshift.io/api/badge/repositories/102083" alt="Regncreative/Pulse on GitHub Trending (Dart) | Trendshift" width="250" height="55" /></a>
   <a href="https://trendshift.io/repositories/102083"><img src="https://trendshift.io/api/badge/trendshift/repositories/102083/weekly?language=Dart" alt="Regncreative/Pulse on the Trendshift weekly list for Dart" width="250" height="55" /></a>
   <br />
-  <sub>Featured on GitHub Trending (Dart) and Trendshift</sub>
+  <a href="https://upstar.dev/r/Regncreative/Pulse"><img src="https://upstar.dev/badge/Regncreative/Pulse.svg" alt="Regncreative/Pulse on Upstar" height="20" /></a>
+  <br />
+  <sub>Featured on GitHub Trending (Dart), Trendshift and Upstar</sub>
 </p>
 
 <p align="center">
