@@ -163,13 +163,19 @@ Full notes: [v1.4.3](docs/releases/v1.4.3.md) · [v1.4.2](docs/releases/v1.4.2.m
 - Settings for appearance, background mode, System Health, Timeline, diagnostics, performance, privacy and updates; all stored locally
 
 <p align="center">
+  <img src="docs/readme/crashes.png" alt="Crashes" width="49%" />
   <img src="docs/readme/system-health.png" alt="System Health" width="49%" />
+</p>
+<p align="center">
+  <img src="docs/readme/assistant.png" alt="Assistant" width="49%" />
   <img src="docs/readme/inventory.png" alt="Inventory" width="49%" />
 </p>
 <p align="center">
   <img src="docs/readme/reports.png" alt="Reports" width="49%" />
   <img src="docs/readme/diagnostics.png" alt="Diagnostics" width="49%" />
 </p>
+
+<p align="center"><sub>Screenshots use sample data, rendered from the app itself (<code>apps/pulse_app/test/screenshots</code>).</sub></p>
 
 ---
 

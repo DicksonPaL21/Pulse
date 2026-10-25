@@ -13,7 +13,9 @@ const bool kUseMockTimeline = bool.fromEnvironment(
 ///
 /// `flutter run -d windows --dart-define=PULSE_START_PAGE=1`
 /// 0 Timeline · 1 Health · 2 Inventory · 3 Reports · 4 Diagnostics ·
-/// 5 Settings · 6 Assistant. Out-of-range values fall back to Timeline.
+/// 5 Settings · 6 Assistant · 7 Crashes. Out-of-range values fall back to
+/// Timeline. README and website screenshots come from
+/// test/screenshots/readme_screenshots.dart instead (sample data).
 const int kStartPage = int.fromEnvironment(
   'PULSE_START_PAGE',
   defaultValue: 0,
