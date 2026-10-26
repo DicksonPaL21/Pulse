@@ -39,7 +39,8 @@ abstract class LatestReleaseSource {
   Future<ReleaseInfo> latest();
 }
 
-/// Reads `GET /repos/Regncreative/Pulse/releases/latest` from the GitHub API.
+/// Reads `GET /repos/Regncreative/PulseDiagnostics/releases/latest` from the
+/// GitHub API.
 ///
 /// The request carries only what HTTP needs (Pulse's version in the
 /// User-Agent, which GitHub requires). Nothing about this PC is sent.
@@ -47,12 +48,12 @@ class GitHubLatestRelease implements LatestReleaseSource {
   const GitHubLatestRelease({this.timeout = const Duration(seconds: 10)});
 
   static final Uri _endpoint = Uri.parse(
-    'https://api.github.com/repos/Regncreative/Pulse/releases/latest',
+    'https://api.github.com/repos/Regncreative/PulseDiagnostics/releases/latest',
   );
 
   /// Release pages must stay on this prefix before Pulse opens them.
   static const releasePagePrefix =
-      'https://github.com/Regncreative/Pulse/releases/';
+      'https://github.com/Regncreative/PulseDiagnostics/releases/';
 
   final Duration timeout;
 

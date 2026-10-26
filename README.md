@@ -11,16 +11,16 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Regncreative/Pulse/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/Regncreative/Pulse?style=flat-square&color=C8F04A&labelColor=111114" /></a>
-  <a href="https://github.com/Regncreative/Pulse/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/Regncreative/Pulse/ci.yml?branch=master&style=flat-square&label=CI&labelColor=111114" /></a>
+  <a href="https://github.com/Regncreative/PulseDiagnostics/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/Regncreative/PulseDiagnostics?style=flat-square&color=C8F04A&labelColor=111114" /></a>
+  <a href="https://github.com/Regncreative/PulseDiagnostics/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/Regncreative/PulseDiagnostics/ci.yml?branch=master&style=flat-square&label=CI&labelColor=111114" /></a>
   <img alt="Windows 10 and 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?style=flat-square&logo=windows&logoColor=white&labelColor=111114" />
   <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-22C55E?style=flat-square&labelColor=111114" /></a>
   <img alt="No telemetry" src="https://img.shields.io/badge/telemetry-none-22C55E?style=flat-square&labelColor=111114" />
 </p>
 
 <p align="center">
-  <a href="https://trendshift.io/repositories/102083"><img src="https://trendshift.io/api/badge/repositories/102083" alt="Regncreative/Pulse on GitHub Trending (Dart) | Trendshift" width="250" height="55" /></a>
-  <a href="https://trendshift.io/repositories/102083"><img src="https://trendshift.io/api/badge/trendshift/repositories/102083/weekly?language=Dart" alt="Regncreative/Pulse on the Trendshift weekly list for Dart" width="250" height="55" /></a>
+  <a href="https://trendshift.io/repositories/102083"><img src="https://trendshift.io/api/badge/repositories/102083" alt="Regncreative/PulseDiagnostics on GitHub Trending (Dart) | Trendshift" width="250" height="55" /></a>
+  <a href="https://trendshift.io/repositories/102083"><img src="https://trendshift.io/api/badge/trendshift/repositories/102083/weekly?language=Dart" alt="Regncreative/PulseDiagnostics on the Trendshift weekly list for Dart" width="250" height="55" /></a>
   <br />
   <a href="https://upstar.dev/r/Regncreative/Pulse"><img src="https://upstar.dev/badge/Regncreative/Pulse.svg" alt="Regncreative/Pulse on Upstar" height="20" /></a>
   <br />
@@ -28,11 +28,11 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Regncreative/Pulse/releases/latest"><strong>Download for Windows</strong></a>
+  <a href="https://github.com/Regncreative/PulseDiagnostics/releases/latest"><strong>Download for Windows</strong></a>
   ·
   <a href="https://apps.microsoft.com/detail/9PNDTLNTJ82T"><strong>Microsoft Store</strong></a>
   ·
-  <a href="https://pulse.regncreative.com"><strong>Website</strong></a>
+  <a href="https://pulsediagnostics.regncreative.com"><strong>Website</strong></a>
 </p>
 
 <p align="center">
@@ -187,7 +187,7 @@ Full notes: [v1.4.3](docs/releases/v1.4.3.md) · [v1.4.2](docs/releases/v1.4.2.m
 
 ### GitHub release
 
-1. Download `Pulse-Setup-<version>-windows-x64.exe` from the [latest release](https://github.com/Regncreative/Pulse/releases/latest).
+1. Download `Pulse-Setup-<version>-windows-x64.exe` from the [latest release](https://github.com/Regncreative/PulseDiagnostics/releases/latest).
 2. Run it and accept the UAC prompt. Setup installs the VC++ runtime if needed, registers PulseService and starts it.
 3. Open Pulse from the Start menu.
 
@@ -217,7 +217,7 @@ Releases are not code-signed yet (see [Code signing policy](#code-signing-policy
 - **Low privilege.** PulseService runs as `LocalService`, not SYSTEM, and talks to the app over a local named pipe that is not reachable from the network.
 - **Shareable exports.** Personal details are masked in reports and exports by default.
 
-Details: [security guide](docs/guides/security.md) · [SECURITY.md](SECURITY.md) (reporting vulnerabilities) · [privacy policy](https://pulse.regncreative.com/privacy)
+Details: [security guide](docs/guides/security.md) · [SECURITY.md](SECURITY.md) (reporting vulnerabilities) · [privacy policy](https://pulsediagnostics.regncreative.com/privacy)
 
 ---
 
@@ -347,7 +347,7 @@ Free code signing provided by [SignPath.io](https://about.signpath.io/), certifi
 - Only release builds produced by this repository's GitHub Actions workflow are signed. Every signing request is approved manually.
 - The Microsoft Store edition is signed by Microsoft.
 
-**Privacy:** This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it. The optional Assistant only talks to an AI runtime on `localhost`; the optional update check contacts GitHub only when you ask it to. See the [privacy policy](https://pulse.regncreative.com/privacy).
+**Privacy:** This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it. The optional Assistant only talks to an AI runtime on `localhost`; the optional update check contacts GitHub only when you ask it to. See the [privacy policy](https://pulsediagnostics.regncreative.com/privacy).
 
 ---
 

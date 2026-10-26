@@ -5,7 +5,8 @@ import 'package:ffi/ffi.dart';
 import 'package:win32/win32.dart';
 
 /// Pages Pulse may open in the browser: its own GitHub project only.
-const String kPulseGitHubPrefix = 'https://github.com/Regncreative/Pulse/';
+const String kPulseGitHubPrefix =
+    'https://github.com/Regncreative/PulseDiagnostics/';
 
 /// ShellExecute returns a value greater than 32 on success.
 const int _kShellExecuteSuccessFloor = 32;

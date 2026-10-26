@@ -7,7 +7,7 @@
 #define MyAppName "Pulse Diagnostics"
 #define MyAppVersion "1.6.0"
 #define MyAppPublisher "Regncreative"
-#define MyAppURL "https://github.com/Regncreative/Pulse"
+#define MyAppURL "https://github.com/Regncreative/PulseDiagnostics"
 #define MyAppExeName "Pulse.exe"
 
 #ifndef PulsePayloadDir
