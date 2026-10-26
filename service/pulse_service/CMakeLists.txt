@@ -119,7 +119,13 @@ target_link_libraries(PulseService PRIVATE
   cfgmgr32
   winspool
   bcrypt
+  delayimp
 )
+
+# Windows Server ships wlanapi.dll only with the Wireless LAN Service feature.
+# A normal import would stop PulseService from starting there, so the DLL is
+# loaded on first use and the Wi-Fi sample checks for it (system_overview_info).
+target_link_options(PulseService PRIVATE "/DELAYLOAD:wlanapi.dll")
 
 enable_testing()
 add_executable(pulse_wire_tests
