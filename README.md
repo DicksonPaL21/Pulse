@@ -32,7 +32,7 @@
   ·
   <a href="https://apps.microsoft.com/detail/9PNDTLNTJ82T"><strong>Microsoft Store</strong></a>
   ·
-  <a href="https://pulse.regncreative.com"><strong>Website</strong></a>
+  <a href="https://pulsediagnostics.regncreative.com"><strong>Website</strong></a>
 </p>
 
 <p align="center">
@@ -217,7 +217,7 @@ Releases are not code-signed yet (see [Code signing policy](#code-signing-policy
 - **Low privilege.** PulseService runs as `LocalService`, not SYSTEM, and talks to the app over a local named pipe that is not reachable from the network.
 - **Shareable exports.** Personal details are masked in reports and exports by default.
 
-Details: [security guide](docs/guides/security.md) · [SECURITY.md](SECURITY.md) (reporting vulnerabilities) · [privacy policy](https://pulse.regncreative.com/privacy)
+Details: [security guide](docs/guides/security.md) · [SECURITY.md](SECURITY.md) (reporting vulnerabilities) · [privacy policy](https://pulsediagnostics.regncreative.com/privacy)
 
 ---
 
@@ -347,7 +347,7 @@ Free code signing provided by [SignPath.io](https://about.signpath.io/), certifi
 - Only release builds produced by this repository's GitHub Actions workflow are signed. Every signing request is approved manually.
 - The Microsoft Store edition is signed by Microsoft.
 
-**Privacy:** This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it. The optional Assistant only talks to an AI runtime on `localhost`; the optional update check contacts GitHub only when you ask it to. See the [privacy policy](https://pulse.regncreative.com/privacy).
+**Privacy:** This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it. The optional Assistant only talks to an AI runtime on `localhost`; the optional update check contacts GitHub only when you ask it to. See the [privacy policy](https://pulsediagnostics.regncreative.com/privacy).
 
 ---
 
