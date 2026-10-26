@@ -10,10 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Pulse is now called Pulse Diagnostics, the name it already had in the Microsoft Store: window and title bar, tray menu, Start menu and desktop shortcuts, Programs and Features, the service in services.msc (Pulse Diagnostics Service), report headers and the download files (`PulseDiagnostics-Setup-<version>-windows-x64.exe`). Setup upgrades an existing install in place: same folder, settings and history, and it removes the old "Pulse" shortcuts
+- The GitHub repository is now [Regncreative/PulseDiagnostics](https://github.com/Regncreative/PulseDiagnostics); links to the old address redirect. Update checks and release links use the new address
 
 ### Fixed
 
-- PulseService did not start on Windows Server without the Wireless LAN Service feature: Setup showed "wlanapi.dll was not found" and Pulse stayed offline. Wi-Fi details are now read only when Windows has them ([#50](https://github.com/Regncreative/Pulse/issues/50))
+- PulseService did not start on Windows Server without the Wireless LAN Service feature: Setup showed "wlanapi.dll was not found" and Pulse stayed offline. Wi-Fi details are now read only when Windows has them ([#50](https://github.com/Regncreative/PulseDiagnostics/issues/50))
 
 ## [1.6.0] — 2026-10-24
 

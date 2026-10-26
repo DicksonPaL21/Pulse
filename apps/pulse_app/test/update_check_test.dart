@@ -46,7 +46,7 @@ void main() {
       final release = GitHubLatestRelease.parseRelease(jsonEncode({
         'tag_name': 'v1.4.0',
         'html_url':
-            'https://github.com/Regncreative/Pulse/releases/tag/v1.4.0',
+            'https://github.com/Regncreative/PulseDiagnostics/releases/tag/v1.4.0',
         'name': 'Pulse 1.4.0',
         'body': 'Blue screen explainer',
         'published_at': '2026-10-20T10:00:00Z',
@@ -64,7 +64,7 @@ void main() {
       }));
       expect(
         release.pageUrl.toString(),
-        'https://github.com/Regncreative/Pulse/releases/tag/v1.4.0',
+        'https://github.com/Regncreative/PulseDiagnostics/releases/tag/v1.4.0',
       );
     });
 
