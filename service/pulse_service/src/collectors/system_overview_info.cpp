@@ -1,5 +1,7 @@
 #include "collectors/system_overview_info.hpp"
 
+#include "logging/logger.hpp"
+
 #include <algorithm>
 #include <cstdint>
 #include <cstdio>
@@ -22,6 +24,8 @@
 
 #include <windot11.h>
 #include <wlanapi.h>
+
+#include <delayimp.h>
 
 #pragma comment(lib, "iphlpapi.lib")
 #pragma comment(lib, "ws2_32.lib")
@@ -321,6 +325,41 @@ void EnrichNetworkDriverInfo(const std::string& net_cfg_instance_id,
 
 // --- WLAN (Wi-Fi) helpers ---
 
+// Delay-loaded (see CMakeLists.txt): on Windows Server it exists only with the
+// Wireless LAN Service feature installed.
+constexpr char kWlanApiDll[] = "wlanapi.dll";
+
+/// Resolves every wlanapi.dll import up front, so a missing DLL or function
+/// returns false here instead of raising the delay-load exception at the first
+/// Wlan* call. No C++ objects: the function uses structured exception handling.
+bool TryLoadWlanApi() {
+  __try {
+    return SUCCEEDED(__HrLoadAllImportsForDll(kWlanApiDll));
+  } __except (GetExceptionCode() == VcppException(ERROR_SEVERITY_ERROR,
+                                                  ERROR_MOD_NOT_FOUND) ||
+                      GetExceptionCode() == VcppException(ERROR_SEVERITY_ERROR,
+                                                          ERROR_PROC_NOT_FOUND)
+                  ? EXCEPTION_EXECUTE_HANDLER
+                  : EXCEPTION_CONTINUE_SEARCH) {
+    return false;
+  }
+}
+
+/// Checked once per service run; logs once when Wi-Fi details are unavailable.
+bool WlanApiAvailable() {
+  static const bool available = [] {
+    const bool loaded = TryLoadWlanApi();
+    if (!loaded) {
+      Logger::Instance().Info(
+          "SystemOverview",
+          "wlanapi.dll is not available (on Windows Server it comes with the "
+          "Wireless LAN Service feature); Wi-Fi details are skipped");
+    }
+    return loaded;
+  }();
+  return available;
+}
+
 std::string WifiAuthAlgorithmName(DOT11_AUTH_ALGORITHM algo) {
   switch (algo) {
     case DOT11_AUTH_ALGO_80211_OPEN: return "Open";
@@ -356,9 +395,11 @@ std::string WifiSecurityDescription(const WLAN_SECURITY_ATTRIBUTES& sec) {
 }
 
 /// Current Wi-Fi connection (SSID / signal / channel / security) for the
-/// active interface only. No-op (leaves fields empty) when WLAN AutoConfig
-/// is unavailable or nothing is connected.
+/// active interface only. No-op (leaves fields empty) when wlanapi.dll or
+/// WLAN AutoConfig is unavailable or nothing is connected.
 void SampleWifiInfo(ipc::HealthSample* out) {
+  if (!WlanApiAvailable()) return;
+
   HANDLE client = nullptr;
   DWORD negotiated_version = 0;
   if (WlanOpenHandle(2, nullptr, &negotiated_version, &client) !=
