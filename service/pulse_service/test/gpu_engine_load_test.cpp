@@ -111,6 +111,23 @@ void TestAdapterMemoryIsSummedPerAdapter() {
   CHECK(used.at(L"LUID_0X00000000_0X0000A001") == 0);
 }
 
+void TestIdleAdapterWithoutEnginesReadsZero() {
+  // The dedicated GPU has no engine instances (no process uses it); the
+  // integrated one is busy. Only the missing adapter is filled in.
+  auto loads = SumGpuEngineLoad({
+      {L"pid_77_luid_0x00000000_0x0000A001_phys_0_eng_0_engtype_3D", 15.0},
+  });
+  AddIdleGpuAdapters({L"LUID_0X00000000_0X0000A001",
+                      L"LUID_0X00000000_0X0000F21B", L""},
+                     &loads);
+  CHECK(loads.size() == 2);
+  CHECK(loads.at(L"LUID_0X00000000_0X0000A001").overall == 15.0);
+  const auto& idle = loads.at(L"LUID_0X00000000_0X0000F21B");
+  CHECK(idle.has_overall && idle.overall == 0.0);
+  // No engine types are invented for the idle adapter.
+  CHECK(!idle.has_3d && !idle.has_copy && !idle.has_video_decode);
+}
+
 }  // namespace
 
 int main() {
@@ -122,6 +139,7 @@ int main() {
   TestIdleEngineStillReports();
   TestNamesWithoutLuidAreIgnored();
   TestAdapterMemoryIsSummedPerAdapter();
+  TestIdleAdapterWithoutEnginesReadsZero();
   std::cout << "gpu_engine_load_tests passed\n";
   return 0;
 }

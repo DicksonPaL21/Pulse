@@ -116,6 +116,19 @@ std::map<std::wstring, GpuAdapterLoad> SumGpuEngineLoad(
   return by_adapter;
 }
 
+void AddIdleGpuAdapters(const std::vector<std::wstring>& adapter_tokens,
+                        std::map<std::wstring, GpuAdapterLoad>* loads) {
+  if (loads == nullptr) return;
+  for (const std::wstring& token : adapter_tokens) {
+    if (token.empty()) continue;
+    GpuAdapterLoad& load = (*loads)[token];
+    if (!load.has_overall) {
+      load.has_overall = true;
+      load.overall = 0.0;
+    }
+  }
+}
+
 std::map<std::wstring, uint64_t> SumGpuAdapterMemory(
     const std::vector<GpuCounterValue>& memory) {
   std::map<std::wstring, uint64_t> by_adapter;

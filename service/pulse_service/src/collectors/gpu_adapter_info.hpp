@@ -10,7 +10,8 @@
 
 namespace pulse {
 
-/// Prefer discrete DXGI adapter; fall back to adapter 0.
+/// One DXGI adapter. The primary one is the GPU Windows ranks highest for
+/// performance (external, then discrete, then integrated).
 struct GpuAdapterSelection {
   std::string model;
   std::string vendor;

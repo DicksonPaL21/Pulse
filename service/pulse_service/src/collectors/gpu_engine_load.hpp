@@ -48,6 +48,13 @@ struct GpuAdapterLoad {
 [[nodiscard]] std::map<std::wstring, GpuAdapterLoad> SumGpuEngineLoad(
     const std::vector<GpuCounterValue>& engines);
 
+/// Adds a 0 % load for every adapter token missing from `loads`. PDH lists a
+/// GPU engine only for the processes using it, so an adapter without any is
+/// idle; Task Manager shows it at 0 %. Call only with loads read from
+/// counters that answered this sample.
+void AddIdleGpuAdapters(const std::vector<std::wstring>& adapter_tokens,
+                        std::map<std::wstring, GpuAdapterLoad>* loads);
+
 /// "\GPU Adapter Memory(*)\..." values → bytes per adapter token
 /// (upper-cased), summed over the adapter's physical parts ("phys_N").
 [[nodiscard]] std::map<std::wstring, uint64_t> SumGpuAdapterMemory(
