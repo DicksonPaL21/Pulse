@@ -36,6 +36,7 @@ target_include_directories(pulse_wire PUBLIC
 
 add_executable(PulseService WIN32
   src/main.cpp
+  res/PulseService.rc
   src/service_core/service_core.cpp
   src/ipc/ipc_server.cpp
   src/ipc/event_mapper.cpp
