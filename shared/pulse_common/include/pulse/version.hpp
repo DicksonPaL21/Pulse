@@ -3,14 +3,15 @@
 #include <cstdint>
 #include <string>
 
+#include "pulse/product.h"
+
 namespace pulse {
 
 struct VersionInfo {
-  // Defaults are the shipping product version; keep in sync with
-  // constants.hpp kServiceVersion.
-  int major = 1;
-  int minor = 6;
-  int patch = 0;
+  // Defaults are the shipping product version (pulse/product.h).
+  int major = PULSE_VERSION_MAJOR;
+  int minor = PULSE_VERSION_MINOR;
+  int patch = PULSE_VERSION_PATCH;
   /// Optional prerelease / channel label (empty for stable).
   const char* label = "";
 

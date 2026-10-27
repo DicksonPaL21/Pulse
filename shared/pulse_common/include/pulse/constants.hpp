@@ -3,14 +3,16 @@
 #include <cstdint>
 #include <string>
 
+#include "pulse/product.h"
+
 namespace pulse {
 
-constexpr const char* kProductName = "Pulse Diagnostics";
+constexpr const char* kProductName = PULSE_PRODUCT_NAME;
 constexpr const char* kServiceName = "PulseService";
-constexpr const char* kServiceDisplayName = "Pulse Diagnostics Service";
+constexpr const char* kServiceDisplayName = PULSE_SERVICE_DISPLAY_NAME;
 constexpr const char* kPipeName = "\\\\.\\pipe\\PulseService";
-constexpr const char* kServiceVersion = "1.6.0";
-constexpr const char* kAppVersion = "1.6.0";
+constexpr const char* kServiceVersion = PULSE_VERSION_STRING;
+constexpr const char* kAppVersion = PULSE_VERSION_STRING;
 
 // Framing: magic "PULS" + uint32 LE length + protobuf payload
 constexpr uint32_t kFrameMagic = 0x50554C53u; // 'P' 'U' 'L' 'S' little-endian as bytes PULS
