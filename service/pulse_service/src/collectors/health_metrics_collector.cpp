@@ -1137,6 +1137,16 @@ void HealthMetricsCollector::SampleGpuAdapters(ipc::HealthSample* out) {
 
   std::map<std::wstring, GpuAdapterLoad> loads;
   if (pdh_gpu_ok_) loads = SumGpuEngineLoad(ReadGpuCounterValues(pdh_gpu_));
+  // No engine values at all means the counters did not answer, not that every
+  // GPU is idle (the GPU driving the display always has work).
+  if (!loads.empty()) {
+    std::vector<std::wstring> tokens;
+    tokens.reserve(gpu_adapters_.size());
+    for (const GpuAdapterSelection& adapter : gpu_adapters_) {
+      tokens.push_back(GpuLuidTokenOfInstance(adapter.luid_pdh_token));
+    }
+    AddIdleGpuAdapters(tokens, &loads);
+  }
   std::map<std::wstring, uint64_t> dedicated_used;
   std::map<std::wstring, uint64_t> shared_used;
   if (pdh_gpu_mem_ok_) {

@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- On PCs with an integrated and a dedicated GPU, System Health showed the integrated one. It now shows the GPU Windows ranks highest for performance, the one apps get when they ask for "high performance"; every GPU stays listed under All GPUs ([#54](https://github.com/Regncreative/PulseDiagnostics/issues/54))
+- A GPU with nothing running on it showed "—" instead of 0 %, as Task Manager shows it
 - PulseService did not start on Windows Server without the Wireless LAN Service feature: Setup showed "wlanapi.dll was not found" and Pulse stayed offline. Wi-Fi details are now read only when Windows has them ([#50](https://github.com/Regncreative/PulseDiagnostics/issues/50))
 
 ## [1.6.0] — 2026-10-24

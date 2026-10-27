@@ -12,7 +12,7 @@
 #include <SetupAPI.h>
 #include <d3d12.h>
 #include <d3dkmthk.h>
-#include <dxgi.h>
+#include <dxgi1_6.h>
 #include <initguid.h>
 #include <devguid.h>
 #include <devpkey.h>
@@ -386,9 +386,55 @@ GpuAdapterSelection SelectionFromDesc(const DXGI_ADAPTER_DESC1& desc) {
   return sel;
 }
 
+/// First hardware adapter in Windows' high-performance order: external,
+/// then discrete, then integrated GPUs (IDXGIFactory6, Windows 10 1803+).
+/// has_luid stays false when that interface is missing or nothing matched.
+GpuAdapterSelection QueryHighPerformanceGpuAdapter() {
+  GpuAdapterSelection sel;
+  IDXGIFactory1* factory1 = nullptr;
+  if (FAILED(CreateDXGIFactory1(__uuidof(IDXGIFactory1),
+                                reinterpret_cast<void**>(&factory1))) ||
+      factory1 == nullptr) {
+    return sel;
+  }
+  IDXGIFactory6* factory = nullptr;
+  const HRESULT qi = factory1->QueryInterface(
+      __uuidof(IDXGIFactory6), reinterpret_cast<void**>(&factory));
+  factory1->Release();
+  if (FAILED(qi) || factory == nullptr) return sel;
+
+  for (UINT i = 0;; ++i) {
+    IDXGIAdapter1* adapter = nullptr;
+    if (FAILED(factory->EnumAdapterByGpuPreference(
+            i, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, __uuidof(IDXGIAdapter1),
+            reinterpret_cast<void**>(&adapter))) ||
+        adapter == nullptr) {
+      break;
+    }
+    DXGI_ADAPTER_DESC1 desc{};
+    const bool hardware = SUCCEEDED(adapter->GetDesc1(&desc)) &&
+                          (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) == 0;
+    adapter->Release();
+    if (hardware) {
+      sel = SelectionFromDesc(desc);
+      break;
+    }
+  }
+  factory->Release();
+  return sel;
+}
+
 }  // namespace
 
 GpuAdapterSelection QueryPrimaryGpuAdapter() {
+  // Integrated GPUs report some dedicated memory too, so "first adapter with
+  // dedicated memory" picked the integrated GPU on PCs with two (issue #54).
+  // The memory check below remains for Windows without IDXGIFactory6.
+  if (GpuAdapterSelection preferred = QueryHighPerformanceGpuAdapter();
+      preferred.has_luid) {
+    return preferred;
+  }
+
   GpuAdapterSelection sel;
 
   IDXGIFactory1* factory = nullptr;
