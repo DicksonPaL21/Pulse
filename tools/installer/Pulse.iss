@@ -5,7 +5,7 @@
 ; No PowerShell. No ExecutionPolicy. UAC elevation only.
 
 #define MyAppName "Pulse Diagnostics"
-#define MyAppVersion "1.6.0"
+#define MyAppVersion "1.6.1"
 #define MyAppPublisher "Regncreative"
 #define MyAppURL "https://github.com/Regncreative/PulseDiagnostics"
 #define MyAppExeName "Pulse.exe"
