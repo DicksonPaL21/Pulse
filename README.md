@@ -55,7 +55,7 @@
 - [Documentation](#documentation)
 - [How Pulse is built](#how-pulse-is-built)
 - [Code signing policy](#code-signing-policy)
-- [Contributing](#contributing) · [License](#license)
+- [Contributing](#contributing) · [Thanks](#thanks) · [License](#license)
 
 ---
 
@@ -359,6 +359,19 @@ Issues and pull requests are welcome. Please read [AGENTS.md](AGENTS.md) and [CO
 1. Keep changes observation-only — no cleaner, optimizer or antivirus features.
 2. Run `ctest` and `flutter analyze` / `flutter test` before opening a pull request.
 3. Architectural changes need an ADR under `docs/architecture/decisions/`.
+
+## Thanks
+
+These people reported problems that led to real fixes in Pulse. Thank you.
+
+| | What they found | Fixed in |
+|---|---|---|
+| <a href="https://github.com/FadeMind"><img src="https://github.com/FadeMind.png?size=80" width="40" height="40" alt=""><br>FadeMind</a> | Pulse crashed when it closed; their crash dumps pinpointed the cause ([#32](https://github.com/Regncreative/PulseDiagnostics/issues/32)). SMART and temperature data never reached System Health ([#20](https://github.com/Regncreative/PulseDiagnostics/issues/20)). Total capacity counted only one disk ([#29](https://github.com/Regncreative/PulseDiagnostics/issues/29)). Resizable BAR showed "Not supported" on a GPU that supports it ([#31](https://github.com/Regncreative/PulseDiagnostics/issues/31)). | 1.4.1 – 1.4.3 |
+| <a href="https://github.com/clb92"><img src="https://github.com/clb92.png?size=80" width="40" height="40" alt=""><br>clb92</a> | The Assistant did not find LM Studio although its server was running ([#21](https://github.com/Regncreative/PulseDiagnostics/issues/21)). | 1.4.1 |
+| <a href="https://github.com/arut16"><img src="https://github.com/arut16.png?size=80" width="40" height="40" alt=""><br>arut16</a> | PulseService did not start on Windows Server ([#50](https://github.com/Regncreative/PulseDiagnostics/issues/50)). | 1.6.1 |
+| <a href="https://github.com/calladion"><img src="https://github.com/calladion.png?size=80" width="40" height="40" alt=""><br>calladion</a> | System Health showed the integrated GPU on PCs with two GPUs ([#54](https://github.com/Regncreative/PulseDiagnostics/issues/54)). | 1.6.1 |
+
+Found a bug? [Open an issue](https://github.com/Regncreative/PulseDiagnostics/issues/new/choose).
 
 ## License
 
