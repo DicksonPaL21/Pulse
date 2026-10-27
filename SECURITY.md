@@ -8,7 +8,7 @@
 | `1.5.x` | Best effort (upgrade to 1.6.x recommended) |
 | `1.4.x` and older | No |
 
-Pulse **1.6.0** is the current stable release. Security reports are welcome and will remain private until a fix is available.
+Pulse Diagnostics **1.6.1** is the current stable release. Security reports are welcome and will remain private until a fix is available.
 
 ## Reporting a vulnerability
 

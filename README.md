@@ -93,8 +93,9 @@ Windows ships two tools for this. Pulse does not replace them; it sits between t
 - **Why it crashed, in plain words.** Each group says what happened, how often, which file an app crashed in and whether it belongs to the app, Windows, a driver or another program, the versions it happened on, and what to try next.
 - **Named crashes in the Timeline.** "Discord Crashed" instead of "Application Crashed", with the error and the file.
 - **Crash history report** and a crash history tool for the local Assistant.
+- **1.6.1:** the app is now called Pulse Diagnostics. PulseService starts on Windows Server without the Wireless LAN Service feature, and on PCs with two GPUs System Health shows the dedicated one.
 
-Full notes: [v1.6.0](docs/releases/v1.6.0.md) · [CHANGELOG](CHANGELOG.md)
+Full notes: [v1.6.1](docs/releases/v1.6.1.md) · [v1.6.0](docs/releases/v1.6.0.md) · [CHANGELOG](CHANGELOG.md)
 
 ## What's new in 1.5
 
@@ -187,9 +188,9 @@ Full notes: [v1.4.3](docs/releases/v1.4.3.md) · [v1.4.2](docs/releases/v1.4.2.m
 
 ### GitHub release
 
-1. Download `Pulse-Setup-<version>-windows-x64.exe` from the [latest release](https://github.com/Regncreative/PulseDiagnostics/releases/latest).
+1. Download `PulseDiagnostics-Setup-<version>-windows-x64.exe` from the [latest release](https://github.com/Regncreative/PulseDiagnostics/releases/latest).
 2. Run it and accept the UAC prompt. Setup installs the VC++ runtime if needed, registers PulseService and starts it.
-3. Open Pulse from the Start menu.
+3. Open Pulse Diagnostics from the Start menu.
 
 The release also has a payload ZIP. It still needs PulseService and is not a portable edition (see [portable vs service](docs/architecture/40-portable-vs-service.md)).
 
@@ -202,7 +203,7 @@ The release also has a payload ZIP. It still needs PulseService and is not a por
 Each release lists SHA-256 checksums in `SHA256SUMS.txt`:
 
 ```powershell
-Get-FileHash .\Pulse-Setup-1.6.0-windows-x64.exe -Algorithm SHA256
+Get-FileHash .\PulseDiagnostics-Setup-1.6.1-windows-x64.exe -Algorithm SHA256
 ```
 
 Releases are not code-signed yet (see [Code signing policy](#code-signing-policy)), so SmartScreen or some antivirus tools may warn about a new file. More help: [installation guide](docs/guides/installation.md) · [troubleshooting](docs/guides/troubleshooting.md) · [upgrade notes](docs/guides/upgrade-notes.md)
@@ -317,7 +318,7 @@ Every feature should answer one question: **"What is Windows doing right now?"**
 | [AGENTS.md](AGENTS.md) | Product principles and development rules |
 | [docs/architecture](docs/architecture/README.md) | Architecture package and ADRs |
 | [docs/guides](docs/guides/installation.md) | Installation, troubleshooting, upgrade notes, security |
-| [docs/releases](docs/releases/v1.6.0.md) | Release notes |
+| [docs/releases](docs/releases/v1.6.1.md) | Release notes |
 | [CHANGELOG.md](CHANGELOG.md) | Version history |
 | [BUILD.md](BUILD.md) · [DEVELOPMENT.md](DEVELOPMENT.md) | Building and local workflow |
 | [CONTRIBUTING.md](CONTRIBUTING.md) · [SECURITY.md](SECURITY.md) | Contributing and vulnerability reports |
