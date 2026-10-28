@@ -9,8 +9,13 @@ name: Release
 #   packages attached. Nothing is published until a maintainer reviews the
 #   draft and clicks Publish.
 #
-# Code signing (SignPath Foundation) is not wired in yet: the application is
-# in review. See docs/architecture/25-beta-release.md, "Signing releases".
+# Code signing (SignPath Foundation): Pulse.exe and PulseService.exe are
+# signed before they are packaged, then Setup.exe is signed. Manual runs use
+# the test certificate; tag builds use the release certificate once the
+# repository variable SIGNPATH_RELEASE_SIGNING is 'true'. Without the
+# SIGNPATH_API_TOKEN secret and SIGNPATH_ORGANIZATION_ID variable the
+# packages are built unsigned. See docs/architecture/25-beta-release.md,
+# "Signing releases".
 
 on:
   workflow_dispatch:
@@ -19,6 +24,8 @@ on:
 
 permissions:
   contents: write
+  # SignPath downloads the unsigned workflow artifacts with this token.
+  actions: read
 
 jobs:
   package:
@@ -57,9 +64,111 @@ jobs:
           }
           "version=$pkg" >> $env:GITHUB_OUTPUT
 
-      - name: Build packages
+      - name: Signing plan
+        id: signing
         shell: pwsh
-        run: powershell -ExecutionPolicy Bypass -File .\tools\scripts\package_beta.ps1
+        env:
+          HAS_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN != '' }}
+          ORGANIZATION_ID: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          RELEASE_SIGNING: ${{ vars.SIGNPATH_RELEASE_SIGNING }}
+        run: |
+          $configured = $env:HAS_TOKEN -eq 'true' -and [bool]$env:ORGANIZATION_ID
+          if ("${{ github.ref_type }}" -eq "tag") {
+            $policy = "release-signing"
+            $enabled = $configured -and $env:RELEASE_SIGNING -eq 'true'
+          } else {
+            $policy = "test-signing"
+            $enabled = $configured
+          }
+          if ($enabled) {
+            Write-Host "Signing with SignPath policy $policy"
+          } else {
+            Write-Host "::warning::Packages are not signed: SignPath is not set up for $policy."
+          }
+          "enabled=$($enabled.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+          "policy=$policy" >> $env:GITHUB_OUTPUT
+
+      - name: Build payload
+        shell: pwsh
+        run: powershell -ExecutionPolicy Bypass -File .\tools\scripts\package_beta.ps1 -Stage Payload
+
+      - name: Upload unsigned binaries
+        id: unsigned-binaries
+        if: steps.signing.outputs.enabled == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: unsigned-binaries
+          path: |
+            dist/Pulse/Pulse.exe
+            dist/Pulse/service/PulseService.exe
+          if-no-files-found: error
+
+      - name: Sign binaries
+        if: steps.signing.outputs.enabled == 'true'
+        uses: signpath/github-action-submit-signing-request@f6d04783b4569d051e0c80105fe66e82819d0092 # v3.0
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: PulseDiagnostics
+          signing-policy-slug: ${{ steps.signing.outputs.policy }}
+          artifact-configuration-slug: binaries
+          github-artifact-id: ${{ steps.unsigned-binaries.outputs.artifact-id }}
+          parameters: |
+            version: "${{ steps.version.outputs.version }}"
+          # Release signing waits for a maintainer to approve the request.
+          wait-for-completion-timeout-in-seconds: 3600
+          output-artifact-directory: signed/binaries
+
+      - name: Use signed binaries
+        if: steps.signing.outputs.enabled == 'true'
+        shell: pwsh
+        run: |
+          foreach ($file in "Pulse.exe", "service/PulseService.exe") {
+            $signed = Join-Path signed/binaries $file
+            $signature = Get-AuthenticodeSignature $signed
+            if (-not $signature.SignerCertificate) { throw "$file came back from SignPath without a signature" }
+            Write-Host "$file signed by $($signature.SignerCertificate.Subject) ($($signature.Status))"
+            Copy-Item $signed (Join-Path dist/Pulse $file) -Force
+          }
+
+      - name: Build installer
+        shell: pwsh
+        run: powershell -ExecutionPolicy Bypass -File .\tools\scripts\package_beta.ps1 -Stage Installer
+
+      - name: Upload unsigned installer
+        id: unsigned-installer
+        if: steps.signing.outputs.enabled == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: unsigned-installer
+          path: dist/PulseDiagnostics-Setup-${{ steps.version.outputs.version }}-windows-x64.exe
+          if-no-files-found: error
+
+      - name: Sign installer
+        if: steps.signing.outputs.enabled == 'true'
+        uses: signpath/github-action-submit-signing-request@f6d04783b4569d051e0c80105fe66e82819d0092 # v3.0
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: PulseDiagnostics
+          signing-policy-slug: ${{ steps.signing.outputs.policy }}
+          artifact-configuration-slug: installer
+          github-artifact-id: ${{ steps.unsigned-installer.outputs.artifact-id }}
+          parameters: |
+            version: "${{ steps.version.outputs.version }}"
+          wait-for-completion-timeout-in-seconds: 3600
+          output-artifact-directory: signed/installer
+
+      - name: Use signed installer
+        if: steps.signing.outputs.enabled == 'true'
+        shell: pwsh
+        run: |
+          $file = "PulseDiagnostics-Setup-${{ steps.version.outputs.version }}-windows-x64.exe"
+          $signed = Join-Path signed/installer $file
+          $signature = Get-AuthenticodeSignature $signed
+          if (-not $signature.SignerCertificate) { throw "$file came back from SignPath without a signature" }
+          Write-Host "$file signed by $($signature.SignerCertificate.Subject) ($($signature.Status))"
+          Copy-Item $signed (Join-Path dist $file) -Force
 
       - name: Checksums
         shell: pwsh

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SignPath artifact configuration "binaries" (project PulseDiagnostics).
+
+  release.yml uploads Pulse.exe and service/PulseService.exe from dist/Pulse
+  as one zip. Both are signed before they go into Setup.exe and the payload
+  zip. Their version resources must name the product and the release being
+  built (pulse/product.h), so a mislabeled build is refused.
+
+  Third-party files in the payload (Flutter engine, plugins, VC++ runtime)
+  are not part of the upload and are not signed with this certificate.
+-->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <parameters>
+    <parameter name="version" required="true" />
+  </parameters>
+  <zip-file>
+    <pe-file-set product-name="Pulse Diagnostics" product-version="${version}" company-name="Regn Creative">
+      <include path="Pulse.exe" />
+      <include path="service/PulseService.exe" />
+      <for-each>
+        <authenticode-sign />
+      </for-each>
+    </pe-file-set>
+  </zip-file>
+</artifact-configuration>

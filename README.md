@@ -339,7 +339,7 @@ Bug reports and code review are very welcome — open an issue.
 
 ## Code signing policy
 
-Windows releases of Pulse Diagnostics are being moved to signing through the SignPath Foundation's free program for open-source projects (application in review):
+Windows releases of Pulse Diagnostics are being moved to signing through the SignPath Foundation's free program for open-source projects (approved; the release certificate is being set up):
 
 Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).
 
