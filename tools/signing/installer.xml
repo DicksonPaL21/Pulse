@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SignPath artifact configuration "installer" (project PulseDiagnostics).
+
+  release.yml uploads the Setup.exe that Inno Setup built from the signed
+  binaries. Only the file name is checked: Inno Setup pads the strings of
+  its version resource with spaces, so they cannot be matched exactly.
+-->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <parameters>
+    <parameter name="version" required="true" />
+  </parameters>
+  <zip-file>
+    <pe-file path="PulseDiagnostics-Setup-${version}-windows-x64.exe">
+      <authenticode-sign />
+    </pe-file>
+  </zip-file>
+</artifact-configuration>

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The release workflow signs Pulse.exe, PulseService.exe and Setup.exe through SignPath Foundation. Releases stay unsigned until the release certificate is issued
+- Pulse.exe's file version information shows the release version (1.6.1) instead of the build number from pubspec (1.6.1+26), as PulseService.exe does
+
 ## [1.6.1] — 2026-10-27
 
 ### Changed
