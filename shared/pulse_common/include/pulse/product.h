@@ -1,7 +1,8 @@
-/* Product name and version of PulseService, in one place for the C++ code
- * (constants.hpp, version.hpp) and for PulseService.rc, which can only read
- * preprocessor definitions. Plain C on purpose: the resource compiler reads
- * .h files for their #defines only. */
+/* Product name and version of Pulse Diagnostics, in one place for the C++
+ * code (constants.hpp, version.hpp) and for the version resources of
+ * PulseService.exe (PulseService.rc) and Pulse.exe (Runner.rc), which can only
+ * read preprocessor definitions. Plain C on purpose: the resource compiler
+ * reads .h files for their #defines only. */
 #ifndef PULSE_PRODUCT_H_
 #define PULSE_PRODUCT_H_
 
