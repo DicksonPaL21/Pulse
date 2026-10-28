@@ -11,7 +11,16 @@
 
   The Setup.exe elevates via UAC, installs VC++ redist, registers/starts
   PulseService (--install-start), and launches Pulse — no PowerShell.
+
+.PARAMETER Stage
+  All (default) builds everything. release.yml runs Payload, signs Pulse.exe
+  and PulseService.exe in dist/Pulse, then runs Installer to build the zip
+  and Setup.exe from the signed files.
 #>
+param(
+  [ValidateSet("All", "Payload", "Installer")]
+  [string]$Stage = "All"
+)
 $ErrorActionPreference = "Stop"
 $Version = "1.6.1"
 $root = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
@@ -22,162 +31,163 @@ $flutterBin = @(
 ) | Where-Object { Test-Path $_ } | Select-Object -First 1
 if ($flutterBin) { $env:Path = "$flutterBin;$env:Path" }
 
-Write-Host "==> Packaging Pulse $Version"
+Write-Host "==> Packaging Pulse $Version ($Stage)"
 
-Write-Host "==> Cleaning $dist"
-if (Test-Path $dist) { Remove-Item -Recurse -Force $dist }
-New-Item -ItemType Directory -Force -Path $dist | Out-Null
-New-Item -ItemType Directory -Force -Path (Join-Path $dist "service") | Out-Null
+if ($Stage -ne "Installer") {
+  Write-Host "==> Cleaning $dist"
+  if (Test-Path $dist) { Remove-Item -Recurse -Force $dist }
+  New-Item -ItemType Directory -Force -Path $dist | Out-Null
+  New-Item -ItemType Directory -Force -Path (Join-Path $dist "service") | Out-Null
 
-Write-Host "==> Building PulseService (Release)"
-$vsDevCandidates = @(
-  "${env:ProgramFiles(x86)}\Microsoft Visual Studio\18\BuildTools\Common7\Tools\VsDevCmd.bat",
-  "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2022\BuildTools\Common7\Tools\VsDevCmd.bat",
-  "${env:ProgramFiles}\Microsoft Visual Studio\2022\Community\Common7\Tools\VsDevCmd.bat",
-  "${env:ProgramFiles}\Microsoft Visual Studio\2022\Professional\Common7\Tools\VsDevCmd.bat"
-)
-# vswhere finds any edition (Build Tools locally, Enterprise on GitHub runners).
-$vsDev = $null
-$vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-if (Test-Path $vswhere) {
-  $vsPath = & $vswhere -latest -products * `
-    -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
-    -property installationPath
-  if ($vsPath) {
-    $candidate = Join-Path $vsPath "Common7\Tools\VsDevCmd.bat"
-    if (Test-Path $candidate) { $vsDev = $candidate }
+  Write-Host "==> Building PulseService (Release)"
+  $vsDevCandidates = @(
+    "${env:ProgramFiles(x86)}\Microsoft Visual Studio\18\BuildTools\Common7\Tools\VsDevCmd.bat",
+    "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2022\BuildTools\Common7\Tools\VsDevCmd.bat",
+    "${env:ProgramFiles}\Microsoft Visual Studio\2022\Community\Common7\Tools\VsDevCmd.bat",
+    "${env:ProgramFiles}\Microsoft Visual Studio\2022\Professional\Common7\Tools\VsDevCmd.bat"
+  )
+  # vswhere finds any edition (Build Tools locally, Enterprise on GitHub runners).
+  $vsDev = $null
+  $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+  if (Test-Path $vswhere) {
+    $vsPath = & $vswhere -latest -products * `
+      -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+      -property installationPath
+    if ($vsPath) {
+      $candidate = Join-Path $vsPath "Common7\Tools\VsDevCmd.bat"
+      if (Test-Path $candidate) { $vsDev = $candidate }
+    }
   }
-}
-if (-not $vsDev) {
-  $vsDev = $vsDevCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
-}
-if (-not $vsDev) { throw "VsDevCmd.bat not found. Install VS Build Tools with C++ workload." }
-
-$cmakeCandidates = @(
-  "${env:ProgramFiles(x86)}\Microsoft Visual Studio\18\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe",
-  "${env:ProgramFiles}\CMake\bin\cmake.exe",
-  "cmake"
-)
-$cmake = $null
-foreach ($c in $cmakeCandidates) {
-  if ($c -eq "cmake") {
-    $cmd = Get-Command cmake -ErrorAction SilentlyContinue
-    if ($cmd) { $cmake = $cmd.Source; break }
-  } elseif (Test-Path $c) {
-    $cmake = $c
-    break
+  if (-not $vsDev) {
+    $vsDev = $vsDevCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
   }
-}
-if (-not $cmake) { throw "cmake not found" }
+  if (-not $vsDev) { throw "VsDevCmd.bat not found. Install VS Build Tools with C++ workload." }
 
-$serviceBuild = Join-Path $root "build\service-release"
-# Non-ASCII OneDrive paths + VsDevCmd via cmd /c overflow ("input line is too long").
-if ($root -match '[^\x00-\x7F]') {
-  $serviceBuild = "C:\dev\Pulse-service-release"
-  Write-Host "Non-ASCII workspace path detected - service build at $serviceBuild"
-}
-New-Item -ItemType Directory -Force -Path $serviceBuild | Out-Null
-
-# Prefer importing the Dev Shell module (avoids a giant cmd.exe command line).
-$vsInstall = Split-Path (Split-Path (Split-Path $vsDev -Parent) -Parent) -Parent
-$devShell = Join-Path $vsInstall "Common7\Tools\Microsoft.VisualStudio.DevShell.dll"
-if (Test-Path $devShell) {
-  Import-Module $devShell
-  Enter-VsDevShell -VsInstallPath $vsInstall -SkipAutomaticLocation -DevCmdArguments "-arch=x64 -host_arch=x64" | Out-Null
-  & $cmake -S (Join-Path $root "service\pulse_service") -B $serviceBuild -G Ninja -DCMAKE_BUILD_TYPE=Release
-  if ($LASTEXITCODE -ne 0) { throw "PulseService cmake configure failed" }
-  & $cmake --build $serviceBuild
-  if ($LASTEXITCODE -ne 0) { throw "PulseService build failed" }
-} else {
-  cmd /c "`"$vsDev`" -arch=amd64 -host_arch=amd64 && `"$cmake`" -S `"$root\service\pulse_service`" -B `"$serviceBuild`" -G Ninja -DCMAKE_BUILD_TYPE=Release && `"$cmake`" --build `"$serviceBuild`""
-  if ($LASTEXITCODE -ne 0) { throw "PulseService build failed" }
-}
-
-$serviceExe = Join-Path $serviceBuild "PulseService.exe"
-if (-not (Test-Path $serviceExe)) {
-  # Some generators place under Release/
-  $alt = Join-Path $serviceBuild "Release\PulseService.exe"
-  if (Test-Path $alt) { $serviceExe = $alt }
-}
-if (-not (Test-Path $serviceExe)) { throw "PulseService.exe not found after build" }
-Copy-Item $serviceExe (Join-Path $dist "service\PulseService.exe") -Force
-
-Write-Host "==> Building Flutter Windows Release"
-# MSBuild custom builds break on non-ASCII paths (e.g. OneDrive\Masaüstü).
-# Prefer an ASCII staging copy when the workspace path is not ASCII-safe.
-$stageRoot = $root
-$needsStage = $root -match '[^\x00-\x7F]'
-if ($needsStage) {
-  $stageRoot = "C:\dev\Pulse-build"
-  Write-Host "Non-ASCII workspace path detected - staging to $stageRoot"
-  if (Test-Path $stageRoot) { Remove-Item -Recurse -Force $stageRoot }
-  New-Item -ItemType Directory -Force -Path $stageRoot | Out-Null
-  robocopy $root $stageRoot /E /XD build dist .dart_tool build-ninja .git "apps\pulse_app\build" "apps\pulse_app\.dart_tool" /NFL /NDL /NJH /NJS /nc /ns /np | Out-Null
-}
-
-Push-Location (Join-Path $stageRoot "apps\pulse_app")
-try {
-  if (Test-Path "windows\flutter\ephemeral") {
-    Remove-Item -Recurse -Force "windows\flutter\ephemeral" -ErrorAction SilentlyContinue
+  $cmakeCandidates = @(
+    "${env:ProgramFiles(x86)}\Microsoft Visual Studio\18\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe",
+    "${env:ProgramFiles}\CMake\bin\cmake.exe",
+    "cmake"
+  )
+  $cmake = $null
+  foreach ($c in $cmakeCandidates) {
+    if ($c -eq "cmake") {
+      $cmd = Get-Command cmake -ErrorAction SilentlyContinue
+      if ($cmd) { $cmake = $cmd.Source; break }
+    } elseif (Test-Path $c) {
+      $cmake = $c
+      break
+    }
   }
-  flutter pub get
-  if ($LASTEXITCODE -ne 0) { throw "flutter pub get failed" }
-  flutter build windows --release
-  if ($LASTEXITCODE -ne 0) { throw "flutter build windows --release failed" }
-} finally {
-  Pop-Location
-}
+  if (-not $cmake) { throw "cmake not found" }
 
-$runner = Join-Path $stageRoot "apps\pulse_app\build\windows\x64\runner\Release"
-if (-not (Test-Path $runner)) {
-  $runner = Join-Path $stageRoot "apps\pulse_app\build\windows\runner\Release"
-}
-if (-not (Test-Path $runner)) { throw "Flutter Release runner not found at $runner" }
+  $serviceBuild = Join-Path $root "build\service-release"
+  # Non-ASCII OneDrive paths + VsDevCmd via cmd /c overflow ("input line is too long").
+  if ($root -match '[^\x00-\x7F]') {
+    $serviceBuild = "C:\dev\Pulse-service-release"
+    Write-Host "Non-ASCII workspace path detected - service build at $serviceBuild"
+  }
+  New-Item -ItemType Directory -Force -Path $serviceBuild | Out-Null
 
-Write-Host "==> Copying Flutter Release bundle"
-Copy-Item -Path (Join-Path $runner "*") -Destination $dist -Recurse -Force
+  # Prefer importing the Dev Shell module (avoids a giant cmd.exe command line).
+  $vsInstall = Split-Path (Split-Path (Split-Path $vsDev -Parent) -Parent) -Parent
+  $devShell = Join-Path $vsInstall "Common7\Tools\Microsoft.VisualStudio.DevShell.dll"
+  if (Test-Path $devShell) {
+    Import-Module $devShell
+    Enter-VsDevShell -VsInstallPath $vsInstall -SkipAutomaticLocation -DevCmdArguments "-arch=x64 -host_arch=x64" | Out-Null
+    & $cmake -S (Join-Path $root "service\pulse_service") -B $serviceBuild -G Ninja -DCMAKE_BUILD_TYPE=Release
+    if ($LASTEXITCODE -ne 0) { throw "PulseService cmake configure failed" }
+    & $cmake --build $serviceBuild
+    if ($LASTEXITCODE -ne 0) { throw "PulseService build failed" }
+  } else {
+    cmd /c "`"$vsDev`" -arch=amd64 -host_arch=amd64 && `"$cmake`" -S `"$root\service\pulse_service`" -B `"$serviceBuild`" -G Ninja -DCMAKE_BUILD_TYPE=Release && `"$cmake`" --build `"$serviceBuild`""
+    if ($LASTEXITCODE -ne 0) { throw "PulseService build failed" }
+  }
 
-Write-Host "==> Bundling Visual C++ runtime (app-local + VC_redist)"
-# Newest MSVC redistributable of the Visual Studio used for the build.
-$redistRoot = Join-Path $vsInstall "VC\Redist\MSVC"
-$crtDir = Get-ChildItem $redistRoot -Directory -ErrorAction SilentlyContinue |
-  Where-Object { $_.Name -match '^\d+(\.\d+)+$' } |
-  Sort-Object { [version]$_.Name } -Descending |
-  ForEach-Object {
-    Get-ChildItem (Join-Path $_.FullName "x64") -Directory -Filter "Microsoft.VC*.CRT" -ErrorAction SilentlyContinue
-  } |
-  Select-Object -First 1 -ExpandProperty FullName
-if (-not $crtDir -or -not (Test-Path $crtDir)) {
-  throw "MSVC CRT redistributable folder not found under $redistRoot. Install VS Build Tools C++ redistributables."
-}
-Write-Host "    CRT source: $crtDir"
-# App-local next to Pulse.exe and PulseService.exe (licensed REDIST binaries).
-Copy-Item (Join-Path $crtDir "*") -Destination $dist -Force
-Copy-Item (Join-Path $crtDir "*") -Destination (Join-Path $dist "service") -Force
+  $serviceExe = Join-Path $serviceBuild "PulseService.exe"
+  if (-not (Test-Path $serviceExe)) {
+    # Some generators place under Release/
+    $alt = Join-Path $serviceBuild "Release\PulseService.exe"
+    if (Test-Path $alt) { $serviceExe = $alt }
+  }
+  if (-not (Test-Path $serviceExe)) { throw "PulseService.exe not found after build" }
+  Copy-Item $serviceExe (Join-Path $dist "service\PulseService.exe") -Force
 
-$vcRedist = Get-ChildItem $redistRoot -Recurse -Filter "vc_redist.x64.exe" -ErrorAction SilentlyContinue |
-  Sort-Object LastWriteTime -Descending |
-  Select-Object -First 1 -ExpandProperty FullName
-if (-not $vcRedist) { throw "vc_redist.x64.exe not found under Visual Studio Redist" }
-New-Item -ItemType Directory -Force -Path (Join-Path $dist "redist") | Out-Null
-Copy-Item $vcRedist (Join-Path $dist "redist\VC_redist.x64.exe") -Force
+  Write-Host "==> Building Flutter Windows Release"
+  # MSBuild custom builds break on non-ASCII paths (e.g. OneDrive\Masaüstü).
+  # Prefer an ASCII staging copy when the workspace path is not ASCII-safe.
+  $stageRoot = $root
+  $needsStage = $root -match '[^\x00-\x7F]'
+  if ($needsStage) {
+    $stageRoot = "C:\dev\Pulse-build"
+    Write-Host "Non-ASCII workspace path detected - staging to $stageRoot"
+    if (Test-Path $stageRoot) { Remove-Item -Recurse -Force $stageRoot }
+    New-Item -ItemType Directory -Force -Path $stageRoot | Out-Null
+    robocopy $root $stageRoot /E /XD build dist .dart_tool build-ninja .git "apps\pulse_app\build" "apps\pulse_app\.dart_tool" /NFL /NDL /NJH /NJS /nc /ns /np | Out-Null
+  }
 
-Write-Host "==> Copying user guides into payload"
-$docsOut = Join-Path $dist "docs\guides"
-New-Item -ItemType Directory -Force -Path $docsOut | Out-Null
-$guideExtras = @(
-  "installation.md",
-  "troubleshooting.md",
-  "security.md",
-  "upgrade-notes.md"
-)
-foreach ($g in $guideExtras) {
-  $src = Join-Path $root "docs\guides\$g"
-  if (Test-Path $src) { Copy-Item $src $docsOut -Force }
-}
+  Push-Location (Join-Path $stageRoot "apps\pulse_app")
+  try {
+    if (Test-Path "windows\flutter\ephemeral") {
+      Remove-Item -Recurse -Force "windows\flutter\ephemeral" -ErrorAction SilentlyContinue
+    }
+    flutter pub get
+    if ($LASTEXITCODE -ne 0) { throw "flutter pub get failed" }
+    flutter build windows --release
+    if ($LASTEXITCODE -ne 0) { throw "flutter build windows --release failed" }
+  } finally {
+    Pop-Location
+  }
 
-Write-Host "==> Writing README for payload folder (advanced / portable)"
-@"
+  $runner = Join-Path $stageRoot "apps\pulse_app\build\windows\x64\runner\Release"
+  if (-not (Test-Path $runner)) {
+    $runner = Join-Path $stageRoot "apps\pulse_app\build\windows\runner\Release"
+  }
+  if (-not (Test-Path $runner)) { throw "Flutter Release runner not found at $runner" }
+
+  Write-Host "==> Copying Flutter Release bundle"
+  Copy-Item -Path (Join-Path $runner "*") -Destination $dist -Recurse -Force
+
+  Write-Host "==> Bundling Visual C++ runtime (app-local + VC_redist)"
+  # Newest MSVC redistributable of the Visual Studio used for the build.
+  $redistRoot = Join-Path $vsInstall "VC\Redist\MSVC"
+  $crtDir = Get-ChildItem $redistRoot -Directory -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -match '^\d+(\.\d+)+$' } |
+    Sort-Object { [version]$_.Name } -Descending |
+    ForEach-Object {
+      Get-ChildItem (Join-Path $_.FullName "x64") -Directory -Filter "Microsoft.VC*.CRT" -ErrorAction SilentlyContinue
+    } |
+    Select-Object -First 1 -ExpandProperty FullName
+  if (-not $crtDir -or -not (Test-Path $crtDir)) {
+    throw "MSVC CRT redistributable folder not found under $redistRoot. Install VS Build Tools C++ redistributables."
+  }
+  Write-Host "    CRT source: $crtDir"
+  # App-local next to Pulse.exe and PulseService.exe (licensed REDIST binaries).
+  Copy-Item (Join-Path $crtDir "*") -Destination $dist -Force
+  Copy-Item (Join-Path $crtDir "*") -Destination (Join-Path $dist "service") -Force
+
+  $vcRedist = Get-ChildItem $redistRoot -Recurse -Filter "vc_redist.x64.exe" -ErrorAction SilentlyContinue |
+    Sort-Object LastWriteTime -Descending |
+    Select-Object -First 1 -ExpandProperty FullName
+  if (-not $vcRedist) { throw "vc_redist.x64.exe not found under Visual Studio Redist" }
+  New-Item -ItemType Directory -Force -Path (Join-Path $dist "redist") | Out-Null
+  Copy-Item $vcRedist (Join-Path $dist "redist\VC_redist.x64.exe") -Force
+
+  Write-Host "==> Copying user guides into payload"
+  $docsOut = Join-Path $dist "docs\guides"
+  New-Item -ItemType Directory -Force -Path $docsOut | Out-Null
+  $guideExtras = @(
+    "installation.md",
+    "troubleshooting.md",
+    "security.md",
+    "upgrade-notes.md"
+  )
+  foreach ($g in $guideExtras) {
+    $src = Join-Path $root "docs\guides\$g"
+    if (Test-Path $src) { Copy-Item $src $docsOut -Force }
+  }
+
+  Write-Host "==> Writing README for payload folder (advanced / portable)"
+  @"
 Pulse Diagnostics payload folder (advanced)
 ===========================================
 
@@ -190,6 +200,16 @@ This folder is the install payload. For developers:
 
 Privacy: local-only. No telemetry. Observation only.
 "@ | Set-Content -Path (Join-Path $dist "README_INSTALL.txt") -Encoding UTF8
+}
+
+if ($Stage -eq "Payload") {
+  Write-Host ""
+  Write-Host "Payload ready: $dist"
+  return
+}
+if (-not (Test-Path (Join-Path $dist "Pulse.exe"))) {
+  throw "No payload at $dist. Run with -Stage Payload first."
+}
 
 # Zip (payload / CI artifact - not the primary end-user deliverable)
 $zip = Join-Path $root "dist\PulseDiagnostics-$Version-windows-x64.zip"
